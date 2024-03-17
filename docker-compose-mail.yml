@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  front:
+    image: mailu/mailu-front:latest
+    volumes:
+      - ./data/front:/data
+    environment:
+      - DJANGO_SECRET_KEY=CHANGEME
+      - HTTP_PORT=80
+      - SMTP_HOST=smtp
+      - SMTP_PORT=25
+      - SMTP_USER=admin
+      - SMTP_PASSWORD=adminpassword
+      - SMTP_TLS=false
+      - ENABLE_ADMIN=true
+      - ENABLE_API=true
+      - API_PORT=8000
+      - API_KEY=change-to-a-long-random-string
+    depends_on:
+      - smtp
+
+  smtp:
+    image: mailu/mailu-smtp:latest
+    volumes:
+      - ./data/smtp:/data
+    environment:
+      - DJANGO_SECRET_KEY=CHANGEME
+      - SMTP_HOST=smtp
+      - SMTP_PORT=25
+      - SMTP_USER=admin
+      - SMTP_PASSWORD=adminpassword
+      - SMTP_TLS=false
+      - DOMAIN=mysite.com
+      - ENABLE_SUBMISSION=true
+      - SUBMISSION_HOST=smtp
+      - SUBMISSION_PORT=587
+      - SUBMISSION_TLS=true
+      - SUBMISSION_USER=admin
+      - SUBMISSION_PASSWORD=adminpassword
+    depends_on:
+      - imap
+
+  imap:
+    image: mailu/mailu-imap:latest
+    volumes:
+      - ./data/imap:/data
+    environment:
+      - DJANGO_SECRET_KEY=CHANGEME
+      - SMTP_HOST=smtp
+      - SMTP_PORT=25
+      - SMTP_USER=admin
+      - SMTP_PASSWORD=adminpassword
+      - SMTP_TLS=false
+      - DOMAIN=botlet.io
+
+networks:
+  default:
+    name: mailu

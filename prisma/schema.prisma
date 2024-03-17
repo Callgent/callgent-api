@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// to generate dtos/entities
+generator nestjsDto {
+  provider                        = "prisma-generator-nestjs-dto"
+  output                          = "../src"
+  outputToNestJsResourceStructure = "true"
+  exportRelationModifierClasses   = "true"
+  reExport                        = "false"
+  createDtoPrefix                 = "Create"
+  updateDtoPrefix                 = "Update"
+  dtoSuffix                       = "Dto"
+  entityPrefix                    = ""
+  entitySuffix                    = ""
+  fileNamingStyle                 = "kebab"
+  classValidation                 = "true"
+  prettier                        = "true"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+// db sharding base on tenantId: 
+// 1. id segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
+// 2.chard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
+
+//////////////////// Authentication and Account ////////////////////////////
+
+model Tenant {
+  id       Int     @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String  @unique @db.VarChar(36)
+  mailHost String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  name     String? @db.VarChar(50)
+  avatar   String? @db.VarChar(1023)
+  type     Int     @default(1) /// @description account type: 1: individual, 2: organization.
+  status   Int     @default(0) /// @description user status: 0: pending, 1: active, -1: inactive.
+
+  User User[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+}
+
+model User {
+  id     Int     @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid   String  @unique @db.VarChar(36)
+  name   String  @db.VarChar(36)
+  avatar String? @db.VarChar(1023)
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  /// @DtoRelationIncludeId
+  tenantId     Int            @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  userIdentity UserIdentity[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+}
+
+model UserIdentity {
+  id             Int     @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId       Int     @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  provider       String  @db.VarChar(36)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uid            String  @db.VarChar(255) /// @description userId from provider.
+  credentials    String  @db.VarChar(2048) /// @description user cridentials
+  name           String? @db.VarChar(255)
+  /// @MinLength(6)
+  /// @IsEmail
+  /// @example user@example.com
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  email          String? @db.VarChar(255)
+  email_verified Boolean @default(false)
+  avatar         String? @db.VarChar(1023)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  info           Json?   @map("info") /// @description  authentication info from realm
+
+  user     User   @relation(fields: [userId], references: [id])
+  userId   Int
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  userUuid String @db.VarChar(36)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([provider, uid])
+  @@index([userId])
+  @@index([userUuid])
+  @@index([tenantId])
+}
+
+/// @DtoIgnoreModel
+/// @description non-organization email hosts
+model PublicMailHost {
+  id      Int    @id @default(autoincrement())
+  /// @description starts with `.`, e.g.: '.gmail.com', '.hotmail.com'
+  dotHost String @unique @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+}
+
+//////////////////// Botlet ////////////////////////////
+
+model Botlet {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  name         String  @db.VarChar(255)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  /// @description default receiver type, if caller not specified, or orderly if this is empty
+  receiverType String? @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+}
+
+model Task {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  status  Int    @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
+  brief   String @db.VarChar(255) /// @description task brief or description
+  content Json? /// @description optional task content
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @example api/email/slack/sms/...
+  callerType     String  @db.VarChar(36) /// @description caller type
+  caller         String? @db.VarChar(255) /// @description empty means anonymous
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @description receiver type, caller may specify this on task creation
+  receiverType   String? @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  receiver       String? @db.VarChar(255)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  receiverActual String? @db.VarChar(255)
+  callback       String? @db.VarChar(1023) /// @description empty means needn't response
+
+  /// @DtoReadOnly
+  botletUuid String @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+  @@index([botletUuid])
+}
+
+/// @description supported receiver types, tenant irrelevant.
+model Receiver {
+  /// @DtoEntityHidden
+  id   Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid String @unique @db.VarChar(36)
+
+  receiverType String?  @db.VarChar(36) /// @description receiver type
+  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+}
+
+/// @DtoIgnoreModel
+/// @description A botlet may have multiple receivers orderly.
+model BotletReceiver {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  receiverType String?  @db.VarChar(36) /// @description receiver type
+  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  receiver     String?  @db.VarChar(255)
+  config       Json? /// @description invocation config, e.g. auth
+  order        Int      @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  botletUuid String @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+  @@index([botletUuid])
+}
+
+/// @DtoIgnoreModel
+model AuthToken {
+  /// @DtoEntityHidden
+  id Int @id @default(autoincrement())
+
+  token   String  @unique @db.VarChar(36)
+  type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
+  /// @DtoCastType(JwtPayload, ../infra/auth/jwt/jwt.service)
+  payload Json
+  revoked Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+/// @description a botlet may have multiple endpoints, including receiver & sender
+model Endpoint {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  receiver Boolean @default(false) /// @description task sender or receiver
+  typeKey  String  @db.VarChar(127) /// @description endpoint type key
+  priority Int     @default(0) /// @description priority in the botlet
+
+  entry            Json             @db.Json /// @description entry address & configs
+  authType         EndpointAuthType /// @description entry auth type: NONE, APP: all task same auth, USER: auth each task owner/assignee
+  /// @DtoCastType(EndpointParam, ../endpoint.interface)
+  reqParamTemplate Json[]           @db.Json /// @description sending/receiving parameters template
+  initParams       Json             @db.Json /// @description initializing parameters
+  content          Json?            @db.Json /// @description generated content/code by init method
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  botletUuid String @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+  @@index([botletUuid])
+}
+
+enum EndpointAuthType {
+  NONE /// @description no auth, or treat auth as normal progressive params
+  APP /// @description all task same auth
+  USER /// @description auth each task owner/assignee
+}
+
+/// @DtoIgnoreModel
+/// @description endpoint user auth params
+model EndpointAuth {
+  /// @DtoEntityHidden
+  id       Int @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  endpointUuid String  @db.VarChar(36) /// @description sender endpoint uuid.
+
+  config Json @db.Json /// @description entry config
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String   @db.VarChar(36)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([endpointUuid, userKey])
+  @@index([tenantId])
+  @@index([endpointUuid])
+}
