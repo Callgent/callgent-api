@@ -1,5 +1,15 @@
 # Botlet API
 
+<p align="center"><a href="#license">
+<a href="https://app.snyk.io/test/github/Botlet-IO/botlet-api" alt="FOSSA Status"><img src="https://snyk.io/test/github/Botlet-IO/botlet-api/badge.svg"/></a>
+<a href="https://app.fossa.com/projects/git%2Bgithub.com%2FBotlet-IO%2Fbotlet-api?ref=badge_shield&issueType=license" alt="FOSSA Status"><img src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FBotlet-IO%2Fbotlet-api.svg?type=shield&issueType=license"/></a>
+<a href="https://github.com/Botlet-IO/botlet-api/issues">
+<img src="https://img.shields.io/github/issues/Botlet-IO/botlet-api.svg" alt="GitHub issues" /></a>
+<a href="https://github.com/Botlet-IO/botlet-api/pulls">
+<img src="https://img.shields.io/github/issues-pr/Botlet-IO/botlet-api.svg" alt="GitHub pull requests" /></a>
+<img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" height="20px">
+</p>
+
 Botlet API is an open-source SaaS project built using NestJS, Prisma, PostgreSQL, and Swagger. It is licensed under the Apache-2.0 License and based on the Contributor Development Agreement (CDO).
 
 ## Table of Contents
