@@ -33,14 +33,14 @@ export class EndpointsService {
           IS_BOTLET_ENDPOINT_SERVICE,
           provider.metatype,
         );
-        if (name?.indexOf(':') < 0) continue;
-
-        const [key, type] = name.split(/:[^:]+$/);
-        if (type == 'sender' || type == 'both') {
-          this._add2ServiceList(key, serviceKey, false);
-        }
-        if (type == 'receiver' || type == 'both') {
-          this._add2ServiceList(key, serviceKey, true);
+        if (name?.indexOf(':') > 0) {
+          const [key, type] = name.split(/:[^:]+$/);
+          if (type == 'sender' || type == 'both') {
+            this._add2ServiceList(key, serviceKey, false);
+          }
+          if (type == 'receiver' || type == 'both') {
+            this._add2ServiceList(key, serviceKey, true);
+          }
         }
       }
     }
@@ -102,7 +102,7 @@ export class EndpointsService {
       if (service) {
         const content = await (endpoint.receiver
           ? service.initReceiver
-          : service.initSender)(initParams, endpoint);
+          : service.initSender)(initParams, endpoint as any);
         if (content)
           prisma.endpoint.update({
             where: { uuid },

@@ -10,22 +10,6 @@ export interface EndpointInterface {
   initSender(initParams: object, endpoint: EndpointDto): Promise<string>;
 }
 
-class EndpointEntry {
-  @ApiProperty({
-    description: 'entry address',
-    example: 'task+1234567890@botlet.io',
-  })
-  address: EndpointParam;
-
-  @ApiProperty({
-    enum: ['NONE', 'APP', 'USER'],
-  })
-  authType?: 'NONE' | 'APP' | 'USER';
-
-  @ApiProperty({ description: 'Authentication params' })
-  params?: EndpointParam[];
-}
-
 export class EndpointParam {
   @ApiProperty({
     description:
@@ -76,6 +60,23 @@ export class EndpointParam {
   constraint?: string;
   @ApiProperty()
   position?: number | 'bottom' | 'top';
+}
+
+class EndpointEntry {
+  @ApiProperty({
+    description: 'entry address',
+    example: 'task+1234567890@botlet.io',
+  })
+  address: EndpointParam;
+
+  @ApiProperty({
+    description: 'default auth type',
+    enum: ['NONE', 'APP', 'USER'],
+  })
+  authType?: 'NONE' | 'APP' | 'USER';
+
+  @ApiProperty({ description: 'Authentication params' })
+  params?: EndpointParam[];
 }
 
 class Endpoint {

@@ -13,6 +13,9 @@ dependencies:
   '@fastify/compress':
     specifier: ^7.0.0
     version: 7.0.0
+  '@fastify/cookie':
+    specifier: ^9.3.1
+    version: 9.3.1
   '@fastify/cors':
     specifier: ^9.0.1
     version: 9.0.1
@@ -50,8 +53,8 @@ dependencies:
     specifier: ^10.0.3
     version: 10.0.3(@nestjs/common@10.0.0)(passport@0.7.0)
   '@nestjs/platform-fastify':
-    specifier: ^10.3.3
-    version: 10.3.3(@fastify/static@6.12.0)(@nestjs/common@10.0.0)(@nestjs/core@10.0.0)
+    specifier: ^10.3.4
+    version: 10.3.4(@fastify/static@6.12.0)(@nestjs/common@10.0.0)(@nestjs/core@10.0.0)
   '@nestjs/swagger':
     specifier: ^7.2.0
     version: 7.2.0(@fastify/static@6.12.0)(@nestjs/common@10.0.0)(@nestjs/core@10.0.0)(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.1)
@@ -74,11 +77,8 @@ dependencies:
     specifier: ^0.14.1
     version: 0.14.1
   fastify:
-    specifier: 4.26.1
-    version: 4.26.1
-  fastify-cookie:
-    specifier: ^5.7.0
-    version: 5.7.0
+    specifier: 4.26.2
+    version: 4.26.2
   fastify-ip:
     specifier: ^1.0.0
     version: 1.0.0
@@ -98,8 +98,8 @@ dependencies:
     specifier: ^4.2.0
     version: 4.2.0(@nestjs/common@10.0.0)(@nestjs/core@10.0.0)(reflect-metadata@0.2.1)(rxjs@7.8.1)
   nestjs-oauth2:
-    specifier: ^0.0.31
-    version: 0.0.31(@nestjs/common@10.0.0)(rxjs@7.8.1)
+    specifier: ^0.0.7
+    version: 0.0.7(@nestjs/common@10.0.0)(rxjs@7.8.1)
   nestjs-pino:
     specifier: ^4.0.0
     version: 4.0.0(@nestjs/common@10.0.0)(pino-http@9.0.0)
@@ -912,6 +912,13 @@ packages:
       pumpify: 2.0.1
     dev: false
 
+  /@fastify/cookie@9.3.1:
+    resolution: {integrity: sha512-h1NAEhB266+ZbZ0e9qUE6NnNR07i7DnNXWG9VbbZ8uC6O/hxHpl+Zoe5sw1yfdZ2U6XhToUGDnzQtWJdCaPwfg==}
+    dependencies:
+      cookie-signature: 1.2.1
+      fastify-plugin: 4.5.1
+    dev: false
+
   /@fastify/cors@9.0.1:
     resolution: {integrity: sha512-YY9Ho3ovI+QHIL2hW+9X4XqQjXLjJqsU+sMV/xFsxZkE8p3GNnYVFpoOxF7SsP5ZL76gwvbo3V9L+FIekBGU4Q==}
     dependencies:
@@ -1546,8 +1553,8 @@ packages:
       passport: 0.7.0
     dev: false
 
-  /@nestjs/platform-fastify@10.3.3(@fastify/static@6.12.0)(@nestjs/common@10.0.0)(@nestjs/core@10.0.0):
-    resolution: {integrity: sha512-OTKcKGnWWrSk/nDl5bFmv2gcPhbF6nsU/EHxkh6tguc0YY4aopQR9GaodseJn8isEOtZzcx8UUBsnLTtqWKxaA==}
+  /@nestjs/platform-fastify@10.3.4(@fastify/static@6.12.0)(@nestjs/common@10.0.0)(@nestjs/core@10.0.0):
+    resolution: {integrity: sha512-rYoAdJ1ybBXPwO+KutWJ4siaqGDdMzwXS4ggJ5soQgD4maN2p1rvKE31MzERd1MqYXWprFIESFHuxkiHMZV6kg==}
     peerDependencies:
       '@fastify/static': ^6.0.0 || ^7.0.0
       '@fastify/view': ^7.0.0 || ^8.0.0
@@ -1565,8 +1572,8 @@ packages:
       '@fastify/static': 6.12.0
       '@nestjs/common': 10.0.0(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.1)(rxjs@7.8.1)
       '@nestjs/core': 10.0.0(@nestjs/common@10.0.0)(reflect-metadata@0.2.1)(rxjs@7.8.1)
-      fastify: 4.26.0
-      light-my-request: 5.11.0
+      fastify: 4.26.2
+      light-my-request: 5.12.0
       path-to-regexp: 3.2.0
       tslib: 2.6.2
     transitivePeerDependencies:
@@ -3339,8 +3346,8 @@ packages:
     engines: {node: '>=6.6.0'}
     dev: false
 
-  /cookie@0.5.0:
-    resolution: {integrity: sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==}
+  /cookie@0.6.0:
+    resolution: {integrity: sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw==}
     engines: {node: '>= 0.6'}
     dev: false
 
@@ -4067,21 +4074,6 @@ packages:
     resolution: {integrity: sha512-eel5UKGn369gGEWOqBShmFJWfq/xSJvsgDzgLYC845GneayWvXBf0lJCBn5qTABfewy1ZDPoaR5OZCP+kssfuw==}
     dev: false
 
-  /fastify-cookie@5.6.1:
-    resolution: {integrity: sha512-qKFxDOLkrXn2TkxlO/+cK0tWYCTSrJDmuwty6Zl7kD5FtALwcjUHPFzOdR1Gxupb5oWhvbpSHBMx2XS+t9fbQQ==}
-    dependencies:
-      cookie-signature: 1.2.1
-      fastify-plugin: 3.0.1
-    dev: false
-
-  /fastify-cookie@5.7.0:
-    resolution: {integrity: sha512-l9UDkHysfOBdyA2rNkr1DQqe6xFdT3NuT60W+o7ramvuyyIc9kv6VmrhpLeEx29EftVJR9lRpW4Pg8T+RDNBLw==}
-    deprecated: Please use @fastify/cookie@6.0.0 instead
-    dependencies:
-      fastify-cookie-deprecated: /fastify-cookie@5.6.1
-      process-warning: 1.0.0
-    dev: false
-
   /fastify-ip@1.0.0:
     resolution: {integrity: sha512-ht6hS48UDmdHd9jARn2BphJUgw5u/nm8ItO9EceM2uSVhlusrkF07CfNvpuJHxFX8Nx+Eik/VJz0QzxOn3KMJA==}
     engines: {node: '>=18.x'}
@@ -4089,16 +4081,12 @@ packages:
       fastify-plugin: 4.5.1
     dev: false
 
-  /fastify-plugin@3.0.1:
-    resolution: {integrity: sha512-qKcDXmuZadJqdTm6vlCqioEbyewF60b/0LOFCcYN1B6BIZGlYJumWWOYs70SFYLDAH4YqdE1cxH/RKMG7rFxgA==}
-    dev: false
-
   /fastify-plugin@4.5.1:
     resolution: {integrity: sha512-stRHYGeuqpEZTL1Ef0Ovr2ltazUT9g844X5z/zEBFLG8RYlpDiOCIG+ATvYEp+/zmc7sN29mcIMp8gvYplYPIQ==}
     dev: false
 
-  /fastify@4.26.0:
-    resolution: {integrity: sha512-Fq/7ziWKc6pYLYLIlCRaqJqEVTIZ5tZYfcW/mDK2AQ9v/sqjGFpj0On0/7hU50kbPVjLO4de+larPA1WwPZSfw==}
+  /fastify@4.26.2:
+    resolution: {integrity: sha512-90pjTuPGrfVKtdpLeLzND5nyC4woXZN5VadiNQCicj/iJU4viNHKhsAnb7jmv1vu2IzkLXyBiCzdWuzeXgQ5Ug==}
     dependencies:
       '@fastify/ajv-compiler': 3.5.0
       '@fastify/error': 3.4.1
@@ -4108,30 +4096,7 @@ packages:
       fast-content-type-parse: 1.1.0
       fast-json-stringify: 5.12.0
       find-my-way: 8.1.0
-      light-my-request: 5.11.0
-      pino: 8.18.0
-      process-warning: 3.0.0
-      proxy-addr: 2.0.7
-      rfdc: 1.3.1
-      secure-json-parse: 2.7.0
-      semver: 7.6.0
-      toad-cache: 3.7.0
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
-  /fastify@4.26.1:
-    resolution: {integrity: sha512-tznA/G55dsxzM5XChBfcvVSloG2ejeeotfPPJSFaWmHyCDVGMpvf3nRNbsCb/JTBF9RmQFBfuujWt3Nphjesng==}
-    dependencies:
-      '@fastify/ajv-compiler': 3.5.0
-      '@fastify/error': 3.4.1
-      '@fastify/fast-json-stringify-compiler': 4.3.0
-      abstract-logging: 2.0.1
-      avvio: 8.3.0
-      fast-content-type-parse: 1.1.0
-      fast-json-stringify: 5.12.0
-      find-my-way: 8.1.0
-      light-my-request: 5.11.0
+      light-my-request: 5.12.0
       pino: 8.18.0
       process-warning: 3.0.0
       proxy-addr: 2.0.7
@@ -5824,11 +5789,11 @@ packages:
   /libphonenumber-js@1.10.55:
     resolution: {integrity: sha512-MrTg2JFLscgmTY6/oT9vopYETlgUls/FU6OaeeamGwk4LFxjIgOUML/ZSZICgR0LPYXaonVJo40lzMvaaTJlQA==}
 
-  /light-my-request@5.11.0:
-    resolution: {integrity: sha512-qkFCeloXCOMpmEdZ/MV91P8AT4fjwFXWaAFz3lUeStM8RcoM1ks4J/F8r1b3r6y/H4u3ACEJ1T+Gv5bopj7oDA==}
+  /light-my-request@5.12.0:
+    resolution: {integrity: sha512-P526OX6E7aeCIfw/9UyJNsAISfcFETghysaWHQAlQYayynShT08MOj4c6fBCvTWBrHXSvqBAKDp3amUPSCQI4w==}
     dependencies:
-      cookie: 0.5.0
-      process-warning: 2.3.2
+      cookie: 0.6.0
+      process-warning: 3.0.0
       set-cookie-parser: 2.6.0
     dev: false
 
@@ -6385,8 +6350,8 @@ packages:
       rxjs: 7.8.1
     dev: false
 
-  /nestjs-oauth2@0.0.31(@nestjs/common@10.0.0)(rxjs@7.8.1):
-    resolution: {integrity: sha512-mTqXLUhPnmVstS5bea0LolVyhpZx/SSkCwSBWA81mtnzijgCuQ2Nav2ipfCnByNNS4tDqTlCvQwvmdkJsjzvQw==}
+  /nestjs-oauth2@0.0.7(@nestjs/common@10.0.0)(rxjs@7.8.1):
+    resolution: {integrity: sha512-P4HfJziGsMl4+aTclr9vkqfbI84odja1kOjKZw095A+b4ksVczOC4J/AH4BydsIAPVsj/5RJj4aGFoWV90Bu1w==}
     peerDependencies:
       '@nestjs/common': ^9.0.0
       rxjs: ^7.x
@@ -7099,14 +7064,6 @@ packages:
 
   /process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
-
-  /process-warning@1.0.0:
-    resolution: {integrity: sha512-du4wfLyj4yCZq1VupnVSZmRsPJsNuxoDQFdCFHLaYiEbFBD7QE0a+I4D7hOxrVnh78QE/YipFAj9lXHiXocV+Q==}
-    dev: false
-
-  /process-warning@2.3.2:
-    resolution: {integrity: sha512-n9wh8tvBe5sFmsqlg+XQhaQLumwpqoAUruLwjCopgTmUBjJ/fjtBsJzKleCaIGBOMXYEhp1YfKl4d7rJ5ZKJGA==}
-    dev: false
 
   /process-warning@3.0.0:
     resolution: {integrity: sha512-mqn0kFRl0EoqhnL0GQ0veqFHyIN1yig9RHh/InzORTUiZHFRAur+aMtRkELNwGs9aNwKS6tg/An4NYBPGwvtzQ==}

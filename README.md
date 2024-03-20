@@ -121,4 +121,4 @@ Botlet.IO is licensed under the Apache-2.0 License. See the [LICENSE](LICENSE) f
 
 ---
 
-For more information, please visit our [documentation](https://docs.botlet.io/) or join our [community](https://discord.botlet.io/).
+For more information, please visit our [documentation](https://docs.botlet.io/) or join our [community](https://botlet.io/discord).
