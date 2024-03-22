@@ -111,7 +111,7 @@ export async function bootstrapForTest(
 ): Promise<NestFastifyApplication> {
   let app: NestFastifyApplication =
     await moduleFixtureForTest.createNestApplication(new FastifyAdapter(), {
-      abortOnError: false,
+      abortOnError: true,
       bufferLogs: false,
     });
   app = await bootstrap(app, process.env.PORT || '0');

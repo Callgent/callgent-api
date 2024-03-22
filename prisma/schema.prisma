@@ -200,7 +200,8 @@ model Task {
   receiverActual String? @db.VarChar(255)
   callback       String? @db.VarChar(1023) /// @description empty means needn't response
 
-  /// @DtoReadOnly
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   botletUuid String @db.VarChar(36)
 
   /// @DtoReadOnly
@@ -305,7 +306,12 @@ model Endpoint {
   /// @DtoEntityHidden
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  receiver Boolean @default(false) /// @description task sender or receiver
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  receiver Boolean /// @description task sender or receiver
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
   typeKey  String  @db.VarChar(127) /// @description endpoint type key
   priority Int     @default(0) /// @description priority in the botlet
 
@@ -313,11 +319,12 @@ model Endpoint {
   authType         EndpointAuthType /// @description entry auth type: NONE, APP: all task same auth, USER: auth each task owner/assignee
   /// @DtoCastType(EndpointParam, ../endpoint.interface)
   reqParamTemplate Json[]           @db.Json /// @description sending/receiving parameters template
-  initParams       Json             @db.Json /// @description initializing parameters
+  initParams       Json?            @db.Json /// @description initializing parameters
   content          Json?            @db.Json /// @description generated content/code by init method
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   botletUuid String @db.VarChar(36)
 
   /// @DtoReadOnly
@@ -352,6 +359,7 @@ model EndpointAuth {
   userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   endpointUuid String  @db.VarChar(36) /// @description sender endpoint uuid.
 
   config Json @db.Json /// @description entry config
