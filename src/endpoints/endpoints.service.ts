@@ -1,14 +1,17 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InjectionToken,
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { PrismaClient } from '@prisma/client';
-import { CreateEndpointDto } from './dto/create-endpoint.dto';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { Utils } from '../infra/libs/utils';
+import { selectHelper } from '../infra/repo/select.helper';
+import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { IS_BOTLET_ENDPOINT_SERVICE } from './endpoint-service.decorator';
 import { EndpointInterface } from './endpoint.interface';
@@ -20,6 +23,12 @@ export class EndpointsService {
     @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {}
+  protected readonly defSelect: Prisma.EndpointSelect = {
+    id: false,
+    tenantId: false,
+    createdBy: false,
+    deletedAt: false,
+  };
   private sendersList = {};
   private receiversList = {};
 
@@ -34,7 +43,7 @@ export class EndpointsService {
           provider.metatype,
         );
         if (name?.indexOf(':') > 0) {
-          const [key, type] = name.split(/:[^:]+$/);
+          const [key, type] = name.split(/:(?=[^:]*$)/);
           if (type == 'sender' || type == 'both') {
             this._add2ServiceList(key, serviceKey, false);
           }
@@ -83,13 +92,63 @@ export class EndpointsService {
   }
 
   @Transactional()
+  async create(
+    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'uuid' | 'reqParamTemplate'>,
+    select?: Prisma.EndpointSelect,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const service = this.getService(dto.typeKey, dto.receiver);
+    if (!service)
+      throw new BadRequestException('Endpoint type not found: ' + dto.typeKey);
+
+    const uuid = Utils.uuid();
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.endpoint.create({
+          select,
+          data: { ...dto, uuid },
+        }),
+      this.defSelect,
+    );
+  }
+
+  @Transactional()
   update(uuid: string, dto: UpdateEndpointDto) {
     throw new Error('Method not implemented.');
   }
 
   @Transactional()
-  create(endpointKey: string, botletUuid: string, dto: CreateEndpointDto) {
-    throw new Error('Method not implemented.');
+  upsertEndpointAuth(
+    dto: Prisma.EndpointAuthUncheckedCreateInput,
+    endpoint: EndpointDto,
+  ) {
+    if (endpoint.authType == 'NONE')
+      throw new BadRequestException("auth type `NONE` needn't be set");
+    else if (endpoint.authType == 'USER') {
+      if (!dto.userKey)
+        throw new BadRequestException(
+          '`userKey` is required for auth type `USER`',
+        );
+    } else if (endpoint.authType == 'APP') dto.userKey = '';
+    // else
+    //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
+    dto.endpointUuid = endpoint.uuid;
+
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
+      prisma.endpointAuth.upsert({
+        select,
+        where: {
+          endpointUuid_userKey: {
+            endpointUuid: dto.endpointUuid,
+            userKey: dto.userKey,
+          },
+        },
+        create: dto,
+        update: dto,
+      }),
+    );
   }
 
   @Transactional()

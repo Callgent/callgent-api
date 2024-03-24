@@ -6,15 +6,20 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { CreateEndpointAuthDto } from '../endpoint-auths/dto/create-endpoint-auth.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+import { CreateEndpointDto } from './dto/create-endpoint.dto';
+import { EndpointDto } from './dto/endpoint.dto';
+import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointConfig } from './endpoint.interface';
 import { EndpointsService } from './endpoints.service';
-import { CreateEndpointDto } from './dto/create-endpoint.dto';
-import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 
 @ApiTags('Endpoints')
 @ApiBearerAuth('defaultBearerAuth')
@@ -29,26 +34,49 @@ export class EndpointsController {
   }
 
   @ApiOkResponse({ type: EndpointConfig })
-  @Get(':endpointKey/config')
-  getConfig(@Param('endpointKey') endpointKey: string) {
-    const service = this.endpointsService.getService(endpointKey);
+  @Get(':endpointType/config')
+  getConfig(@Param('endpointType') endpointType: string) {
+    const service = this.endpointsService.getService(endpointType);
     if (!service)
-      throw new NotFoundException('No endpoint found with key:', endpointKey);
+      throw new NotFoundException('No endpoint found with key:', endpointType);
     return service.getConfig();
   }
 
-  @Post(':endpointKey/botlets/:botletUuid')
-  createEndpoint(
-    @Param('botletUuid') botletUuid: string,
-    @Param('endpointKey') endpointKey: string,
+  @Post(':endpointType/botlets')
+  async createEndpoint(
+    @Req() req,
+    @Param('endpointType') endpointType: string,
     @Body() dto: CreateEndpointDto,
   ) {
-    this.endpointsService.create(endpointKey, botletUuid, dto);
+    return {
+      data: await this.endpointsService.create({
+        ...dto,
+        typeKey: endpointType,
+        createdBy: req.user.sub,
+      }),
+    };
   }
 
   @Patch(':uuid')
-  updateEndpoint(@Param('uuid') uuid: string, @Body() dto: UpdateEndpointDto) {
-    this.endpointsService.update(uuid, dto);
+  async updateEndpoint(
+    @Param('uuid') uuid: string,
+    @Body() dto: UpdateEndpointDto,
+  ) {
+    return {
+      data: await this.endpointsService.update(uuid, dto),
+    };
+  }
+
+  /** for auth type `APP`, userKey is ignored */
+  @Put('auth')
+  async upsertEndpointAuth(@Req() req, @Body() dto: CreateEndpointAuthDto) {
+    const endpoint = EntityIdExists.entity<EndpointDto>(dto, 'endpointUuid');
+    return {
+      data: await this.endpointsService.upsertEndpointAuth(
+        { ...dto, createdBy: req.user.sub },
+        endpoint,
+      ),
+    };
   }
 
   @Post(':uuid/init')

@@ -2,12 +2,44 @@ import { EndpointDto } from '../../dto/endpoint.dto';
 import { EndpointServiceName } from '../../endpoint-service.decorator';
 import { EndpointConfig, EndpointInterface } from '../../endpoint.interface';
 
-@EndpointServiceName('webpage', 'both')
-export class WebpageEndpoint implements EndpointInterface {
+@EndpointServiceName('restAPI', 'both')
+export class RestAPIEndpoint implements EndpointInterface {
   getConfig(): EndpointConfig {
     return {
-      entry: { address: { type: 'url', name: 'Page URL' } },
       sender: {
+        entry: {
+          address: {
+            type: 'url',
+            name: 'API root URL',
+          },
+          authConfig: [
+            {
+              name: 'tokenName',
+              label: 'Token Name',
+              type: 'text',
+            },
+            {
+              name: 'tokenPosition',
+              label: 'Where is the Token',
+              type: 'select',
+              value: ['header', 'cookie', 'body', 'query'],
+            },
+            {
+              name: 'credentialsType',
+              label: 'Credentials Type',
+              placeholder:
+                'Method to exchange token from credentials: token = exchange(credentials, args)',
+              type: 'select',
+              value: {
+                constant: [
+                  { name: 'apiKey', label: 'API Key', type: 'password' },
+                ],
+                oauth: [],
+                function: [],
+              },
+            },
+          ],
+        },
         addParams: true,
         params: [
           {

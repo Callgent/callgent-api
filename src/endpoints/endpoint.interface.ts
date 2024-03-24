@@ -45,6 +45,7 @@ export class EndpointParam {
     | 'markdown'
     | 'file'
     | 'image'
+    | 'script'
     | 'readonly';
   @ApiProperty({ description: 'Param name' })
   name: string;
@@ -55,11 +56,13 @@ export class EndpointParam {
   @ApiProperty()
   optional?: boolean;
   @ApiProperty({ description: 'Default value, or select options' })
-  value?: any;
+  value?: any | { [key: string]: EndpointParam[] };
   @ApiProperty()
   constraint?: string;
   @ApiProperty()
   position?: number | 'bottom' | 'top';
+  // @ApiProperty()
+  // hidden?: boolean | (form: object) => boolean;
 }
 
 class EndpointEntry {
@@ -75,8 +78,8 @@ class EndpointEntry {
   })
   authType?: 'NONE' | 'APP' | 'USER';
 
-  @ApiProperty({ description: 'Authentication params' })
-  params?: EndpointParam[];
+  @ApiProperty({ description: 'Authentication Configuration' })
+  authConfig?: EndpointParam[];
 }
 
 class Endpoint {
@@ -94,7 +97,7 @@ class Endpoint {
 
 export class EndpointConfig {
   @ApiProperty({ description: 'Endpoint entry' })
-  entry: EndpointEntry;
+  entry?: EndpointEntry;
 
   @ApiProperty({ description: 'The task receiver' })
   receiver?: Endpoint;

@@ -43,8 +43,8 @@ export function EntityIdExists(
 }
 
 /** minor optimize to reuse the previously checked entity object. */
-EntityIdExists.entity = <T>(target: any, propertyName: string): T => {
-  return target[ENTITY_PREFIX + propertyName];
+EntityIdExists.entity = <T>(dto: any, propertyName: string): T => {
+  return dto[ENTITY_PREFIX + propertyName];
 };
 
 const ENTITY_PREFIX = '$entityOf_';

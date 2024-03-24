@@ -17,7 +17,9 @@ export class PrismaTenancyService {
     return this.cls.get(PrismaTenancyService.TENANT_ID_KEY);
   }
 
-  async bypassTenancy(tx: PrismaClient) {
-    await tx.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', TRUE)`;
+  async bypassTenancy(tx: PrismaClient, off = false) {
+    await tx.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${
+      off ? 'FALSE' : 'TRUE'
+    })`;
   }
 }

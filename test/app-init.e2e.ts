@@ -12,6 +12,7 @@ import {
   prismaTenancyUseFactory,
 } from '../src/infra/repo/tenancy/prisma-tenancy.provider';
 import { PrismaTenancyService } from '../src/infra/repo/tenancy/prisma-tenancy.service';
+import { ConfigService } from '@nestjs/config';
 
 export let testApp: NestFastifyApplication;
 let moduleFixture: TestingModule;
@@ -127,11 +128,15 @@ export async function beforeEachFn() {
 export async function beforeEachFnTenanted(tenantId = 1) {
   await prismaTestingHelper.startNewTransaction({ timeout: 888888 });
   testApp.get(PrismaTenancyService).setTenantId(tenantId);
-  console.log('Starts test transaction, tenantId=', tenantId);
+  console.log('Starts test transaction, tenantId:', tenantId);
 }
 
 // This function must be called after every test
 export async function afterEachFn(): Promise<void> {
   prismaTestingHelper?.rollbackCurrentTransaction();
-  console.log('Rollback test transaction.');
+  // console.log('Rollback test transaction.');
+}
+
+export function getConfigValue(key: string) {
+  return testApp.get(ConfigService).get(key);
 }

@@ -1,6 +1,6 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Botlet, Prisma, PrismaClient } from '@prisma/client';
@@ -8,6 +8,7 @@ import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UpdateBotletDto } from './dto/update-botlet.dto';
 import { BotletCreatedEvent } from './events/botlet-created.event';
+import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -17,6 +18,7 @@ export class BotletsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
   protected readonly defSelect: Prisma.BotletSelect = {
     id: false,
@@ -113,5 +115,21 @@ export class BotletsService {
         where: { uuid },
       }),
     );
+  }
+
+  @Transactional()
+  async duplicateOverTenancy(
+    dupUuid: string,
+    dto: Omit<Prisma.BotletUncheckedCreateInput, 'uuid'>,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+
+    await this.tenancyService.bypassTenancy(prisma);
+    const dup = await prisma.botlet.findUnique({ where: { uuid: dupUuid } });
+    if (!dup)
+      throw new NotFoundException('botlet to duplicate not found: ' + dupUuid);
+
+    await this.tenancyService.bypassTenancy(prisma, true);
+    const botlet = await this.create(dto, { id: null });
   }
 }

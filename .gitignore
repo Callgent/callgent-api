@@ -18,6 +18,7 @@ lerna-debug.log*
 
 # OS
 .env
+.env.prod*
 .DS_Store
 .coverage-e2e
 

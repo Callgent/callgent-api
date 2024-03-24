@@ -38,11 +38,7 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(BotletDto) },
-          },
-        },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
       ],
     },
   })
@@ -60,11 +56,7 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(BotletDto) },
-          },
-        },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
       ],
     },
   })
@@ -133,5 +125,27 @@ export class BotletsController {
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
     return { data: await this.botletService.delete(uuid) };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+      ],
+    },
+  })
+  @Post('duplicate/:uuid')
+  async duplicateOverTenancy(
+    @Param('uuid') uuid: string,
+    @Req() req,
+    @Body() dto: CreateBotletDto,
+  ) {
+    return {
+      data: await this.botletService.duplicateOverTenancy(uuid, {
+        ...dto,
+        createdBy: req.user.sub,
+      }),
+    };
   }
 }

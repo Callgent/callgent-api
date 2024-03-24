@@ -317,15 +317,17 @@ model Endpoint {
 
   entry            Json             @db.Json /// @description entry address & configs
   authType         EndpointAuthType /// @description entry auth type: NONE, APP: all task same auth, USER: auth each task owner/assignee
+  /// @description auth guard ts function (req, auth: EndpointAuth) => boolean, TODO: import?
+  authConfig       Json?            @db.Json
   /// @DtoCastType(EndpointParam, ../endpoint.interface)
   reqParamTemplate Json[]           @db.Json /// @description sending/receiving parameters template
   initParams       Json?            @db.Json /// @description initializing parameters
   content          Json?            @db.Json /// @description generated content/code by init method
 
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36)
+  botletUuid String @db.VarChar(36) /// @description botlet owning the endpoint
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -347,7 +349,6 @@ enum EndpointAuthType {
   USER /// @description auth each task owner/assignee
 }
 
-/// @DtoIgnoreModel
 /// @description endpoint user auth params
 model EndpointAuth {
   /// @DtoEntityHidden
@@ -356,13 +357,11 @@ model EndpointAuth {
   /// @DtoEntityHidden
   tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
   /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  endpointUuid String  @db.VarChar(36) /// @description sender endpoint uuid.
+  endpointUuid String  @db.VarChar(36) /// @description endpoint uuid.
+  userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
 
-  config Json @db.Json /// @description entry config
+  params Json @db.Json /// @description auth params
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
