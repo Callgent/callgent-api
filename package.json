@@ -53,7 +53,7 @@
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "fastify": "4.26.1",
+    "fastify": "4.26.2",
     "fastify-cookie": "^5.7.0",
     "fastify-ip": "^1.0.0",
     "glob": "^10.3.10",
