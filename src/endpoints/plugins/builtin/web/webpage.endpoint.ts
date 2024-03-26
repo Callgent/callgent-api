@@ -1,8 +1,8 @@
-import { EndpointDto } from '../../dto/endpoint.dto';
-import { EndpointServiceName } from '../../endpoint-service.decorator';
-import { EndpointConfig, EndpointInterface } from '../../endpoint.interface';
+import { EndpointDto } from '../../../dto/endpoint.dto';
+import { EndpointPluginName } from '../../endpoint-plugin.decorator';
+import { EndpointConfig, EndpointInterface } from '../../../endpoint.interface';
 
-@EndpointServiceName('webpage', 'both')
+@EndpointPluginName('webpage', 'both')
 export class WebpageEndpoint implements EndpointInterface {
   getConfig(): EndpointConfig {
     return {

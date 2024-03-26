@@ -1,8 +1,8 @@
-import { EndpointDto } from '../../dto/endpoint.dto';
-import { EndpointServiceName } from '../../endpoint-service.decorator';
-import { EndpointConfig, EndpointInterface } from '../../endpoint.interface';
+import { EndpointDto } from '../../../dto/endpoint.dto';
+import { EndpointPluginName } from '../../endpoint-plugin.decorator';
+import { EndpointConfig, EndpointInterface } from '../../../endpoint.interface';
 
-@EndpointServiceName('restAPI', 'both')
+@EndpointPluginName('restAPI', 'both')
 export class RestAPIEndpoint implements EndpointInterface {
   getConfig(): EndpointConfig {
     return {
