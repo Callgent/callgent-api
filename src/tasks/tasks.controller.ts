@@ -61,16 +61,13 @@ export class TasksController {
     @Body() dto: CreateTaskDto,
   ) {
     const user: JwtPayload = req.user;
-    const [task, syncResult] = await this.taskService.create(
-      {
-        ...dto,
-        botletUuid,
-        callerType: user.aud,
-        // assignees are set when processing the task
-        createdBy: user.sub,
-      },
-      { receiver: false, receiverActual: false, receiverType: false },
-    );
+    const [task, syncResult] = await this.taskService.create({
+      ...dto,
+      botletUuid,
+      callerType: user.aud,
+      // assignees are set when processing the task
+      createdBy: user.sub,
+    });
     return {
       data: task,
       meta: { syncResult },

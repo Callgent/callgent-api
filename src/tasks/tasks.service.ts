@@ -47,19 +47,18 @@ export class TasksService {
       select: {
         id: true,
         uuid: true,
-        receiverType: true,
       },
     });
     if (!botlet)
       throw new NotFoundException('Botlet not found, uuid=' + dto.botletUuid);
 
     // quick determine task receiver, may null
-    const receiver = await this.evalTaskReceiver(
-      prisma,
-      botlet,
-      dto.receiverType,
-    );
-    dto.receiverType = receiver?.receiverType;
+    // const receiver = await this.evalTaskReceiver(
+    //   prisma,
+    //   botlet,
+    //   dto.receiverType,
+    // );
+    // dto.receiverType = receiver?.receiverType;
 
     // TODO synced call needn't task record
     // if (receiver?.synced) {
@@ -84,7 +83,7 @@ export class TasksService {
 
     this.eventEmitter.emit(
       TaskCreatedEvent.eventName,
-      new TaskCreatedEvent(ret, receiver),
+      new TaskCreatedEvent(ret),
     );
     return [ret];
   }
@@ -94,23 +93,24 @@ export class TasksService {
     botlet: Partial<Botlet>,
     preferredReceiverType?: string,
   ) {
-    const receiverType =
-      preferredReceiverType || botlet.receiverType || undefined;
+    // const receiverType =
+    //   preferredReceiverType || botlet.receiverType || undefined;
     // TODO: cache synced types for quick check
 
-    const r = await prisma.botletReceiver.findFirst({
-      where: {
-        botletUuid: botlet.uuid,
-        receiverType,
-      },
-      orderBy: {
-        order: 'asc',
-      },
-    });
+    const r = 0;
+    // await prisma.botletReceiver.findFirst({
+    //   where: {
+    //     botletUuid: botlet.uuid,
+    //     receiverType,
+    //   },
+    //   orderBy: {
+    //     order: 'asc',
+    //   },
+    // });
 
     // invalid receiver specified
-    if (receiverType && !r)
-      throw new BadRequestException('No receiver found: ' + receiverType);
+    // if (receiverType && !r)
+    //   throw new BadRequestException('No receiver found: ' + receiverType);
     return r;
   }
 
