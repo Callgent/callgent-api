@@ -1,0 +1,2599 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "Canny API",
+		"version": "1.0.0"
+	},
+	"servers": [{
+		"url": "https://canny.io/api/v1"
+	}],
+	"paths": {
+		"/boards/list": {
+			"post": {
+				"summary": "List all boards",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"boards\" property that contains an array of board objects.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"boards": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Board"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more boards than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/boards/retrieve": {
+			"post": {
+				"summary": "Retrieve board",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The board's unique identifier."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a board object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Board"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/categories/list": {
+			"post": {
+				"summary": "List categories",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch categories for."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of categories you'd like to fetch. Defaults to 10 if not specified. Max of 10000."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of categories you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"categories\" property that contains an array of tag objects. There's also a \"hasMore\" property that specifies whether this query returns more categories than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"categories": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Category"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more categories than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/categories/retrieve": {
+			"post": {
+				"summary": "Retrieve category",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The category's unique identifier."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a category object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Category"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/categories/create": {
+			"post": {
+				"summary": "Create category",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to create the category for."
+									},
+									"name": {
+										"type": "string",
+										"description": "The name of the category. Must be between 1 and 30 characters long."
+									},
+									"parentID": {
+										"type": "string",
+										"description": "The id of the parent category."
+									},
+									"subscribeAdmins": {
+										"type": "boolean",
+										"description": "Whether or not the admins will be subscribed to the category."
+									}
+								},
+								"required": ["apiKey", "boardID", "name", "subscribeAdmins"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the created category."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/categories/delete": {
+			"post": {
+				"summary": "Delete category",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"categoryID": {
+										"type": "string",
+										"description": "The unique identifier of the category."
+									}
+								},
+								"required": ["apiKey", "categoryID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the category was successfully deleted.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/entries/list": {
+			"post": {
+				"summary": "List entries",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"labelIDs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "Fetch only entries with at least one of the labels in the array."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of entries you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of entries you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									},
+									"sort": {
+										"type": "string",
+										"description": "The order in which the entries should be fetched. Options include: \"created\", \"lastSaved\", \"nonPublishedFirst\", \"publishedAt\". Defaults to \"nonPublishedFirst\" if not specified."
+									},
+									"type": {
+										"type": "string",
+										"description": "The type of entries to fetch. Value can be \"new\", \"improved\", or \"fixed\"."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"entries\" property that contains an array of entry objects. There's also a \"hasMore\" property that specifies whether this query returns more entries than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"entries": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Entry"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more entries than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/entries/create": {
+			"post": {
+				"summary": "Create entry",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"title": {
+										"type": "string",
+										"description": "The title of your changelog entry."
+									},
+									"details": {
+										"type": "string",
+										"description": "The details of your changelog entry."
+									},
+									"type": {
+										"type": "string",
+										"description": "The type of your changelog entry. Can be one of \"fixed\", \"new\", and \"improved\"."
+									},
+									"published": {
+										"type": "boolean",
+										"description": "Whether you want to publish the changelog entry immediately or not. Default is false."
+									},
+									"publishedOn": {
+										"type": "string",
+										"description": "If published is set to true and you would like to set a published date in the past, in ISO 8601 format."
+									},
+									"scheduledFor": {
+										"type": "string",
+										"description": "The date you want the changelog entry to be published, in ISO 8601 format. This has to be in the future."
+									},
+									"labelIDs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "A list of labels to assign to your changelog entry. Each label must be between 1 and 30 characters long."
+									},
+									"postIDs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "A list of posts to link to your changelog entry."
+									}
+								},
+								"required": ["apiKey", "title", "details"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the created entry."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comments/list": {
+			"post": {
+				"summary": "List comments",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"authorID": {
+										"type": "string",
+										"description": "The id of the author you'd like to fetch comments for."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch comments for."
+									},
+									"companyID": {
+										"type": "string",
+										"description": "If specified, will only fetch posts created by users linked to the company with this custom identifier."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of comments you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The id of the post you'd like to fetch comments for."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of comments you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"comments\" property that contains an array of comment objects. There's also a \"hasMore\" property that specifies whether this query returns more comments than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"comments": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Comment"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more comments than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comments/retrieve": {
+			"post": {
+				"summary": "Retrieve comment",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The comment's unique identifier."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a comment object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Comment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comments/create": {
+			"post": {
+				"summary": "Create comment",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"authorID": {
+										"type": "string",
+										"description": "The unique identifier of the comment's author."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The unique identifier of the comment's post."
+									},
+									"value": {
+										"type": "string",
+										"description": "The comment value."
+									},
+									"imageURLs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "An array of the URLs of comment's images."
+									},
+									"internal": {
+										"type": "boolean",
+										"description": "Whether this comment is only available for internal usage. Default is false. This can only be set to true if the author is a member of the company."
+									},
+									"parentID": {
+										"type": "string",
+										"description": "The unique identifier of the comment's parent, if this comment is a reply."
+									},
+									"shouldNotifyVoters": {
+										"type": "boolean",
+										"description": "Whether this comment should be allowed to trigger email notifications. Default is false."
+									}
+								},
+								"required": ["apiKey", "authorID", "postID", "value"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the created comment."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/comments/delete": {
+			"post": {
+				"summary": "Delete comment",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"commentID": {
+										"type": "string",
+										"description": "The unique identifier of the comment."
+									}
+								},
+								"required": ["apiKey", "commentID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the comment was successfully deleted.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/companies/list": {
+			"post": {
+				"summary": "List companies",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"search": {
+										"type": "string",
+										"description": "A string to search by company name"
+									},
+									"segment": {
+										"type": "string",
+										"description": "the URL name of the segment you want to use to filter companies"
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of companies you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of companies you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"companies\" property that contains an array of company objects. There's also a \"hasMore\" property that specifies whether this query returns more companies than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"companies": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Company"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more companies than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/companies/update": {
+			"post": {
+				"summary": "Update company",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The identifier for your company."
+									},
+									"created": {
+										"type": "string",
+										"description": "The date the company was created in your system."
+									},
+									"customFields": {
+										"type": "object",
+										"description": "Any custom fields associated with the company. Each field name (key) must be between 0 and 30 characters long. If field values are strings, they must be less than 200 characters long."
+									},
+									"monthlySpend": {
+										"type": "integer",
+										"description": "The MRR for the company in dollars. This will be rounded to two decimal places."
+									},
+									"name": {
+										"type": "string",
+										"description": "The company's name. Must be between 0 and 100 characters long."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the updated company."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/companies/delete": {
+			"post": {
+				"summary": "Delete company",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"companyID": {
+										"type": "string",
+										"description": "The identifier you used when creating the company."
+									}
+								},
+								"required": ["apiKey", "companyID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the company was successfully deleted.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/opportunities/list": {
+			"post": {
+				"summary": "List opportunties",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of opportunities you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of opportunities you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with an \"opportunities\" property that contains an array of opportunity objects. There's also a \"hasMore\" property that specifies whether this query returns more opportunities than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"opportunities": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Opportunity"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more opportunities than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/list": {
+			"post": {
+				"summary": "List posts",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch posts for."
+									},
+									"authorID": {
+										"type": "string",
+										"description": "If specified, will only fetch posts by the author with this id."
+									},
+									"companyID": {
+										"type": "string",
+										"description": "If specified, will only fetch posts created by users linked to the company with this custom identifier."
+									},
+									"tagIDs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "If specified, will only fetch posts tagged with at least one of the tags in the array."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of posts you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"search": {
+										"type": "string",
+										"description": "If specified, will only fetch posts that match your search query."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of posts you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									},
+									"sort": {
+										"type": "string",
+										"description": "The order in which the posts should be fetched. Options include: \"newest\", \"oldest\", \"relevance\", \"score\", \"statusChanged\", \"trending\". Defaults to \"newest\" if not specified. The \"relevance\" sort can only be specified if a search value has been specified."
+									},
+									"status": {
+										"type": "string",
+										"description": "A comma separated list of statuses. Only posts with these statuses will be fetched. Defaults to \"open,under review,planned,in progress\" if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"posts\" property that contains an array of post objects. There's also a \"hasMore\" property that specifies whether this query returns more posts than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"posts": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Post"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more posts than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/retrieve": {
+			"post": {
+				"summary": "Retrieve post",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The board that the post belongs to. Only required if fetching by urlName."
+									},
+									"id": {
+										"type": "string",
+										"description": "The post's unique identifier."
+									},
+									"urlName": {
+										"type": "string",
+										"description": "The post's unique urlName."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a post object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Post"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/create": {
+			"post": {
+				"summary": "Create post",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"authorID": {
+										"type": "string",
+										"description": "The unique identifier of the post's author."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The unique identifier of the post's board."
+									},
+									"byID": {
+										"type": "string",
+										"description": "The identifier of the admin who creates the post on behalf of the author. This will be visible in the post."
+									},
+									"categoryID": {
+										"type": "string",
+										"description": "The unique identifier of the post's category or subcategory."
+									},
+									"customFields": {
+										"type": "object",
+										"description": "Any custom fields associated with the post. Each field name (key) must be between 0 and 30 characters long. If field values are strings, they must be less than 200 characters long."
+									},
+									"details": {
+										"type": "string",
+										"description": "The post details."
+									},
+									"eta": {
+										"type": "string",
+										"description": "The estimated date of the post's completion. In the format of MM/YYYY, eg, 06/2022."
+									},
+									"etaPublic": {
+										"type": "boolean",
+										"description": "If the ETA should be made visible to all users."
+									},
+									"title": {
+										"type": "string",
+										"description": "The post title."
+									},
+									"ownerID": {
+										"type": "string",
+										"description": "The ID of the user responsible for the completion of the work described in the post."
+									},
+									"imageURLs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "An array of the URLs of post's images."
+									},
+									"createdAt": {
+										"type": "string",
+										"description": "If the post is being moved from another source, the date this post was originally created in ISO 8601 format."
+									}
+								},
+								"required": ["apiKey", "authorID", "boardID", "details", "title"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the created post."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/change_category": {
+			"post": {
+				"summary": "Change post category",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"categoryID": {
+										"type": "string",
+										"description": "The category's unique identifier. Setting it to \"null\" removes the category of the post."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The post's unique identifier."
+									}
+								},
+								"required": ["apiKey", "postID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns the updated post if the post's category was successfully changed.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Post"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/change_status": {
+			"post": {
+				"summary": "Change post status",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"changerID": {
+										"type": "string",
+										"description": "The identifier of the admin to record as having changed the post's status. This will be visible in the post's activity section."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The post's unique identifier."
+									},
+									"shouldNotifyVoters": {
+										"type": "boolean",
+										"description": "Whether or not to notify non-admin voters of the status change."
+									},
+									"status": {
+										"type": "string",
+										"description": "The status to change the post to. Options include: \"open\", \"under review\", \"planned\", \"in progress\", \"complete\", \"closed\", or any other status your team has set on the settings page."
+									},
+									"commentValue": {
+										"type": "string",
+										"description": "The comment attached to this status change. If the comment includes line breaks, use \" \" instead of directly inputting the line breaks."
+									},
+									"commentImageURLs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "An array of the URLs of the images associated with this status change."
+									}
+								},
+								"required": ["apiKey", "changerID", "postID", "shouldNotifyVoters", "status"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns the updated post if the post's status was successfully changed.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Post"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/add_tag": {
+			"post": {
+				"summary": "Add post tag",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The post's unique identifier."
+									},
+									"tagID": {
+										"type": "string",
+										"description": "The tag's unique identifier."
+									}
+								},
+								"required": ["apiKey", "postID", "tagID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns the updated post if the tag was successfully added.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Post"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/remove_tag": {
+			"post": {
+				"summary": "Remove post tag",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The post's unique identifier."
+									},
+									"tagID": {
+										"type": "string",
+										"description": "The tag's unique identifier."
+									}
+								},
+								"required": ["apiKey", "postID", "tagID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns the updated post if the tag was successfully remove.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Post"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/posts/update": {
+			"post": {
+				"summary": "Update post",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The unique identifier of the post."
+									},
+									"customFields": {
+										"type": "object",
+										"description": "Any custom fields associated with the post. Each field name (key) must be between 0 and 30 characters long. If field values are strings, they must be less than 200 characters long."
+									},
+									"details": {
+										"type": "string",
+										"description": "The post details."
+									},
+									"eta": {
+										"type": "string",
+										"description": "The estimated date of the post's completion. In the format of MM/YYYY, eg, 06/2022."
+									},
+									"etaPublic": {
+										"type": "boolean",
+										"description": "If the ETA should be made visible to all users."
+									},
+									"title": {
+										"type": "string",
+										"description": "The post title."
+									},
+									"imageURLs": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "An array of the URLs of post's images."
+									}
+								},
+								"required": ["apiKey", "postID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the post was updated successfully.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/status_changes/list": {
+			"post": {
+				"summary": "List status changes",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch status changes for."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of status changes you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of status changes you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"statusChanges\" property that contains an array of status change objects. There's also a \"hasMore\" property that specifies whether this query returns more status changes than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"statusChanges": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/StatusChange"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more status changes than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tags/list": {
+			"post": {
+				"summary": "List tags",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch tags for."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of tags you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of tags you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"tags\" property that contains an array of tag objects. There's also a \"hasMore\" property that specifies whether this query returns more tags than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"tags": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Tag"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more tags than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tags/retrieve": {
+			"post": {
+				"summary": "Retrieve tag",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The tag's unique identifier."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a tag object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Tag"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tags/create": {
+			"post": {
+				"summary": "Create tag",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The unique identifier of the board the tag should be created for."
+									},
+									"name": {
+										"type": "string",
+										"description": "The name of the tag. Must be between 1 and 30 characters long."
+									}
+								},
+								"required": ["apiKey", "boardID", "name"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns the tag object, if it was successfully created or already exists.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Tag"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/list": {
+			"post": {
+				"summary": "List users",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of entries you'd like to fetch. Defaults to 10 if not specified. Maximum value allowed: 100."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of entries you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a list of users.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/User"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/retrieve": {
+			"post": {
+				"summary": "Retrieve user",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"email": {
+										"type": "string",
+										"description": "The user's email."
+									},
+									"id": {
+										"type": "string",
+										"description": "The user's unique identifier from Canny."
+									},
+									"userID": {
+										"type": "string",
+										"description": "The user's unique identifier in your application."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a user object, if a valid identifier was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/User"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/create_or_update": {
+			"post": {
+				"summary": "Create or update user",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"avatarURL": {
+										"type": "string",
+										"description": "The URL pointing to the user's avatar image."
+									},
+									"companies": {
+										"type": "array",
+										"items": {
+											"$ref": "#/components/schemas/Company"
+										},
+										"description": "A list of companies the user is associated with."
+									},
+									"created": {
+										"type": "string",
+										"description": "The date the user was created in your system."
+									},
+									"customFields": {
+										"type": "object",
+										"description": "Any custom fields associated with the user. Each field name (key) must be between 0 and 30 characters long. If field values are strings, they must be less than 200 characters long."
+									},
+									"email": {
+										"type": "string",
+										"description": "The user's email."
+									},
+									"name": {
+										"type": "string",
+										"description": "The user's name. Must be between 1 and 50 characters."
+									},
+									"userID": {
+										"type": "string",
+										"description": "The user's unique identifier in your application."
+									}
+								},
+								"required": ["apiKey", "name", "userID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Upon success, returns an object with a single key: id.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The id of the created or updated user."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/delete": {
+			"post": {
+				"summary": "Delete user",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The unique identifier of the user."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the user was successfully deleted.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/remove_user_from_company": {
+			"post": {
+				"summary": "Remove user from a company",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"companyID": {
+										"type": "string",
+										"description": "The identifier of your company."
+									},
+									"userID": {
+										"type": "string",
+										"description": "The unique identifier of the user. This can be found through the Retrieve User endpoint."
+									}
+								},
+								"required": ["apiKey", "companyID", "userID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the user was removed. Otherwise an error describing the issue with your request.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/votes/list": {
+			"post": {
+				"summary": "List votes",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"boardID": {
+										"type": "string",
+										"description": "The id of the board you'd like to fetch votes for."
+									},
+									"companyID": {
+										"type": "string",
+										"description": "If specified, will only fetch posts created by users linked to the company with this custom identifier."
+									},
+									"limit": {
+										"type": "integer",
+										"description": "The number of votes you'd like to fetch. Defaults to 10 if not specified."
+									},
+									"postID": {
+										"type": "string",
+										"description": "Specify a postID to only fetch votes for a specific post."
+									},
+									"skip": {
+										"type": "integer",
+										"description": "The number of votes you'd like to skip before starting to fetch. Defaults to 0 if not specified."
+									},
+									"userID": {
+										"type": "string",
+										"description": "Specify a userID to only fetch votes for a specific user."
+									}
+								},
+								"required": ["apiKey"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "A dictionary with a \"votes\" property that contains an array of vote objects. There's also a \"hasMore\" property that specifies whether this query returns more votes than the limit.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"votes": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Vote"
+											}
+										},
+										"hasMore": {
+											"type": "boolean",
+											"description": "Specifies whether this query returns more votes than the limit."
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/votes/retrieve": {
+			"post": {
+				"summary": "Retrieve vote",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"id": {
+										"type": "string",
+										"description": "The vote's unique identifier."
+									}
+								},
+								"required": ["apiKey", "id"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns a vote object, if a valid id was supplied.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Vote"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/votes/create": {
+			"post": {
+				"summary": "Create vote",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"byID": {
+										"type": "string",
+										"description": "The unique identifier of the user who cast the vote on behalf of the voter. Must be a Canny administrator."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The unique identifier of the post to vote on."
+									},
+									"voterID": {
+										"type": "string",
+										"description": "The unique identifier of the voter."
+									}
+								},
+								"required": ["apiKey", "postID", "voterID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the vote was successfully created or already exists.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/votes/delete": {
+			"post": {
+				"summary": "Delete vote",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"postID": {
+										"type": "string",
+										"description": "The unique identifier of the post to vote on."
+									},
+									"voterID": {
+										"type": "string",
+										"description": "The unique identifier of the voter."
+									}
+								},
+								"required": ["apiKey", "postID", "voterID"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the vote was successfully deleted, or already doesn't exist.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/feedback/enqueue": {
+			"post": {
+				"summary": "Enqueue feedback",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"apiKey": {
+										"type": "string",
+										"description": "Your secret API key."
+									},
+									"payload": {
+										"type": "object",
+										"properties": {
+											"id": {
+												"type": "string",
+												"description": "The unique identifier of the conversation or chat you are enqueuing."
+											},
+											"authorID": {
+												"type": "string",
+												"description": "The author's unique identifier in your application. If the user does not exist, you can create them with the \"Create or Update User\" endpoint first."
+											},
+											"text": {
+												"type": "string",
+												"description": "The text you want to extract features from e.g. a call transcript."
+											},
+											"sourceURL": {
+												"type": "string",
+												"description": "An optional URL linking to the conversation or chat you are enqueuing."
+											},
+											"sourceType": {
+												"type": "string",
+												"description": "An optional indicator of the source e.g. X (Twitter), Zoom, Instagram, ..."
+											}
+										},
+										"required": ["id", "authorID", "text"]
+									},
+									"type": {
+										"type": "string",
+										"description": "The type of content being enqueued. Currently only supports \"call\" and \"conversation\". Choose \"call\" if the transcript is from a call and \"conversation\" if it is from a chat conversation."
+									}
+								},
+								"required": ["apiKey", "payload", "type"]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Returns \"success\" if the payload was enqueued. Otherwise an error describing the issue with your request.",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "success"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"Board": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the board."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the board was created, in ISO 8601 format."
+					},
+					"isPrivate": {
+						"type": "boolean",
+						"description": "Whether or not the board is set as private in the administrative settings."
+					},
+					"name": {
+						"type": "string",
+						"description": "The board's name."
+					},
+					"postCount": {
+						"type": "integer",
+						"description": "The number of non-deleted posts associated with the board. This number includes posts that are marked as closed or complete."
+					},
+					"privateComments": {
+						"type": "boolean",
+						"description": "Whether or not comments left on posts can be viewed by other end-users."
+					},
+					"url": {
+						"type": "string",
+						"description": "The URL to the board's page."
+					}
+				}
+			},
+			"Category": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the category."
+					},
+					"board": {
+						"$ref": "#/components/schemas/Board",
+						"description": "The board this category is associated with."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the category was created, in ISO 8601 format."
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the category."
+					},
+					"parentID": {
+						"type": "string",
+						"description": "The id of the parent category. If this category is not a sub category, this field will be null."
+					},
+					"postCount": {
+						"type": "integer",
+						"description": "The number of posts that have been assigned this category."
+					},
+					"url": {
+						"type": "string",
+						"description": "The URL to the board, filtered to just posts that have been assigned this category."
+					}
+				}
+			},
+			"Entry": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the entry."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the entry was first created, in ISO 8601 format."
+					},
+					"labels": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "The list of labels that the entry is associated with."
+					},
+					"lastSaved": {
+						"type": "string",
+						"description": "Time at which the entry was last updated, in ISO 8601 format."
+					},
+					"markdownDetails": {
+						"type": "string",
+						"description": "The markdown contents of the entry."
+					},
+					"plaintextDetails": {
+						"type": "string",
+						"description": "The plaintext contents of the entry, with images, videos, and links stripped."
+					},
+					"posts": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Post"
+						},
+						"description": "The list of posts this entry is linked to."
+					},
+					"publishedAt": {
+						"type": "string",
+						"description": "Time at which the entry was published, if it has been published."
+					},
+					"scheduledFor": {
+						"type": "string",
+						"description": "Time at which the entry is schedule to be published, if it is scheduled."
+					},
+					"reactions": {
+						"type": "object",
+						"description": "The number of reactions an entry has received."
+					},
+					"status": {
+						"type": "string",
+						"description": "The status of the entry, describing whether it has been published. Will be set to draft, scheduled, or published."
+					},
+					"title": {
+						"type": "string",
+						"description": "The title of the entry."
+					},
+					"types": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "The list of types associated with the entry. Can include new, improved, or fixed."
+					},
+					"url": {
+						"type": "string",
+						"description": "The public URL to the entry page on Canny."
+					}
+				}
+			},
+			"Comment": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the comment."
+					},
+					"author": {
+						"$ref": "#/components/schemas/User",
+						"description": "The user who created the comment."
+					},
+					"board": {
+						"$ref": "#/components/schemas/Board",
+						"description": "The board the comment is associated with."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the comment was created, in ISO 8601 format."
+					},
+					"imageURLs": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "An array of the URLs of the images associated with this comment."
+					},
+					"internal": {
+						"type": "boolean",
+						"description": "Whether or not the comment is an internal comment."
+					},
+					"likeCount": {
+						"type": "integer",
+						"description": "The number of likes a comment has received."
+					},
+					"mentions": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/User"
+						},
+						"description": "An array of user objects who are mentioned in the comment."
+					},
+					"parentID": {
+						"type": "string",
+						"description": "The id of the comment that this comment is a reply to. If this comment is not a reply, this field will be null."
+					},
+					"post": {
+						"$ref": "#/components/schemas/Post",
+						"description": "The post the comment is associated with."
+					},
+					"private": {
+						"type": "boolean",
+						"description": "If the comment is private from other users, only applies if the \"Allow end-users to see each others' comments\" setting is disabled."
+					},
+					"reactions": {
+						"type": "object",
+						"description": "The number of reactions a comment has received."
+					},
+					"value": {
+						"type": "string",
+						"description": "The text value of this comment."
+					}
+				}
+			},
+			"Company": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the company."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the company was created, in ISO 8601 format."
+					},
+					"customFields": {
+						"type": "object",
+						"description": "Any custom fields associated with the company."
+					},
+					"domain": {
+						"type": "string",
+						"description": "The company's domain."
+					},
+					"memberCount": {
+						"type": "integer",
+						"description": "The number of users associated with the company."
+					},
+					"monthlySpend": {
+						"type": "number",
+						"description": "The company's monthly spend."
+					},
+					"name": {
+						"type": "string",
+						"description": "The company's name."
+					}
+				}
+			},
+			"Opportunity": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the opportunity."
+					},
+					"closed": {
+						"type": "boolean",
+						"description": "Whether the opportunity is closed."
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the opportunity."
+					},
+					"postIDs": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "The list of post ids this opportunity is linked to."
+					},
+					"salesforceOpportunityID": {
+						"type": "string",
+						"description": "The unique identifier for the opportunity in Salesforce."
+					},
+					"value": {
+						"type": "number",
+						"description": "The value of the opportunity."
+					},
+					"won": {
+						"type": "boolean",
+						"description": "Whether the opportunity has been won."
+					}
+				}
+			},
+			"Post": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the post."
+					},
+					"author": {
+						"$ref": "#/components/schemas/User",
+						"description": "The user who authored the post. If the author's account has been deleted, this field will be null."
+					},
+					"board": {
+						"$ref": "#/components/schemas/Board",
+						"description": "The board this post is associated with."
+					},
+					"by": {
+						"$ref": "#/components/schemas/User",
+						"description": "The user who created the post on behalf of the author."
+					},
+					"category": {
+						"$ref": "#/components/schemas/Category",
+						"description": "The category this post is assigned to, if any."
+					},
+					"commentCount": {
+						"type": "integer",
+						"description": "The number of non-deleted comments associated with this post."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the post was created, in ISO 8601 format."
+					},
+					"clickup": {
+						"type": "object",
+						"properties": {
+							"linkedTasks": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"properties": {
+										"id": {
+											"type": "string",
+											"description": "The unique identifier of the Clickup task."
+										},
+										"linkID": {
+											"type": "string",
+											"description": "The unique identifier of the link between the post and the Clickup task."
+										},
+										"name": {
+											"type": "string",
+											"description": "The name of the Clickup task."
+										},
+										"postID": {
+											"type": "string",
+											"description": "The unique identifier of the post."
+										},
+										"status": {
+											"type": "string",
+											"description": "The status of the Clickup task."
+										},
+										"url": {
+											"type": "string",
+											"description": "The URL of the Clickup task."
+										}
+									}
+								}
+							},
+							"description": "A list of Clickup tasks that are linked with this post"
+						},
+						"details": {
+							"type": "string",
+							"description": "Any details the user included in the post. This is the longer text field (where the shorter one is \"title\")."
+						},
+						"eta": {
+							"type": "string",
+							"description": "The month and year the post is estimated to be delivered."
+						},
+						"imageURLs": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"description": "An array of the URLs of the images associated with this post"
+						},
+						"jira": {
+							"type": "object",
+							"properties": {
+								"linkedIssues": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"id": {
+												"type": "string",
+												"description": "The unique identifier of the Jira issue."
+											},
+											"key": {
+												"type": "string",
+												"description": "The key of the Jira issue."
+											},
+											"url": {
+												"type": "string",
+												"description": "The URL of the Jira issue."
+											}
+										}
+									}
+								}
+							},
+							"description": "A list of Jira issues that are linked with this post"
+						},
+						"owner": {
+							"$ref": "#/components/schemas/User",
+							"description": "The owner of the post"
+						},
+						"score": {
+							"type": "integer",
+							"description": "The number of votes that have been cast on this post."
+						},
+						"status": {
+							"type": "string",
+							"description": "The post's status: \"open\", \"under review\", \"planned\", \"in progress\", \"complete\", \"closed\", or any other status your team has set on the settings page."
+						},
+						"statusChangedAt": {
+							"type": "string",
+							"description": "Time at which the post's status was last changed"
+						},
+						"tags": {
+							"type": "array",
+							"items": {
+								"$ref": "#/components/schemas/Tag"
+							},
+							"description": "The list of tag objects associated with this post."
+						},
+						"title": {
+							"type": "string",
+							"description": "A brief title describing the post. This is the shorter text input (where the longer is details)."
+						},
+						"url": {
+							"type": "string",
+							"description": "The URL to the post's page."
+						}
+					}
+				},
+				"StatusChange": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"description": "A unique identifier for the status change."
+						},
+						"changeComment": {
+							"$ref": "#/components/schemas/Comment",
+							"description": "The comment attached to this status change. Only imageURLs and value fields are included."
+						},
+						"changer": {
+							"$ref": "#/components/schemas/User",
+							"description": "The user who changed the status."
+						},
+						"created": {
+							"type": "string",
+							"description": "Time at which the status was changed, in ISO 8601 format."
+						},
+						"post": {
+							"$ref": "#/components/schemas/Post",
+							"description": "The post that had its status changed."
+						},
+						"status": {
+							"type": "string",
+							"description": "The status the post was changed to."
+						}
+					}
+				},
+				"Tag": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"description": "A unique identifier for the tag."
+						},
+						"board": {
+							"$ref": "#/components/schemas/Board",
+							"description": "The board this tag is associated with."
+						},
+						"created": {
+							"type": "string",
+							"description": "Time at which the tag was created, in ISO 8601 format."
+						},
+						"name": {
+							"type": "string",
+							"description": "The name of the tag."
+						},
+						"postCount": {
+							"type": "integer",
+							"description": "The number of posts that have been assigned this tag."
+						},
+						"url": {
+							"type": "string",
+							"description": "The URL to the board, filtered to just posts that have been assigned this tag."
+						}
+					}
+				},
+				"User": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"description": "A unique identifier for the user."
+						},
+						"avatarURL": {
+							"type": "string",
+							"description": "Link to the user's avatar image."
+						},
+						"companies": {
+							"type": "array",
+							"items": {
+								"$ref": "#/components/schemas/Company"
+							},
+							"description": "A list of companies the user is associated with."
+						},
+						"created": {
+							"type": "string",
+							"description": "Time at which the user was created, in ISO 8601 format."
+						},
+						"customFields": {
+							"type": "object",
+							"description": "Any custom fields associated with the user."
+						},
+						"email": {
+							"type": "string",
+							"description": "The user's email. This field can be null, for example when you create a new user by voting on behalf of them."
+						},
+						"isAdmin": {
+							"type": "boolean",
+							"description": "Whether or not the user is a Canny admin."
+						},
+						"lastActivity": {
+							"type": "string",
+							"description": "Time at which the user interacted with your company for the last time, in ISO 8601 format."
+						},
+						"name": {
+							"type": "string",
+							"description": "The user's name."
+						},
+						"url": {
+							"type": "string",
+							"description": "The URL of the user's profile."
+						},
+						"userID": {
+							"type": "string",
+							"description": "The user's unique identifier in your application. This field can be null. We only have this data if the user was authenticated via single sign-on, or if it was added via API."
+						}
+					}
+				},
+				"Vote": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"description": "A unique identifier for the vote."
+						},
+						"board": {
+							"$ref": "#/components/schemas/Board",
+							"description": "The board this vote is associated with."
+						},
+						"by": {
+							"$ref": "#/components/schemas/User",
+							"description": "The admin who cast this vote on behalf of a user. If the user voted themselves, this field will be null."
+						},
+						"created": {
+							"type": "string",
+							"description": "Time at which the vote was first cast, in ISO 8601 format."
+						},
+						"post": {
+							"$ref": "#/components/schemas/Post",
+							"description": "The post this vote is associated with."
+						},
+						"voter": {
+							"$ref": "#/components/schemas/User",
+							"description": "The user this post is associated with."
+						}
+					}
+				}
+			}
+		}
+    }
+}

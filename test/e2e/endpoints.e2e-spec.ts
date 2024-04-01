@@ -1,15 +1,16 @@
+import fs from 'fs';
 import * as pactum from 'pactum';
+import { CreateEndpointAuthDto } from '../../src/endpoint-auths/dto/create-endpoint-auth.dto';
 import { CreateEndpointDto } from '../../src/endpoints/dto/create-endpoint.dto';
 import {
   afterAllFn,
   afterEachFn,
   beforeAllFn,
   beforeEachFnTenanted,
-  getConfigValue,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
+import { addBotletActions } from './botlet-api-actions.e2e-spec';
 import { createBotlet } from './botlets.e2e-spec';
-import { CreateEndpointAuthDto } from '../../src/endpoint-auths/dto/create-endpoint-auth.dto';
 
 /**
  * - create a botlet,
@@ -26,61 +27,55 @@ describe('Botlet Endpoint (e2e)', () => {
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it(`(POST): add a new canny.io rest-api sender endpoint`, async () => {
+  it(`(POST): add a new canny.io rest-api server endpoint`, async () => {
     // create the botlet
     const {
       json: { data: botlet },
     } = await createBotlet();
 
-    // add api sender endpoint
+    // add api server endpoint
     const {
-      json: { data: sender },
+      json: { data: sEndpoint },
     } = await createEndpoint('restAPI', {
       botletUuid: botlet.uuid,
-      receiver: false,
-      entry: { url: 'https://canny.io/api/v1' },
-      authType: 'APP',
-      authConfig: {
-        tokenName: 'apiKey',
-        tokenPosition: 'body',
-        credentialsType: { credentialsType: 'constant' },
-      },
-      reqParamTemplate: [], // FIXME openAPI
+      type: 'SERVER',
+      host: { url: 'https://canny.io/api/v1' },
     });
 
-    // add sender endpoint auth
+    const jsonData = fs.readFileSync('./data/canny-apis.json', 'utf8');
     const {
-      json: { data: senderAuth },
-    } = await addEndpointAuth({
-      endpointUuid: sender.uuid,
-      params: { apiKey: getConfigValue('TEST_CANNY_IO_API_KEY') },
+      json: { data: actionCount },
+    } = await addBotletActions({
+      endpointUuid: sEndpoint.uuid,
+      text: jsonData,
+      format: 'openAPI',
     });
 
-    // add api receiver endpoint, as webhook in canny.io
-    const {
-      json: { data: receiver },
-    } = await createEndpoint('restAPI', {
-      botletUuid: botlet.uuid,
-      receiver: true,
-      entry: { path: '/canny/webhook' },
-      authType: 'APP',
-      authConfig: [],
-      reqParamTemplate: [],
-    });
+    // request for task by botlet api
 
-    // send task to the endpoint,
+    // add event endpoint
+    // const {
+    //   json: { data: receiver },
+    // } = await createEndpoint('restAPI', {
+    //   botletUuid: botlet.uuid,
+    //   receiver: true,
+    //   entry: { path: '/canny/webhook' },
+    //   authType: 'APP',
+    //   authConfig: [],
+    //   reqParamTemplate: [],
+    // });
 
-    console.log({ sender, senderAuth, receiver });
+    console.log({ server: sEndpoint, actionCount });
   });
 });
 
 export const createEndpoint = (
-  endpointKey: string,
+  adaptorKey: string,
   endpointDto: CreateEndpointDto,
 ) => {
   return pactum
     .spec()
-    .post(`/api/endpoints/${endpointKey}/botlets`)
+    .post(`/api/endpoints/${adaptorKey}/botlets`)
     .withBearerToken(TestConstant.authToken)
     .withBody(endpointDto)
     .expectStatus(201);
