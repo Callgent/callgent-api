@@ -135,7 +135,7 @@ export class BotletsController {
       ],
     },
   })
-  @Post('duplicate/:uuid')
+  @Post(':uuid/duplicate')
   async duplicateOverTenancy(
     @Param('uuid') uuid: string,
     @Req() req,

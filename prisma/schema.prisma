@@ -50,6 +50,8 @@ model Tenant {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
+
+  @@index([uuid])
 }
 
 model User {
@@ -75,6 +77,7 @@ model User {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  @@index([uuid])
   @@index([tenantId])
 }
 
@@ -148,11 +151,7 @@ model Botlet {
   /// @DtoEntityHidden
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  name         String  @db.VarChar(255)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  /// @description default receiver type, if caller not specified, or orderly if this is empty
-  receiverType String? @db.VarChar(36)
+  name       String  @db.VarChar(255)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -164,7 +163,81 @@ model Botlet {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  @@index([uuid])
   @@index([tenantId])
+}
+
+model BotletApiSchema {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  name    String @db.VarChar(255)
+  /// @description endpoint uuid or command or code
+  content Json   @db.Json
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  botletUuid String @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([botletUuid, name])
+  @@index([uuid])
+  @@index([tenantId])
+  @@index([botletUuid])
+}
+
+model BotletApiAction {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  name    String @db.VarChar(255)
+  /// @description endpoint uuid or command or code
+  content Json   @db.Json
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  botletUuid   String  @db.VarChar(36)
+  /// @description actual server endpoint, when action type is `ENDPOINT`
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  endpointUuid String? @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([botletUuid, name])
+  @@index([uuid])
+  @@index([tenantId])
+  @@index([botletUuid])
 }
 
 model Task {
@@ -186,19 +259,19 @@ model Task {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @example api/email/slack/sms/...
-  callerType     String  @db.VarChar(36) /// @description caller type
-  caller         String? @db.VarChar(255) /// @description empty means anonymous
+  callerType   String  @db.VarChar(36) /// @description caller type
+  caller       String? @db.VarChar(255) /// @description empty means anonymous
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  /// @description receiver type, caller may specify this on task creation
-  receiverType   String? @db.VarChar(36)
+  /// @description client type, caller may specify this on task creation
+  clientType   String? @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  receiver       String? @db.VarChar(255)
+  client       String? @db.VarChar(255)
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  receiverActual String? @db.VarChar(255)
-  callback       String? @db.VarChar(1023) /// @description empty means needn't response
+  clientActual String? @db.VarChar(255)
+  callback     String? @db.VarChar(1023) /// @description empty means needn't response
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
@@ -214,67 +287,7 @@ model Task {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([tenantId])
-  @@index([botletUuid])
-}
-
-/// @description supported receiver types, tenant irrelevant.
-model Receiver {
-  /// @DtoEntityHidden
-  id   Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid String @unique @db.VarChar(36)
-
-  receiverType String?  @db.VarChar(36) /// @description receiver type
-  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-}
-
-/// @DtoIgnoreModel
-/// @description A botlet may have multiple receivers orderly.
-model BotletReceiver {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiverType String?  @db.VarChar(36) /// @description receiver type
-  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiver     String?  @db.VarChar(255)
-  config       Json? /// @description invocation config, e.g. auth
-  order        Int      @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  botletUuid String @db.VarChar(36)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
+  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
 }
@@ -294,6 +307,12 @@ model AuthToken {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
+enum EndpointType {
+  CLIENT
+  SERVER
+  EVENT
+}
+
 /// @description a botlet may have multiple endpoints, including receiver & sender
 model Endpoint {
   /// @DtoEntityHidden
@@ -308,21 +327,16 @@ model Endpoint {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  receiver Boolean /// @description task sender or receiver
+  type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  typeKey  String  @db.VarChar(127) /// @description endpoint type key
-  priority Int     @default(0) /// @description priority in the botlet
+  adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
+  priority   Int          @default(0) /// @description priority in the botlet
 
-  entry            Json             @db.Json /// @description entry address & configs
-  authType         EndpointAuthType /// @description entry auth type: NONE, APP: all task same auth, USER: auth each task owner/assignee
-  /// @description auth guard ts function (req, auth: EndpointAuth) => boolean, TODO: import?
-  authConfig       Json?            @db.Json
-  /// @DtoCastType(EndpointParam, ../endpoint.interface)
-  reqParamTemplate Json[]           @db.Json /// @description sending/receiving parameters template
-  initParams       Json?            @db.Json /// @description initializing parameters
-  content          Json?            @db.Json /// @description generated content/code by init method
+  host       Json             @db.Json /// @description host address & configs
+  initParams Json?            @db.Json /// @description initializing parameters
+  content    Json?            @db.Json /// @description generated content/code by init method
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -339,6 +353,7 @@ model Endpoint {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
 }
@@ -349,7 +364,7 @@ enum EndpointAuthType {
   USER /// @description auth each task owner/assignee
 }
 
-/// @description endpoint user auth params
+/// @description endpoint app or user auth credentials
 model EndpointAuth {
   /// @DtoEntityHidden
   id       Int @id @default(autoincrement())
@@ -361,7 +376,7 @@ model EndpointAuth {
   endpointUuid String  @db.VarChar(36) /// @description endpoint uuid.
   userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
 
-  params Json @db.Json /// @description auth params
+  credentials Json @db.Json /// @description auth credentials
 
   /// @DtoReadOnly
   /// @DtoEntityHidden

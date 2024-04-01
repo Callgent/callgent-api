@@ -4,8 +4,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
+import { BotletApiActionsModule } from './botlet-api-actions/botlet-api-actions.module';
 import { BotletsModule } from './botlets/botlets.module';
-import { CallerModule } from './caller/caller.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
 import { AuthModule } from './infra/auth/auth.module';
 import { LoggingModule } from './infra/logging/logging.module';
@@ -27,10 +27,10 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     BotletsModule,
-    TasksModule,
-    CallerModule,
+    // TasksModule,
     AuthTokensModule,
     EndpointsModule,
+    BotletApiActionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

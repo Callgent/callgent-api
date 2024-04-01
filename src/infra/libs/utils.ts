@@ -16,3 +16,6 @@ export class Utils {
     return bcrypt.compare(pwd, hash);
   }
 }
+
+/** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

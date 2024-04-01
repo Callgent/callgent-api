@@ -1,4 +1,4 @@
-import { BotletReceiver, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export class TaskCreatedEvent {
   public static readonly eventName = 'task.created';
@@ -8,6 +8,6 @@ export class TaskCreatedEvent {
    */
   constructor(
     public readonly task: Prisma.TaskUncheckedCreateInput,
-    public readonly receiver?: BotletReceiver,
+    // public readonly receiver?: BotletReceiver,
   ) {}
 }

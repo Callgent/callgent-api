@@ -210,7 +210,7 @@ function registerApi(
     });
   }
   logger.log(
-    `API Documentation: http://localhost:${process.env.PORT || 3000}/docs`,
+    `API Documentation: http://localhost:${process.env.PORT || 3000}/docs/api`,
   );
 
   return { defaultApiVersion, devDocVersion };
