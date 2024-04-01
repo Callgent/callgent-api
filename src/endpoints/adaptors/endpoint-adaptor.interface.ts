@@ -1,13 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { EndpointDto } from './dto/endpoint.dto';
+import { EndpointDto } from '../dto/endpoint.dto';
 
-export interface EndpointInterface {
+export interface EndpointAdaptor {
   /** Endpoint config. */
   getConfig(): EndpointConfig;
 
   /** init the endpoint. result in generated content */
-  initReceiver(initParams: object, endpoint: EndpointDto): Promise<string>;
-  initSender(initParams: object, endpoint: EndpointDto): Promise<string>;
+  initClient(initParams: object, endpoint: EndpointDto): Promise<string>;
+  initServer(initParams: object, endpoint: EndpointDto): Promise<string>;
+
+  /** parse api spec from text */
+  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec>;
+
+  /** please declare hints in api-doc */
+  readData(name: string, hints?: { [key: string]: any }): Promise<any>;
+}
+
+export class ApiSpec {
+  actions: { name: string; content: object }[];
+  schemas: { name: string; content: object }[];
 }
 
 export class EndpointParam {
@@ -65,10 +76,10 @@ export class EndpointParam {
   // hidden?: boolean | (form: object) => boolean;
 }
 
-class EndpointEntry {
+class EndpointHost {
   @ApiProperty({
-    description: 'entry address',
-    example: 'task+1234567890@botlet.io',
+    description: 'host address',
+    example: 'task+sdfhjw4349fe@c.botlet.io',
   })
   address: EndpointParam;
 
@@ -84,9 +95,9 @@ class EndpointEntry {
 
 class Endpoint {
   @ApiProperty({
-    description: 'Optional endpoint entry, overrides the entry in endpoint',
+    description: 'Optional endpoint host config',
   })
-  entry?: EndpointEntry;
+  host?: EndpointHost;
   @ApiProperty({ description: 'Endpoint requesting params template' })
   params?: EndpointParam[];
   @ApiProperty({ description: 'Whether allow additional params' })
@@ -96,12 +107,12 @@ class Endpoint {
 }
 
 export class EndpointConfig {
-  @ApiProperty({ description: 'Endpoint entry' })
-  entry?: EndpointEntry;
+  @ApiProperty({ description: 'Endpoint host' })
+  host?: EndpointHost;
 
-  @ApiProperty({ description: 'The task receiver' })
-  receiver?: Endpoint;
+  @ApiProperty({ description: 'The task client endpoint' })
+  client?: Endpoint;
 
-  @ApiProperty({ description: 'The task sender' })
-  sender?: Endpoint;
+  @ApiProperty({ description: 'The task server endpoint' })
+  server?: Endpoint;
 }

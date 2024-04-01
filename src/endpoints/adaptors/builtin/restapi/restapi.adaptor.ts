@@ -1,13 +1,17 @@
 import { EndpointDto } from '../../../dto/endpoint.dto';
-import { EndpointPluginName } from '../../endpoint-plugin.decorator';
-import { EndpointConfig, EndpointInterface } from '../../../endpoint.interface';
+import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import {
+  ApiSpec,
+  EndpointAdaptor,
+  EndpointConfig,
+} from '../../endpoint-adaptor.interface';
 
-@EndpointPluginName('restAPI', 'both')
-export class RestAPIEndpoint implements EndpointInterface {
+@EndpointAdaptorName('restAPI', 'both')
+export class RestAPIAdaptor implements EndpointAdaptor {
   getConfig(): EndpointConfig {
     return {
-      sender: {
-        entry: {
+      server: {
+        host: {
           address: {
             type: 'url',
             name: 'API root URL',
@@ -58,8 +62,8 @@ export class RestAPIEndpoint implements EndpointInterface {
           },
         ],
       },
-      receiver: {
-        entry: {
+      client: {
+        host: {
           address: {
             type: 'domain',
             name: 'Custom Domain',
@@ -83,18 +87,25 @@ export class RestAPIEndpoint implements EndpointInterface {
   }
 
   /** generate a web page endpoint */
-  initReceiver(params: object, endpoint: EndpointDto): Promise<string> {
+  initClient(params: object, endpoint: EndpointDto): Promise<string> {
     throw new Error('Method not implemented.');
   }
 
   /** generate operation script based on the Chrome plugin */
-  initSender(initParams: object, endpoint: EndpointDto): Promise<string> {
+  initServer(initParams: object, endpoint: EndpointDto): Promise<string> {
     // - scrape the web page
-    const url = endpoint.entry['Page URL'];
+    const url = endpoint.host['Page URL'];
     // - script to fill params into the page
-    const reqTemplate = endpoint.reqParamTemplate;
+    // const reqTemplate = endpoint.reqParamTemplate;
     // - script to operate the page
     // auth handler
+    throw new Error('Method not implemented.');
+  }
+
+  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {
+    throw new Error('Method not implemented.');
+  }
+  readData(name: string, hints?: { [key: string]: any }): Promise<any> {
     throw new Error('Method not implemented.');
   }
 }
