@@ -43,7 +43,7 @@ export class BotletsService {
         }),
       this.defSelect,
     );
-    this.eventEmitter.emit(
+    await this.eventEmitter.emitAsync(
       BotletCreatedEvent.eventName,
       new BotletCreatedEvent(ret),
     );
@@ -129,7 +129,61 @@ export class BotletsService {
     if (!dup)
       throw new NotFoundException('botlet to duplicate not found: ' + dupUuid);
 
-    await this.tenancyService.bypassTenancy(prisma, true);
+    await this.tenancyService.bypassTenancy(prisma, false);
     const botlet = await this.create(dto, { id: null });
+  }
+
+  /**
+   * Cross tenancy execution when client endpoint is provided.
+   * [endpoint://]botlet.please('act', with_args)
+   * @param act API action name
+   * @param endpoint client endpoint to call API. unnecessary in internal calls
+   */
+  @Transactional()
+  async please(
+    act: string,
+    args: any[],
+    endpoint: { botletUuid: string; uuid?: string; adaptorKey?: string },
+  ) {
+    // invoke botlet action api, through endpoint
+    const prisma = this.txHost.tx as PrismaClient;
+    const withEndpoint = endpoint?.uuid || endpoint?.adaptorKey;
+
+    // load targets
+    if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
+    const [botlet, actions, epClient] = await Promise.all([
+      prisma.botlet.findUnique({ where: { uuid: endpoint.botletUuid } }),
+      prisma.botletApiAction.findMany({
+        where: { name: act, botletUuid: endpoint.botletUuid },
+      }),
+      withEndpoint &&
+        prisma.endpoint.findFirst({ where: { ...endpoint, type: 'CLIENT' } }),
+    ]);
+
+    // check targets
+    if (!botlet)
+      throw new NotFoundException('botlet not found: ' + endpoint.botletUuid);
+    if (actions.length === 0)
+      throw new NotFoundException(
+        `botlet=${endpoint.botletUuid} API action not found: ${act}`,
+      );
+    if (withEndpoint) {
+      if (!epClient)
+        throw new NotFoundException(
+          `Client endpoint not found for botlet=${endpoint.botletUuid}: ${
+            endpoint.uuid || endpoint.adaptorKey
+          }`,
+        );
+      this.tenancyService.setTenantId(botlet.tenantId);
+      this.tenancyService.bypassTenancy(prisma, false);
+    }
+
+    let action;
+    if (actions.length > 1) {
+      // FIXME: match action by args
+      action = actions[0];
+    } else action = actions[0];
+
+    // pre-meta, pre-routing, pre-mapping
   }
 }

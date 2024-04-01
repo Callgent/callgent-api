@@ -1,19 +1,21 @@
 import { Module } from '@nestjs/common';
-import { RestAPIEndpoint } from './builtin/restapi/restapi.endpoint';
-import { WebpageEndpoint } from './builtin/web/webpage.endpoint';
+import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
+import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
+import { BotletCreatedListener } from './listeners/botlet-created.listener';
 
 @Module({
   providers: [
     EndpointsService,
+    BotletCreatedListener,
     {
       provide: 'restAPI-EndpointService',
-      useClass: RestAPIEndpoint,
+      useClass: RestAPIAdaptor,
     },
     {
       provide: 'webpage-EndpointService',
-      useClass: WebpageEndpoint,
+      useClass: WebpageAdaptor,
     },
   ],
   controllers: [EndpointsController],

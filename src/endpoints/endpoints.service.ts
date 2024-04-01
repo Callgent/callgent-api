@@ -8,13 +8,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { EndpointDto } from './dto/endpoint.dto';
+import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
+import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
-import { IS_BOTLET_ENDPOINT_SERVICE } from './endpoint-service.decorator';
-import { EndpointInterface } from './endpoint.interface';
 
 @Injectable()
 export class EndpointsService {
@@ -22,6 +21,7 @@ export class EndpointsService {
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    // private readonly authTokensService: AuthTokensService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     id: false,
@@ -39,7 +39,7 @@ export class EndpointsService {
       for (const [serviceKey, provider] of nestModule.providers) {
         if (!provider.metatype) continue;
         const name = Reflect.getMetadata(
-          IS_BOTLET_ENDPOINT_SERVICE,
+          IS_BOTLET_ENDPOINT_ADAPTOR,
           provider.metatype,
         );
         if (name?.indexOf(':') > 0) {
@@ -77,29 +77,41 @@ export class EndpointsService {
     return prisma.endpoint.findUnique({ where: { uuid } });
   }
 
+  findOneAuth(uuid: string, userKey: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpointAuth.findUnique({
+      where: {
+        endpointUuid_userKey: { endpointUuid: uuid, userKey: userKey },
+      },
+    });
+  }
+
   /**
    * @param receiver undefined: both, false: sender, true: receiver
    */
-  getService(endpointKey: string, receiver?: boolean): EndpointInterface {
-    const list = receiver ? this.receiversList : this.sendersList;
-    if (endpointKey in list)
-      return this.moduleRef.get(list[endpointKey], { strict: true });
+  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
+    const list =
+      endpointType == 'SERVER' ? this.sendersList : this.receiversList;
+    if (adaptorKey in list)
+      return this.moduleRef.get(list[adaptorKey], { strict: true });
 
-    if (receiver === undefined && endpointKey in this.receiversList)
-      return this.moduleRef.get(this.receiversList[endpointKey], {
+    if (endpointType === undefined && adaptorKey in this.sendersList)
+      return this.moduleRef.get(this.sendersList[adaptorKey], {
         strict: true,
       });
   }
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'uuid' | 'reqParamTemplate'>,
+    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'uuid'>,
     select?: Prisma.EndpointSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const service = this.getService(dto.typeKey, dto.receiver);
+    const service = this.getAdaptor(dto.adaptorKey, dto.type);
     if (!service)
-      throw new BadRequestException('Endpoint type not found: ' + dto.typeKey);
+      throw new BadRequestException(
+        'Invalid endpoint adaptor key=' + dto.adaptorKey,
+      );
 
     const uuid = Utils.uuid();
     return selectHelper(
@@ -118,38 +130,39 @@ export class EndpointsService {
     throw new Error('Method not implemented.');
   }
 
-  @Transactional()
-  upsertEndpointAuth(
-    dto: Prisma.EndpointAuthUncheckedCreateInput,
-    endpoint: EndpointDto,
-  ) {
-    if (endpoint.authType == 'NONE')
-      throw new BadRequestException("auth type `NONE` needn't be set");
-    else if (endpoint.authType == 'USER') {
-      if (!dto.userKey)
-        throw new BadRequestException(
-          '`userKey` is required for auth type `USER`',
-        );
-    } else if (endpoint.authType == 'APP') dto.userKey = '';
-    // else
-    //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
-    dto.endpointUuid = endpoint.uuid;
+  // @Transactional()
+  // upsertEndpointAuth(
+  //   dto: Prisma.EndpointAuthUncheckedCreateInput,
+  //   endpoint: EndpointDto,
+  // ) {
+  //   if (!endpoint) throw new BadRequestException('endpoint not found');
+  //   if (endpoint.authType == 'NONE')
+  //     throw new BadRequestException("auth type `NONE` needn't be set");
+  //   else if (endpoint.authType == 'USER') {
+  //     if (!dto.userKey)
+  //       throw new BadRequestException(
+  //         '`userKey` is required for auth type `USER`',
+  //       );
+  //   } else if (endpoint.authType == 'APP') dto.userKey = '';
+  //   // else
+  //   //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
+  //   dto.endpointUuid = endpoint.uuid;
 
-    const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
-      prisma.endpointAuth.upsert({
-        select,
-        where: {
-          endpointUuid_userKey: {
-            endpointUuid: dto.endpointUuid,
-            userKey: dto.userKey,
-          },
-        },
-        create: dto,
-        update: dto,
-      }),
-    );
-  }
+  //   const prisma = this.txHost.tx as PrismaClient;
+  //   return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
+  //     prisma.endpointAuth.upsert({
+  //       select,
+  //       where: {
+  //         endpointUuid_userKey: {
+  //           endpointUuid: dto.endpointUuid,
+  //           userKey: dto.userKey,
+  //         },
+  //       },
+  //       create: dto,
+  //       update: dto,
+  //     }),
+  //   );
+  // }
 
   @Transactional()
   async init(uuid: string, initParams: object) {
@@ -157,19 +170,50 @@ export class EndpointsService {
 
     const endpoint = await this.findOne(uuid);
     if (endpoint) {
-      const service = this.getService(endpoint.typeKey, endpoint.receiver);
-      if (service) {
-        const content = await (endpoint.receiver
-          ? service.initReceiver
-          : service.initSender)(initParams, endpoint as any);
-        if (content)
-          prisma.endpoint.update({
-            where: { uuid },
-            data: { content },
-          });
-        return content;
+      const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
+      if (adaptor) {
+        // FIXME issue receiver token
+        // const content = await (endpoint.type == 'SENDER'
+        //   ? adaptor.initSender
+        //   : adaptor.initReceiver)(initParams, endpoint as any);
+        // if (content)
+        //   prisma.endpoint.update({
+        //     where: { uuid },
+        //     data: { content },
+        //   });
+        // return content;
       }
+      throw new NotFoundException(
+        `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
+      );
     }
     throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+  }
+
+  /** client call in */
+  @Transactional()
+  async callin(uuid: string, req: object) {
+    const endpoint = await this.findOne(uuid);
+    if (endpoint?.type != 'CLIENT')
+      throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+
+    const cAdaptor = this.getAdaptor(endpoint.adaptorKey, EndpointType.CLIENT);
+    if (!cAdaptor)
+      throw new NotFoundException(
+        `Endpoint adaptor not found, key=${endpoint.adaptorKey}`,
+      );
+  }
+
+  /** call out to server */
+  @Transactional()
+  async callout(uuid: string, req: object) {
+    const endpoint = await this.findOne(uuid);
+    if (!endpoint)
+      throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+    const sAdaptor = this.getAdaptor(endpoint.adaptorKey, EndpointType.SERVER);
+    if (!sAdaptor)
+      throw new NotFoundException(
+        `Endpoint adaptor not found, adaptorKey=${endpoint.adaptorKey}`,
+      );
   }
 }

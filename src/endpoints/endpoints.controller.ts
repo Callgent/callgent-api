@@ -6,19 +6,15 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   Query,
   Req,
-  UseGuards,
+  UseGuards
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { CreateEndpointAuthDto } from '../endpoint-auths/dto/create-endpoint-auth.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+import { EndpointConfig } from './adaptors/endpoint-adaptor.interface';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
-import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
-import { EndpointConfig } from './endpoint.interface';
 import { EndpointsService } from './endpoints.service';
 
 @ApiTags('Endpoints')
@@ -36,22 +32,22 @@ export class EndpointsController {
   @ApiOkResponse({ type: EndpointConfig })
   @Get(':endpointType/config')
   getConfig(@Param('endpointType') endpointType: string) {
-    const service = this.endpointsService.getService(endpointType);
+    const service = this.endpointsService.getAdaptor(endpointType);
     if (!service)
       throw new NotFoundException('No endpoint found with key:', endpointType);
     return service.getConfig();
   }
 
-  @Post(':endpointType/botlets')
+  @Post(':adaptorKey/botlets')
   async createEndpoint(
     @Req() req,
-    @Param('endpointType') endpointType: string,
+    @Param('adaptorKey') adaptorKey: string,
     @Body() dto: CreateEndpointDto,
   ) {
     return {
       data: await this.endpointsService.create({
         ...dto,
-        typeKey: endpointType,
+        adaptorKey,
         createdBy: req.user.sub,
       }),
     };
@@ -68,16 +64,16 @@ export class EndpointsController {
   }
 
   /** for auth type `APP`, userKey is ignored */
-  @Put('auth')
-  async upsertEndpointAuth(@Req() req, @Body() dto: CreateEndpointAuthDto) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(dto, 'endpointUuid');
-    return {
-      data: await this.endpointsService.upsertEndpointAuth(
-        { ...dto, createdBy: req.user.sub },
-        endpoint,
-      ),
-    };
-  }
+  // @Put('auth')
+  // async upsertEndpointAuth(@Req() req, @Body() dto: CreateEndpointAuthDto) {
+  //   const endpoint = EntityIdExists.entity<EndpointDto>(dto, 'endpointUuid');
+  //   return {
+  //     data: await this.endpointsService.upsertEndpointAuth(
+  //       { ...dto, createdBy: req.user.sub },
+  //       endpoint,
+  //     ),
+  //   };
+  // }
 
   @Post(':uuid/init')
   initEndpoint(@Param('uuid') uuid: string, @Body() initParams: object) {
