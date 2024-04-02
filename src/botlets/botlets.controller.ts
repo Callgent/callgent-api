@@ -45,10 +45,7 @@ export class BotletsController {
   @Post()
   async create(@Req() req, @Body() dto: CreateBotletDto) {
     return {
-      data: await this.botletService.create({
-        ...dto,
-        createdBy: req.user.sub,
-      }),
+      data: await this.botletService.create(dto, req.user.sub),
     };
   }
 
@@ -142,10 +139,11 @@ export class BotletsController {
     @Body() dto: CreateBotletDto,
   ) {
     return {
-      data: await this.botletService.duplicateOverTenancy(uuid, {
-        ...dto,
-        createdBy: req.user.sub,
-      }),
+      data: await this.botletService.duplicateOverTenancy(
+        uuid,
+        dto,
+        req.user.sub,
+      ),
     };
   }
 }

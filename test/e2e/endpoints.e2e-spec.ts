@@ -1,4 +1,4 @@
-import fs from 'fs';
+import * as fs from 'node:fs/promises';
 import * as pactum from 'pactum';
 import { CreateEndpointAuthDto } from '../../src/endpoint-auths/dto/create-endpoint-auth.dto';
 import { CreateEndpointDto } from '../../src/endpoints/dto/create-endpoint.dto';
@@ -35,18 +35,21 @@ describe('Botlet Endpoint (e2e)', () => {
 
     // add api server endpoint
     const {
-      json: { data: sEndpoint },
+      json: { data: serverEndpoint },
     } = await createEndpoint('restAPI', {
       botletUuid: botlet.uuid,
       type: 'SERVER',
       host: { url: 'https://canny.io/api/v1' },
     });
 
-    const jsonData = fs.readFileSync('./data/canny-apis.json', 'utf8');
+    const jsonData = await fs.readFile(
+      './test/e2e/data/canny-apis.json',
+      'utf8',
+    );
     const {
       json: { data: actionCount },
     } = await addBotletActions({
-      endpointUuid: sEndpoint.uuid,
+      endpointUuid: serverEndpoint.uuid,
       text: jsonData,
       format: 'openAPI',
     });
@@ -65,7 +68,7 @@ describe('Botlet Endpoint (e2e)', () => {
     //   reqParamTemplate: [],
     // });
 
-    console.log({ server: sEndpoint, actionCount });
+    console.log({ serverEndpoint, actionCount });
   });
 });
 

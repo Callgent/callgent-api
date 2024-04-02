@@ -8,9 +8,10 @@ import {
   Post,
   Query,
   Req,
-  UseGuards
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { EndpointType } from '@prisma/client';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EndpointConfig } from './adaptors/endpoint-adaptor.interface';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
@@ -25,18 +26,18 @@ export class EndpointsController {
   constructor(private readonly endpointsService: EndpointsService) {}
 
   @Get()
-  list(@Query('receiver') receiver?: boolean) {
-    return this.endpointsService.list(receiver);
+  list(@Query('client') client?: boolean) {
+    return this.endpointsService.list(client);
   }
 
-  @ApiOkResponse({ type: EndpointConfig })
-  @Get(':endpointType/config')
-  getConfig(@Param('endpointType') endpointType: string) {
-    const service = this.endpointsService.getAdaptor(endpointType);
-    if (!service)
-      throw new NotFoundException('No endpoint found with key:', endpointType);
-    return service.getConfig();
-  }
+  // @ApiOkResponse({ type: EndpointConfig })
+  // @Get(':endpointType/config')
+  // getConfig(@Param('endpointType') endpointType: EndpointType) {
+  //   return this.endpointsService.getAdaptor(endpointType);
+  //   if (!adaptor)
+  //     throw new NotFoundException('No endpoint found with key:', endpointType);
+  //   return adaptor.getConfig();
+  // }
 
   @Post(':adaptorKey/botlets')
   async createEndpoint(

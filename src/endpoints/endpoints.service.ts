@@ -14,14 +14,14 @@ import { selectHelper } from '../infra/repo/select.helper';
 import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
 import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
+import { EndpointDto } from './dto/endpoint.dto';
 
 @Injectable()
 export class EndpointsService {
   constructor(
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
-    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    // private readonly authTokensService: AuthTokensService,
+    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>, // private readonly authTokensService: AuthTokensService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     id: false,
@@ -29,8 +29,8 @@ export class EndpointsService {
     createdBy: false,
     deletedAt: false,
   };
-  private sendersList = {};
-  private receiversList = {};
+  private serversList = {};
+  private clientsList = {};
 
   onModuleInit() {
     const modules = [...this.modulesContainer.values()];
@@ -58,9 +58,9 @@ export class EndpointsService {
   private _add2ServiceList(
     key: string,
     serviceKey: InjectionToken,
-    receiver: boolean,
+    client: boolean,
   ) {
-    const list = receiver ? this.receiversList : this.sendersList;
+    const list = client ? this.clientsList : this.serversList;
     if (key in list)
       throw new Error(
         `Conflict endpoint key ${key}:[${String(serviceKey)}, ${list[key]}]`,
@@ -68,8 +68,8 @@ export class EndpointsService {
     list[key] = serviceKey;
   }
 
-  list(receiver: boolean) {
-    return Object.keys(receiver ? this.receiversList : this.sendersList);
+  list(client: boolean) {
+    return Object.keys(client ? this.clientsList : this.serversList);
   }
 
   findOne(uuid: string) {
@@ -86,18 +86,17 @@ export class EndpointsService {
     });
   }
 
-  /**
-   * @param receiver undefined: both, false: sender, true: receiver
-   */
-  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
-    const list =
-      endpointType == 'SERVER' ? this.sendersList : this.receiversList;
+  protected getAdaptor(
+    adaptorKey: string,
+    endpointType?: EndpointType,
+  ): EndpointAdaptor {
+    const list = endpointType == 'SERVER' ? this.serversList : this.clientsList;
     if (adaptorKey in list)
-      return this.moduleRef.get(list[adaptorKey], { strict: true });
+      return this.moduleRef.get(list[adaptorKey], { strict: false });
 
-    if (endpointType === undefined && adaptorKey in this.sendersList)
-      return this.moduleRef.get(this.sendersList[adaptorKey], {
-        strict: true,
+    if (endpointType === undefined && adaptorKey in this.serversList)
+      return this.moduleRef.get(this.serversList[adaptorKey], {
+        strict: false,
       });
   }
 
@@ -166,6 +165,7 @@ export class EndpointsService {
 
   @Transactional()
   async init(uuid: string, initParams: object) {
+    return;
     const prisma = this.txHost.tx as PrismaClient;
 
     const endpoint = await this.findOne(uuid);
@@ -182,12 +182,21 @@ export class EndpointsService {
         //     data: { content },
         //   });
         // return content;
+        return;
       }
       throw new NotFoundException(
         `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
       );
     }
     throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+  }
+
+  async parseApis(
+    endpoint: EndpointDto,
+    apiTxt: { text: string; format?: string },
+  ) {
+    const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
+    return adaptor.parseApis(apiTxt);
   }
 
   /** client call in */

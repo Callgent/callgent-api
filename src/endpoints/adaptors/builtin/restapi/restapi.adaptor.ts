@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
@@ -102,10 +103,34 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     throw new Error('Method not implemented.');
   }
 
-  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {
-    throw new Error('Method not implemented.');
+  async parseApis(apiTxt: { text: string; format?: string }) {
+    const ret: ApiSpec = { actions: [], schemas: [] };
+
+    const { text, format } = apiTxt;
+    if (!format || format === 'openAPI') {
+      const { paths, components } = JSON.parse(text);
+      if (components?.schemas)
+        Object.entries(components.schemas).forEach(([name, schema]) => {
+          ret.schemas.push({ name, content: schema });
+        });
+
+      if (paths) {
+        Object.entries(paths).forEach(([path, pathApis]) => {
+          Object.entries(pathApis).forEach(([method, methodApis]) => {
+            ret.actions.push({
+              name: `${path}.${method}`,
+              content: methodApis,
+            });
+          });
+        });
+      }
+
+      return ret;
+    }
+
+    throw new BadRequestException('Unsupported format: ' + format);
   }
-  readData(name: string, hints?: { [key: string]: any }): Promise<any> {
+  async readData(name: string, hints?: { [key: string]: any }) {
     throw new Error('Method not implemented.');
   }
 }

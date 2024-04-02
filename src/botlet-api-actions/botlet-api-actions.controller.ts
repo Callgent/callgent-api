@@ -15,10 +15,12 @@ import {
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
+  ApiProperty,
   ApiQuery,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
@@ -36,7 +38,17 @@ export class BotletApis extends ApiSpec {
 export class BotletApiText {
   @EntityIdExists('endpoint', 'uuid')
   endpointUuid: string;
+  @ApiProperty({
+    required: true,
+    description: 'The api content text to parse',
+  })
+  @IsNotEmpty()
   text: string;
+  @ApiProperty({
+    required: false,
+    description: 'The format of the api content text',
+  })
+  @IsOptional()
   format?: string;
 }
 

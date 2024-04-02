@@ -13,6 +13,8 @@ describe('BotletApiActionsController (e2e)', () => {
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
+
+  it('should add botlet actions', () => {});
 });
 
 export const addBotletActions = (apiTxt: BotletApiText) => {

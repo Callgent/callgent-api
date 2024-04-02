@@ -18,7 +18,7 @@ export class BotletCreatedListener {
     const botlet = event.botlet;
 
     // add default endpoints
-    const promises = [
+    const results = await Promise.all([
       // API client endpoint
       this.endpointsService
         .create({
@@ -52,8 +52,8 @@ export class BotletCreatedListener {
       //   host: {},
       //   createdBy: botlet.createdBy,
       // }),
-    ];
+    ]);
 
-    return promises;
+    return results;
   }
 }

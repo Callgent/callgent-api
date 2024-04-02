@@ -17,8 +17,8 @@ export interface EndpointAdaptor {
 }
 
 export class ApiSpec {
-  actions: { name: string; content: object }[];
-  schemas: { name: string; content: object }[];
+  actions: { name: string; content: any }[];
+  schemas: { name: string; content: any }[];
 }
 
 export class EndpointParam {

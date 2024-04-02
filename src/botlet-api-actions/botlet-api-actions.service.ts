@@ -62,13 +62,13 @@ export class BotletApiActionsService {
     return actionsCount;
   }
 
+  @Transactional()
   async importBatch(
     endpoint: EndpointDto,
     apiTxt: { text: string; format?: string },
     createdBy: string,
   ) {
-    const adaptor = this.endpointsService.getAdaptor(endpoint.adaptorKey);
-    const apis = await adaptor.parseApis(apiTxt);
+    const apis = await this.endpointsService.parseApis(endpoint, apiTxt);
     return this.createBatch(endpoint, apis, createdBy);
   }
 

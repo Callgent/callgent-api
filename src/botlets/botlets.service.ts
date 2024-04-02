@@ -6,9 +6,10 @@ import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Botlet, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
+import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { CreateBotletDto } from './dto/create-botlet.dto';
 import { UpdateBotletDto } from './dto/update-botlet.dto';
 import { BotletCreatedEvent } from './events/botlet-created.event';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -29,23 +30,22 @@ export class BotletsService {
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.BotletUncheckedCreateInput, 'uuid'>,
+    dto: CreateBotletDto,
+    createdBy: string,
     select?: Prisma.BotletSelect,
   ) {
+    const data = dto as Prisma.BotletUncheckedCreateInput;
+    (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
+
     const prisma = this.txHost.tx as PrismaClient;
-    const uuid = Utils.uuid();
     const ret: Botlet = await selectHelper(
       select,
-      (select) =>
-        prisma.botlet.create({
-          select,
-          data: { ...dto, uuid },
-        }),
+      (select) => prisma.botlet.create({ select, data }),
       this.defSelect,
     );
     await this.eventEmitter.emitAsync(
       BotletCreatedEvent.eventName,
-      new BotletCreatedEvent(ret),
+      new BotletCreatedEvent({ ...data, ...ret }),
     );
     return ret;
   }
@@ -120,7 +120,8 @@ export class BotletsService {
   @Transactional()
   async duplicateOverTenancy(
     dupUuid: string,
-    dto: Omit<Prisma.BotletUncheckedCreateInput, 'uuid'>,
+    dto: CreateBotletDto,
+    createdBy: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
 
@@ -130,7 +131,7 @@ export class BotletsService {
       throw new NotFoundException('botlet to duplicate not found: ' + dupUuid);
 
     await this.tenancyService.bypassTenancy(prisma, false);
-    const botlet = await this.create(dto, { id: null });
+    const botlet = await this.create(dto, createdBy, { id: null });
   }
 
   /**
