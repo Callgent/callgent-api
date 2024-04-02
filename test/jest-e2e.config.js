@@ -7,5 +7,5 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  coverageDirectory: './coverage-e2e',
+  coverageDirectory: './coverage/e2e',
 };

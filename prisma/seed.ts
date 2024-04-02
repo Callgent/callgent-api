@@ -20,6 +20,17 @@ main()
   });
 
 async function initTestData() {
+  const tenant: Prisma.TenantUncheckedCreateInput = {
+    id: 1,
+    uuid: 'TEST_TENANT_UUID',
+  };
+  const tenantDto = await prisma.tenant.upsert({
+    where: { id: 1 },
+    update: tenant,
+    create: tenant,
+  });
+  console.log({ tenantDto });
+
   const userUuid = 'TEST_USER_UUID';
   const u: Prisma.UserUncheckedCreateInput = {
     id: 1,

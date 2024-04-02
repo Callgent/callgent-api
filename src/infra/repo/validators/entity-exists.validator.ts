@@ -88,6 +88,6 @@ export class EntityIdExistsRule implements ValidatorConstraintInterface {
   }
 
   defaultMessage(args: ValidationArguments) {
-    return `${args.property}#${args.value} doesn't exist`;
+    return `${args.property} entity not found`;
   }
 }
