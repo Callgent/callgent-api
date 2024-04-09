@@ -50,8 +50,6 @@ model Tenant {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
-
-  @@index([uuid])
 }
 
 model User {
@@ -77,7 +75,6 @@ model User {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([uuid])
   @@index([tenantId])
 }
 
@@ -151,7 +148,8 @@ model Botlet {
   /// @DtoEntityHidden
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  name       String  @db.VarChar(255)
+  name    String  @db.VarChar(255)
+  summary String? @db.VarChar(4095)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -163,7 +161,6 @@ model Botlet {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([uuid])
   @@index([tenantId])
 }
 
@@ -197,7 +194,6 @@ model BotletApiSchema {
   deletedAt DateTime? /// @description logical deletion.
 
   @@unique([botletUuid, name])
-  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
 }
@@ -235,7 +231,6 @@ model BotletApiAction {
   deletedAt DateTime? /// @description logical deletion.
 
   @@unique([botletUuid, name])
-  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
 }
@@ -287,9 +282,49 @@ model Task {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
+}
+
+model TaskAction {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  // client side information
+  caller   String  @db.VarChar(36) /// @description caller key
+  cAdaptor String  @db.VarChar(36) /// @description client adaptor key
+  cepUuid  String? @db.VarChar(36) /// @description client endpoint uuid
+  callback Json?   @db.Json /// @description callback params
+
+  // processing
+  returns Boolean @default(false) /// @description whether action has response
+  stage   Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
+  req     Json    @db.Json /// @description request object
+  res     Json?   @db.Json /// @description response object
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  taskUuid String @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+  @@index([taskUuid])
 }
 
 /// @DtoIgnoreModel
@@ -334,9 +369,9 @@ model Endpoint {
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
   priority   Int          @default(0) /// @description priority in the botlet
 
-  host       Json             @db.Json /// @description host address & configs
-  initParams Json?            @db.Json /// @description initializing parameters
-  content    Json?            @db.Json /// @description generated content/code by init method
+  host       Json  @db.Json /// @description host address & configs
+  initParams Json? @db.Json /// @description initializing parameters
+  content    Json? @db.Json /// @description generated content/code by init method
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -353,7 +388,6 @@ model Endpoint {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([uuid])
   @@index([tenantId])
   @@index([botletUuid])
 }
