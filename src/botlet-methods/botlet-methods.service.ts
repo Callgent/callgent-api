@@ -3,22 +3,22 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { UpdateBotletApiActionDto } from './dto/update-botlet-api-action.dto';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
-export class BotletApiActionsService {
+export class BotletMethodsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly endpointsService: EndpointsService,
   ) {}
-  protected readonly defSelect: Prisma.BotletApiActionSelect = {
+  protected readonly defSelect: Prisma.BotletMethodSelect = {
     id: false,
     tenantId: false,
     createdBy: false,
@@ -30,22 +30,20 @@ export class BotletApiActionsService {
     const { actions, schemas } = apis;
 
     // validation
-    const actMap = actions.map<Prisma.BotletApiActionUncheckedCreateInput>(
-      (e) => {
-        if (endpoint.type != 'SERVER')
-          throw new BadRequestException(
-            'endpoint must be of type `SERVER`, uuid=' + endpoint.uuid,
-          );
-        return {
-          ...e,
-          uuid: Utils.uuid(),
-          endpointUuid: endpoint.uuid,
-          botletUuid: endpoint.botletUuid,
-          createdBy: createdBy,
-        };
-      },
-    );
-    const schMap = schemas.map<Prisma.BotletApiSchemaUncheckedCreateInput>(
+    const actMap = actions.map<Prisma.BotletMethodUncheckedCreateInput>((e) => {
+      if (endpoint.type != 'SERVER')
+        throw new BadRequestException(
+          'endpoint must be of type `SERVER`, uuid=' + endpoint.uuid,
+        );
+      return {
+        ...e,
+        uuid: Utils.uuid(),
+        endpointUuid: endpoint.uuid,
+        botletUuid: endpoint.botletUuid,
+        createdBy: createdBy,
+      };
+    });
+    const schMap = schemas.map<Prisma.BotletMethodSchemaUncheckedCreateInput>(
       (e) => ({
         ...e,
         uuid: Utils.uuid(),
@@ -56,8 +54,8 @@ export class BotletApiActionsService {
 
     const prisma = this.txHost.tx as PrismaClient;
     const [{ count: actionsCount }] = await Promise.all([
-      await prisma.botletApiAction.createMany({ data: actMap }),
-      await prisma.botletApiSchema.createMany({ data: schMap }),
+      await prisma.botletMethod.createMany({ data: actMap }),
+      await prisma.botletMethodSchema.createMany({ data: schMap }),
     ]);
     return actionsCount;
   }
@@ -79,9 +77,9 @@ export class BotletApiActionsService {
     page,
     perPage,
   }: {
-    select?: Prisma.BotletApiActionSelect;
-    where?: Prisma.BotletApiActionWhereInput;
-    orderBy?: Prisma.BotletApiActionOrderByWithRelationInput;
+    select?: Prisma.BotletMethodSelect;
+    where?: Prisma.BotletMethodWhereInput;
+    orderBy?: Prisma.BotletMethodOrderByWithRelationInput;
     page?: number;
     perPage?: number;
   }) {
@@ -90,7 +88,7 @@ export class BotletApiActionsService {
       select,
       async (select) => {
         const result = paginate(
-          prisma.botletApiAction,
+          prisma.botletMethod,
           {
             select,
             where,
@@ -112,16 +110,16 @@ export class BotletApiActionsService {
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletApiAction.delete({ select, where: { uuid } }),
+      prisma.botletMethod.delete({ select, where: { uuid } }),
     );
   }
 
   @Transactional()
-  update(dto: UpdateBotletApiActionDto) {
+  update(dto: UpdateBotletMethodDto) {
     if (!dto.uuid) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletApiAction.update({
+      prisma.botletMethod.update({
         select,
         where: { uuid: dto.uuid },
         data: dto,
@@ -132,7 +130,7 @@ export class BotletApiActionsService {
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletApiAction.findUnique({
+      prisma.botletMethod.findUnique({
         select,
         where: { uuid },
       }),

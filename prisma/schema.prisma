@@ -164,7 +164,7 @@ model Botlet {
   @@index([tenantId])
 }
 
-model BotletApiSchema {
+model BotletMethodSchema {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -198,7 +198,7 @@ model BotletApiSchema {
   @@index([botletUuid])
 }
 
-model BotletApiAction {
+model BotletMethod {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -246,31 +246,10 @@ model Task {
   /// @DtoEntityHidden
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  status  Int    @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
-  brief   String @db.VarChar(255) /// @description task brief or description
+  status  Int     @default(-1) /// @description Task status, -1: pending, 0: done, <-1: failed
+  name    String? @db.VarChar(64) /// @description task name
+  brief   String? @db.VarChar(255) /// @description task brief or description
   content Json? /// @description optional task content
-
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @example api/email/slack/sms/...
-  callerType   String  @db.VarChar(36) /// @description caller type
-  caller       String? @db.VarChar(255) /// @description empty means anonymous
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @description client type, caller may specify this on task creation
-  clientType   String? @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  client       String? @db.VarChar(255)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  clientActual String? @db.VarChar(255)
-  callback     String? @db.VarChar(1023) /// @description empty means needn't response
-
-  // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -283,7 +262,6 @@ model Task {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([tenantId])
-  @@index([botletUuid])
 }
 
 model TaskAction {
@@ -298,13 +276,14 @@ model TaskAction {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   // client side information
-  caller   String  @db.VarChar(36) /// @description caller key
-  cAdaptor String  @db.VarChar(36) /// @description client adaptor key
-  cepUuid  String? @db.VarChar(36) /// @description client endpoint uuid
-  callback Json?   @db.Json /// @description callback params
+  /// @description action owner botlet uuid, responsible for progressive response
+  ownerUuid String? @db.VarChar(36)
+  cepUuid   String? @db.VarChar(36) /// @description client endpoint uuid
+  cAdaptor  String  @db.VarChar(36) /// @description client adaptor key
+  callback  Json?   @db.Json /// @description callback params
 
   // processing
-  returns Boolean @default(false) /// @description whether action has response
+  returns Boolean @default(false) /// @description whether action has response object
   stage   Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
   req     Json    @db.Json /// @description request object
   res     Json?   @db.Json /// @description response object
@@ -315,7 +294,7 @@ model TaskAction {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(36) /// @description user uuid, anonymous ip, etc.
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`

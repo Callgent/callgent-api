@@ -26,18 +26,18 @@ import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
-import { BotletApiActionsService } from './botlet-api-actions.service';
-import { BotletApiActionDto } from './dto/botlet-api-action.dto';
-import { UpdateBotletApiActionDto } from './dto/update-botlet-api-action.dto';
+import { BotletMethodsService } from './botlet-methods.service';
+import { BotletMethodDto } from './dto/botlet-method.dto';
+import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
 
 export class BotletApis extends ApiSpec {
   @EntityIdExists('endpoint', 'uuid')
-  endpointUuid: string;
+  endpoint: string;
 }
 
 export class BotletApiText {
   @EntityIdExists('endpoint', 'uuid')
-  endpointUuid: string;
+  endpoint: string;
   @ApiProperty({
     required: true,
     description: 'The api content text to parse',
@@ -52,19 +52,17 @@ export class BotletApiText {
   format?: string;
 }
 
-@ApiTags('BotletApiActions')
+@ApiTags('BotletMethods')
 @ApiBearerAuth('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, BotletApiActionDto)
+@ApiExtraModels(RestApiResponse, BotletMethodDto)
 @UseGuards(JwtGuard)
-@Controller('botlet-actions')
-export class BotletApiActionsController {
-  constructor(
-    private readonly botletApiActionService: BotletApiActionsService,
-  ) {}
+@Controller('botlet-methods')
+export class BotletMethodsController {
+  constructor(private readonly botletMethodService: BotletMethodsService) {}
 
   @ApiOperation({
     summary:
-      'Create batch of new BotletApiAction. Exception if existing one with same name in the same botlet',
+      'Create batch of new BotletMethod. Exception if existing one with same name in the same botlet',
     description: 'return { data: count } on success',
   })
   @Post()
@@ -73,9 +71,9 @@ export class BotletApiActionsController {
     @Body()
     apis: BotletApis,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpointUuid');
+    const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
     return {
-      data: await this.botletApiActionService.createBatch(
+      data: await this.botletMethodService.createBatch(
         endpoint,
         apis,
         req.user?.sub,
@@ -93,9 +91,9 @@ export class BotletApiActionsController {
     @Body()
     apiTxt: BotletApiText,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpointUuid');
+    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
     return {
-      data: await this.botletApiActionService.importBatch(
+      data: await this.botletMethodService.importBatch(
         endpoint,
         apiTxt,
         req.user?.sub,
@@ -109,7 +107,7 @@ export class BotletApiActionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletApiActionDto) },
+            data: { $ref: getSchemaPath(BotletMethodDto) },
           },
         },
       ],
@@ -117,7 +115,7 @@ export class BotletApiActionsController {
   })
   @Get('/:uuid')
   async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.botletApiActionService.findOne(uuid) };
+    return { data: await this.botletMethodService.findOne(uuid) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -131,7 +129,7 @@ export class BotletApiActionsController {
           properties: {
             data: {
               type: 'array',
-              items: { $ref: getSchemaPath(BotletApiActionDto) },
+              items: { $ref: getSchemaPath(BotletMethodDto) },
             },
           },
         },
@@ -147,7 +145,7 @@ export class BotletApiActionsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.botletApiActionService.findAll({
+    return this.botletMethodService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -158,17 +156,17 @@ export class BotletApiActionsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletApiActionDto) } } },
+        { properties: { data: { $ref: getSchemaPath(BotletMethodDto) } } },
       ],
     },
   })
   @Put('/:uuid')
   async update(
     @Param('uuid') uuid: string,
-    @Body() dto: UpdateBotletApiActionDto,
+    @Body() dto: UpdateBotletMethodDto,
   ) {
     dto.uuid = uuid;
-    return { data: await this.botletApiActionService.update(dto) };
+    return { data: await this.botletMethodService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -177,7 +175,7 @@ export class BotletApiActionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletApiActionDto) },
+            data: { $ref: getSchemaPath(BotletMethodDto) },
           },
         },
       ],
@@ -185,6 +183,6 @@ export class BotletApiActionsController {
   })
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
-    return { data: await this.botletApiActionService.delete(uuid) };
+    return { data: await this.botletMethodService.delete(uuid) };
   }
 }

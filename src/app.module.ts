@@ -5,7 +5,7 @@ import { AgentsModule } from './agents/agents.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
-import { BotletApiActionsModule } from './botlet-api-actions/botlet-api-actions.module';
+import { BotletMethodsModule } from './botlet-methods/botlet-methods.module';
 import { BotletsModule } from './botlets/botlets.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
 import { AuthModule } from './infra/auth/auth.module';
@@ -31,7 +31,7 @@ import { TaskActionsModule } from './task-actions/task-actions.module';
     // TasksModule,
     AuthTokensModule,
     EndpointsModule,
-    BotletApiActionsModule,
+    BotletMethodsModule,
     AgentsModule,
     TaskActionsModule,
   ],
