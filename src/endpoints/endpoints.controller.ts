@@ -67,7 +67,7 @@ export class EndpointsController {
   /** for auth type `APP`, userKey is ignored */
   // @Put('auth')
   // async upsertEndpointAuth(@Req() req, @Body() dto: CreateEndpointAuthDto) {
-  //   const endpoint = EntityIdExists.entity<EndpointDto>(dto, 'endpointUuid');
+  //   const endpoint = EntityIdExists.entity<EndpointDto>(dto, 'endpoint');
   //   return {
   //     data: await this.endpointsService.upsertEndpointAuth(
   //       { ...dto, createdBy: req.user.sub },

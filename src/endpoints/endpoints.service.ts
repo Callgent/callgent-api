@@ -13,15 +13,15 @@ import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
 import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
-import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointDto } from './dto/endpoint.dto';
+import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 
 @Injectable()
 export class EndpointsService {
   constructor(
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
-    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>, // private readonly authTokensService: AuthTokensService,
+    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     id: false,
@@ -77,6 +77,18 @@ export class EndpointsService {
     return prisma.endpoint.findUnique({ where: { uuid } });
   }
 
+  findFirstByType(
+    botletUuids: string[],
+    adaptorKey: string,
+    type: EndpointType,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpoint.findFirst({
+      where: { botletUuid: { in: botletUuids }, adaptorKey, type },
+      orderBy: { priority: 'desc' },
+    });
+  }
+
   findOneAuth(uuid: string, userKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpointAuth.findUnique({
@@ -86,10 +98,7 @@ export class EndpointsService {
     });
   }
 
-  protected getAdaptor(
-    adaptorKey: string,
-    endpointType?: EndpointType,
-  ): EndpointAdaptor {
+  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
     const list = endpointType == 'SERVER' ? this.serversList : this.clientsList;
     if (adaptorKey in list)
       return this.moduleRef.get(list[adaptorKey], { strict: false });
@@ -197,32 +206,5 @@ export class EndpointsService {
   ) {
     const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
     return adaptor.parseApis(apiTxt);
-  }
-
-  /** client call in */
-  @Transactional()
-  async callin(uuid: string, req: object) {
-    const endpoint = await this.findOne(uuid);
-    if (endpoint?.type != 'CLIENT')
-      throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
-
-    const cAdaptor = this.getAdaptor(endpoint.adaptorKey, EndpointType.CLIENT);
-    if (!cAdaptor)
-      throw new NotFoundException(
-        `Endpoint adaptor not found, key=${endpoint.adaptorKey}`,
-      );
-  }
-
-  /** call out to server */
-  @Transactional()
-  async callout(uuid: string, req: object) {
-    const endpoint = await this.findOne(uuid);
-    if (!endpoint)
-      throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
-    const sAdaptor = this.getAdaptor(endpoint.adaptorKey, EndpointType.SERVER);
-    if (!sAdaptor)
-      throw new NotFoundException(
-        `Endpoint adaptor not found, adaptorKey=${endpoint.adaptorKey}`,
-      );
   }
 }

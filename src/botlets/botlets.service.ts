@@ -86,6 +86,28 @@ export class BotletsService {
     );
   }
 
+  async findMany(uuids: string[], select?: Prisma.BotletSelect) {
+    const prisma = this.txHost.tx as PrismaClient;
+
+    const botlets = await selectHelper(
+      select,
+      async (select) =>
+        await prisma.botlet.findMany({
+          where: { uuid: { in: uuids } },
+          select,
+        }),
+      this.defSelect,
+    );
+
+    if (botlets.length != uuids.length)
+      throw new NotFoundException(
+        `Botlet not found, uuid=${uuids
+          .filter((x) => !botlets.find((y) => y.uuid == x))
+          .join(', ')}`,
+      );
+    return botlets;
+  }
+
   @Transactional()
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
@@ -154,7 +176,7 @@ export class BotletsService {
     if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
     const [botlet, actions, epClient] = await Promise.all([
       prisma.botlet.findUnique({ where: { uuid: endpoint.botletUuid } }),
-      prisma.botletApiAction.findMany({
+      prisma.botletMethod.findMany({
         where: { name: act, botletUuid: endpoint.botletUuid },
       }),
       withEndpoint &&

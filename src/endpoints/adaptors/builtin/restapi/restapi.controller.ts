@@ -1,19 +1,89 @@
-import { All, Controller, Param, Req } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { EndpointsService } from '../../../endpoints.service';
+import {
+  All,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
+import { TaskActionsService } from '../../../../task-actions/task-actions.service';
+import { RestAPIAdaptor } from './restapi.adaptor';
 
 /** global rest-api endpoint entry */
-@ApiTags('Botlets')
+@ApiTags('Client Endpoint: Rest-API')
+@UseGuards(new JwtGuard(true))
 @Controller('botlets')
 export class RestApiController {
-  constructor(protected readonly endpointsService: EndpointsService) {}
+  constructor(protected readonly taskActionsService: TaskActionsService) {}
 
   @ApiOperation({
-    description: 'Botlet receiver endpoint entry for rest-api.',
+    description: 'rest-api client endpoint entry of multiple botlets',
   })
-  @All(':endpointUuid/api')
-  async receiverEntry(@Req() req, @Param('endpointUuid') uuid: string) {
-    return this.endpointsService.callin(uuid, req);
+  @ApiParam({
+    name: 'uuids',
+    required: true,
+    description: "comma separated botlet uuids, eg: 'uuid1,uuid2,uuid3'. ",
+  })
+  @ApiParam({
+    name: 'endpoint',
+    required: false,
+    description: 'endpoint uuid, optional: "/botlets/the-uuid`//`invoke/api/"',
+  })
+  @ApiParam({
+    name: 'NOTE: swagger does not support wildcard param. Just document here',
+    required: false,
+    description:
+      '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
+  })
+  @ApiHeader({ name: 'taskId', required: false })
+  @ApiHeader({
+    name: 'owner',
+    required: false,
+    description: 'action request owner, responsible for progressive response',
+  })
+  @ApiHeader({ name: 'callback', required: false })
+  @All(':uuids/:endpoint/invoke/api/*')
+  async invokeBotlets(
+    @Req() req,
+    @Param('uuids') botletStr: string,
+    @Param('endpoint') endpoint?: string,
+    @Headers('taskId') taskId?: string,
+    @Headers('owner') owner?: string,
+    @Headers('callback') callback?: string,
+  ) {
+    const botlets = botletStr.split(',').filter((b) => !!b);
+
+    const basePath = `${botletStr}/${endpoint}/invoke/api/`;
+    let action = req.url.substr(req.url.indexOf(basePath) + basePath.length);
+    if (action)
+      action = RestAPIAdaptor.formalActionName(req.method, '/' + action);
+
+    const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
+    // TODO owner defaults to caller botlet
+    return this.taskActionsService.$execute({
+      taskId,
+      caller,
+      owner,
+      botletUuids: botlets,
+      rawReq: req,
+      reqAdaptorKey: 'restAPI',
+      reqEndpointUuid: endpoint,
+      action,
+      callback,
+    });
+  }
+
+  @ApiOperation({
+    description:
+      'Inquiry the result of an invocation request. TODO: Socket Mode',
+  })
+  @Get('/invoke/result/:requestId')
+  async invokeResult(@Param('requestId') reqId: string) {
+    // FIXME
+    return reqId;
   }
 
   /**
@@ -46,7 +116,7 @@ export class RestApiController {
   //   if (!caller) throw new UnauthorizedException();
 
   //   const dto = await this.convertToTask(callerType, body, caller);
-  //   if (!dto?.botletUuid)
+  //   if (!dto?.botlet)
   //     throw new BadRequestException('botlet uuid is missing');
 
   //   const [task] = await this.tasksService.create(dto);

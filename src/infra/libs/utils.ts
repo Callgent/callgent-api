@@ -3,8 +3,8 @@ import { nanoid } from 'nanoid';
 
 export class Utils {
   // Define a static async method to generate UUIDs
-  static uuid() {
-    return nanoid();
+  static uuid(size?: number) {
+    return nanoid(size);
   }
 
   static async hashSalted(pwd: string): Promise<string> {

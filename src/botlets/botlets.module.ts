@@ -4,6 +4,7 @@ import { BotletsService } from './botlets.service';
 
 @Module({
   controllers: [BotletsController],
-  providers: [BotletsService]
+  providers: [BotletsService],
+  exports: [BotletsService],
 })
 export class BotletsModule {}

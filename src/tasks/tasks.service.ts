@@ -1,15 +1,12 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Botlet, Prisma, PrismaClient, Task } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
+import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskCreatedEvent } from './events/task-created.event';
 
@@ -35,57 +32,25 @@ export class TasksService {
    */
   @Transactional()
   async create(
-    dto: Omit<Prisma.TaskUncheckedCreateInput, 'uuid'>,
+    dto: CreateTaskDto,
+    createdBy: string,
     select?: Prisma.TaskSelect,
   ) {
+    const data = dto as Prisma.BotletUncheckedCreateInput;
+    (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
+
     const prisma = this.txHost.tx as PrismaClient;
-
-    const botlet = await prisma.botlet.findUnique({
-      where: {
-        uuid: dto.botletUuid,
-      },
-      select: {
-        id: true,
-        uuid: true,
-      },
-    });
-    if (!botlet)
-      throw new NotFoundException('Botlet not found, uuid=' + dto.botletUuid);
-
-    // quick determine task receiver, may null
-    // const receiver = await this.evalTaskReceiver(
-    //   prisma,
-    //   botlet,
-    //   dto.receiverType,
-    // );
-    // dto.receiverType = receiver?.receiverType;
-
-    // TODO synced call needn't task record
-    // if (receiver?.synced) {
-    //   const [syncResult] = await this.eventEmitter.emitAsync(
-    //     `${TaskCreatedEvent.eventName}.${receiver.receiverType}`,
-    //     new TaskCreatedEvent({ ...dto, uuid: undefined }, receiver),
-    //   );
-    //   return [dto, syncResult];
-    // }
-
-    const uuid = Utils.uuid();
     const ret: Task = await selectHelper(
       select,
-      (select) =>
-        prisma.task.create({
-          select,
-          data: { ...dto, uuid },
-        }),
+      (select) => prisma.task.create({ select, data }),
       this.defSelect,
     );
-    ret.uuid = uuid;
 
     this.eventEmitter.emit(
       TaskCreatedEvent.eventName,
-      new TaskCreatedEvent(ret),
+      new TaskCreatedEvent({ ...data, ...ret }),
     );
-    return [ret];
+    return ret;
   }
 
   async evalTaskReceiver(
@@ -171,13 +136,16 @@ export class TasksService {
     );
   }
 
-  findOne(uuid: string) {
+  findOne(uuid: string, select?: Prisma.TaskSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.task.findUnique({
-        select,
-        where: { uuid },
-      }),
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.task.findUnique({
+          select,
+          where: { uuid },
+        }),
+      this.defSelect,
     );
   }
 }

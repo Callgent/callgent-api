@@ -9,7 +9,7 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addBotletActions } from './botlet-methods.e2e-spec';
+import { addBotletActions as addBotletMethods } from './botlet-methods.e2e-spec';
 import { createBotlet } from './botlets.e2e-spec';
 
 /**
@@ -21,13 +21,13 @@ import { createBotlet } from './botlets.e2e-spec';
  * - confirm
  * - progressive request
  */
-describe('Botlet Endpoint (e2e)', () => {
+describe('Task Actions (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it(`(POST): add a new canny.io rest-api server endpoint`, async () => {
+  it(`(POST): add a new canny.io rest-api server endpoint to invoke`, async () => {
     // create the botlet
     const {
       json: { data: botlet },
@@ -48,7 +48,7 @@ describe('Botlet Endpoint (e2e)', () => {
     );
     const {
       json: { data: actionCount },
-    } = await addBotletActions({
+    } = await addBotletMethods({
       endpoint: serverEndpoint.uuid,
       text: jsonData,
       format: 'openAPI',
@@ -63,8 +63,6 @@ describe('Botlet Endpoint (e2e)', () => {
 
     console.log({ serverEndpoint, actionCount });
   });
-
-  it(`(POST): add a new client endpoint with auth`, async () => {});
 });
 
 export const createEndpoint = (
@@ -91,7 +89,7 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
 export const invokeBotletByApi = (botletUuid) => {
   return pactum
     .spec()
-    .post(`/api/botlets/${botletUuid}/invoke/api/boards/list`)
+    .post(`/api/botlets/${botletUuid}//invoke/api/boards/list`)
     .withBearerToken(TestConstant.authToken)
     .expectStatus(200);
 };

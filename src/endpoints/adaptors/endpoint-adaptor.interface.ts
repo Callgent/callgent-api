@@ -14,7 +14,25 @@ export interface EndpointAdaptor {
 
   /** please declare hints in api-doc */
   readData(name: string, hints?: { [key: string]: any }): Promise<any>;
+  invoke(params: object): Promise<any>;
+  /** get callback param */
+  getCallback(
+    callback: string,
+    rawReq: object,
+    reqEndpoint?: EndpointDto,
+  ): Promise<string>;
+  /** send response back to client */
+  callback(resp: any): Promise<boolean>;
+
+  /** wrap raw data to adapted data source */
+  toJson(
+    rawData: object,
+    request: boolean,
+    endpoint: EndpointDto,
+  ): AdaptedDataSource;
 }
+
+export interface AdaptedDataSource {}
 
 export class ApiSpec {
   actions: { name: string; content: any }[];

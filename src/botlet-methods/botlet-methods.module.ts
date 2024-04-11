@@ -7,5 +7,6 @@ import { BotletMethodsService } from './botlet-methods.service';
   imports: [EndpointsModule],
   providers: [BotletMethodsService],
   controllers: [BotletMethodsController],
+  exports: [BotletMethodsService],
 })
 export class BotletMethodsModule {}

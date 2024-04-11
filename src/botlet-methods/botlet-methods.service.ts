@@ -106,6 +106,15 @@ export class BotletMethodsService {
     );
   }
 
+  findMany(args: {
+    select?: Prisma.BotletMethodSelect;
+    where?: Prisma.BotletMethodWhereInput;
+    orderBy?: Prisma.BotletMethodOrderByWithRelationInput;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.botletMethod.findMany({ ...args });
+  }
+
   @Transactional()
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;

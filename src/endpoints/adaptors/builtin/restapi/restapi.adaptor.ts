@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
+  AdaptedDataSource,
   ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
@@ -73,6 +74,13 @@ export class RestAPIAdaptor implements EndpointAdaptor {
           },
         },
         params: [
+          {
+            type: 'url',
+            name: 'Callback URL',
+            optional: true,
+            placeholder:
+              'Callback URL to receive response with request ID. TODO: api spec',
+          },
           { type: 'radio', name: 'Page Type', value: ['WEB', 'React', 'Vue'] },
         ],
         addParams: true,
@@ -118,7 +126,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
         Object.entries(paths).forEach(([path, pathApis]) => {
           Object.entries(pathApis).forEach(([method, methodApis]) => {
             ret.actions.push({
-              name: `${path}.${method}`,
+              name: RestAPIAdaptor.formalActionName(method, path),
               content: methodApis,
             });
           });
@@ -130,7 +138,60 @@ export class RestAPIAdaptor implements EndpointAdaptor {
 
     throw new BadRequestException('Unsupported format: ' + format);
   }
+
+  async getCallback(
+    callback: string,
+    rawReq: object,
+    reqEndpoint?: EndpointDto,
+  ) {
+    // FIXME
+    return callback;
+  }
+  toJson(
+    rawData: object,
+    // request: boolean,
+    // endpoint: EndpointDto,
+  ): AdaptedDataSource {
+    return this.req2Json(rawData);
+  }
+
+  req2Json(request) {
+    const { url, method, headers, query, params, body, raw } = request;
+
+    let files: Record<string, any> = {};
+    if (request.file) {
+      files[request.file.fieldname] = request.file;
+    } else if (raw.files) {
+      for (const [key, value] of Object.entries(raw.files)) {
+        files[key] = value;
+      }
+    } else files = undefined;
+
+    const type = request.isFormSubmission ? 'form' : 'body';
+
+    return {
+      url,
+      method,
+      headers,
+      query,
+      params,
+      files,
+      [type]: body,
+    };
+  }
+
   async readData(name: string, hints?: { [key: string]: any }) {
     throw new Error('Method not implemented.');
   }
+
+  async invoke(params: object) {
+    throw new Error('Method not implemented.');
+  }
+
+  callback(resp: any): Promise<boolean> {
+    throw new Error('Method not implemented.');
+  }
+
+  static formalActionName = (method, path) =>
+    `${(method || 'GET').toUpperCase()}:${path}`;
 }

@@ -1,6 +1,7 @@
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
+  AdaptedDataSource,
   ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
@@ -8,6 +9,12 @@ import {
 
 @EndpointAdaptorName('webpage', 'both')
 export class WebpageAdaptor implements EndpointAdaptor {
+  getCallback(callback: string, rawReq: object, reqEndpoint?: EndpointDto): Promise<string> {
+    throw new Error('Method not implemented.');
+  }
+  toJson(rawData: object, request: boolean, endpoint: EndpointDto): AdaptedDataSource {
+    throw new Error('Method not implemented.');
+  }
   getConfig(): EndpointConfig {
     return {
       host: { address: { type: 'url', name: 'Page URL' } },
@@ -73,6 +80,18 @@ export class WebpageAdaptor implements EndpointAdaptor {
   }
 
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
+    throw new Error('Method not implemented.');
+  }
+
+  req2Json(req: object) {
+    throw new Error('Method not implemented.');
+  }
+
+  async invoke(params: object) {
+    throw new Error('Method not implemented.');
+  }
+
+  callback(resp: any): Promise<boolean> {
     throw new Error('Method not implemented.');
   }
 }

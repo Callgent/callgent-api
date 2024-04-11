@@ -7,6 +7,7 @@ import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
 
+/** FIXME CreateUserEvent: init a botlet with sep for user */
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);

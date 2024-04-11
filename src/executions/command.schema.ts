@@ -17,12 +17,19 @@ export type Instruction =
 // | 'exit';
 
 export class Command {
+  /** name of command */
+  name?: string;
+  /** boolean expression */
   if?: string;
   /** iteration over a collection */
-  for?: string;
+  for?: { exp: string; var: string };
+  /** boolean expression */
   while?: string;
+  /** Instruction flow */
   exec: Instruction | Instruction[];
+  /** Instruction flow */
   else?: Instruction | Instruction[];
+  pseudo? = false;
 }
 
 // invocation produce variable data,
