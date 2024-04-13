@@ -149,6 +149,9 @@ model Botlet {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   name    String  @db.VarChar(255)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
   summary String? @db.VarChar(4095)
 
   /// @DtoReadOnly
@@ -165,40 +168,6 @@ model Botlet {
   @@index([tenantId])
 }
 
-model BotletMethodSchema {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  name    String @db.VarChar(255)
-  /// @description endpoint uuid or command or code
-  content Json   @db.Json
-
-  // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@unique([botletUuid, name])
-  @@index([tenantId])
-  @@index([botletUuid])
-}
-
 model BotletMethod {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
@@ -210,9 +179,15 @@ model BotletMethod {
   /// @DtoEntityHidden
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  name    String @db.VarChar(255)
+  name      String @db.VarChar(255)
+  /// @description js function signature to invoke this botlet method
+  signature String @db.VarChar(255)
+  /// @description js function api docs
+  documents String @db.VarChar(4095)
+  /// @description js function actual code to invoke this botlet method
+  arrowFunc String @db.VarChar(1023)
   /// @description endpoint uuid or command or code
-  content Json   @db.Json
+  content   Json   @db.Json
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
@@ -401,4 +376,32 @@ model EndpointAuth {
   @@unique([endpointUuid, userKey])
   @@index([tenantId])
   @@index([endpointUuid])
+}
+
+/// @DtoIgnoreModel
+model LlmTemplate {
+  /// @DtoEntityHidden
+  id Int @id @default(autoincrement())
+
+  name   String @db.VarChar(32)
+  prompt String @db.VarChar(4096)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([name])
+}
+
+/// @DtoIgnoreModel
+model LlmCache {
+  /// @DtoEntityHidden
+  id Int @id @default(autoincrement())
+
+  name   String @db.VarChar(32)
+  prompt String @db.VarChar(4096)
+  result String @db.VarChar(4096)
+
+  createdAt DateTime @default(now())
+
+  @@unique([prompt, name])
 }

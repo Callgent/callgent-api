@@ -1,6 +1,9 @@
 lockfileVersion: '6.0'
 
 dependencies:
+  '@apidevtools/json-schema-ref-parser':
+    specifier: ^11.5.4
+    version: 11.5.4
   '@fastify/compress':
     specifier: ^7.0.0
     version: 7.0.0
@@ -67,6 +70,9 @@ dependencies:
   class-validator:
     specifier: ^0.14.1
     version: 0.14.1
+  dot:
+    specifier: ^1.1.3
+    version: 1.1.3
   fastify:
     specifier: 4.26.2
     version: 4.26.2
@@ -76,6 +82,9 @@ dependencies:
   glob:
     specifier: ^10.3.10
     version: 10.3.10
+  jsonrepair:
+    specifier: ^3.6.1
+    version: 3.6.1
   module:
     specifier: ^1.2.5
     version: 1.2.5
@@ -147,6 +156,9 @@ devDependencies:
   '@types/bcrypt':
     specifier: ^5.0.2
     version: 5.0.2
+  '@types/dot':
+    specifier: ^1.1.7
+    version: 1.1.7
   '@types/express':
     specifier: ^4.17.17
     version: 4.17.17
@@ -320,6 +332,15 @@ packages:
     transitivePeerDependencies:
       - chokidar
     dev: true
+
+  /@apidevtools/json-schema-ref-parser@11.5.4:
+    resolution: {integrity: sha512-o2fsypTGU0WxRxbax8zQoHiIB4dyrkwYfcm8TxZ+bx9pCzcWZbQtiMqpgBvWA/nJ2TrGjK5adCLfTH8wUeU/Wg==}
+    engines: {node: '>= 16'}
+    dependencies:
+      '@jsdevtools/ono': 7.1.3
+      '@types/json-schema': 7.0.15
+      js-yaml: 4.1.0
+    dev: false
 
   /@arr/every@1.0.1:
     resolution: {integrity: sha512-UQFQ6SgyJ6LX42W8rHCs8KVc0JS0tzVL9ct4XYedJukskYVWTo49tNiMEK9C2HTyarbNiT/RVIRSY82vH+6sTg==}
@@ -1256,6 +1277,10 @@ packages:
       '@jridgewell/resolve-uri': 3.1.1
       '@jridgewell/sourcemap-codec': 1.4.15
 
+  /@jsdevtools/ono@7.1.3:
+    resolution: {integrity: sha512-4JQNk+3mVzK3xh2rqd6RB4J46qUR19azEHBneZyTZM+c456qOrbbM/5xcR8huNCCcbVt7+UmizG6GuUvPvKUYg==}
+    dev: false
+
   /@lukeed/csprng@1.1.0:
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
     engines: {node: '>=8'}
@@ -1888,6 +1913,10 @@ packages:
       '@types/ms': 0.7.34
     dev: true
 
+  /@types/dot@1.1.7:
+    resolution: {integrity: sha512-RhMcnI18Y+401Nceh2pW5gTGgsdfZdvg9g0P/5HIBJ0jmZEv5KlkYvfQiHhw4/Vnb8NdePi/4UCs92ITExLxuQ==}
+    dev: true
+
   /@types/eslint-scope@3.7.7:
     resolution: {integrity: sha512-MzMFlSLBqNF2gcHWO0G1vP/YQyfvrxZ0bF+u7mzUdZ1/xK4A4sru+nraZz5i3iEIk1l1uyicaDVTB4QbbEkAYg==}
     dependencies:
@@ -1955,7 +1984,6 @@ packages:
 
   /@types/json-schema@7.0.15:
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
-    dev: true
 
   /@types/jsonwebtoken@9.0.5:
     resolution: {integrity: sha512-VRLSGzik+Unrup6BsouBeHsf4d1hOEgYWTm/7Nmw1sXoN1+tRly/Gy/po3yeahnP4jfnQWWAhQAqcNfH7ngOkA==}
@@ -3599,6 +3627,12 @@ packages:
     dependencies:
       is-obj: 2.0.0
     dev: true
+
+  /dot@1.1.3:
+    resolution: {integrity: sha512-/nt74Rm+PcfnirXGEdhZleTwGC2LMnuKTeeTIlI82xb5loBBoXNYzr2ezCroPSMtilK8EZIfcNZwOcHN+ib1Lg==}
+    engines: {'0': node >=0.2.6}
+    hasBin: true
+    dev: false
 
   /dotenv-expand@10.0.0:
     resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
@@ -5656,6 +5690,11 @@ packages:
     resolution: {integrity: sha512-POQXvpdL69+CluYsillJ7SUhKvytYjW9vG/GKpnf+xP8UWgYEM/RaMzHHofbALDiKbbP1W8UEYmgGl39WkPZsg==}
     engines: {'0': node >= 0.2.0}
     dev: true
+
+  /jsonrepair@3.6.1:
+    resolution: {integrity: sha512-3yMISA+ma94/Sr8aDmB6mki6dKRoad4qMjddL+0gdymCnhjWPhzbNCyvx7ji7QroeicTSQW0lm77SC8Ecl/k3w==}
+    hasBin: true
+    dev: false
 
   /jsonwebtoken@9.0.2:
     resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}

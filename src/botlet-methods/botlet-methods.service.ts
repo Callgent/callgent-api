@@ -3,12 +3,12 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
+import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -26,15 +26,15 @@ export class BotletMethodsService {
   };
 
   @Transactional()
-  async createBatch(endpoint: EndpointDto, apis: ApiSpec, createdBy: string) {
-    const { actions, schemas } = apis;
+  async createBatch(endpoint: EndpointDto, spec: ApiSpec, createdBy: string) {
+    if (endpoint.type != 'SERVER')
+      throw new BadRequestException(
+        'endpoint must be of type `SERVER`, uuid=' + endpoint.uuid,
+      );
 
+    const { apis } = spec;
     // validation
-    const actMap = actions.map<Prisma.BotletMethodUncheckedCreateInput>((e) => {
-      if (endpoint.type != 'SERVER')
-        throw new BadRequestException(
-          'endpoint must be of type `SERVER`, uuid=' + endpoint.uuid,
-        );
+    const actMap = apis.map<Prisma.BotletMethodUncheckedCreateInput>((e) => {
       return {
         ...e,
         uuid: Utils.uuid(),
@@ -43,20 +43,11 @@ export class BotletMethodsService {
         createdBy: createdBy,
       };
     });
-    const schMap = schemas.map<Prisma.BotletMethodSchemaUncheckedCreateInput>(
-      (e) => ({
-        ...e,
-        uuid: Utils.uuid(),
-        botletUuid: endpoint.botletUuid,
-        createdBy: createdBy,
-      }),
-    );
 
     const prisma = this.txHost.tx as PrismaClient;
-    const [{ count: actionsCount }] = await Promise.all([
-      await prisma.botletMethod.createMany({ data: actMap }),
-      await prisma.botletMethodSchema.createMany({ data: schMap }),
-    ]);
+    const { count: actionsCount } = await prisma.botletMethod.createMany({
+      data: actMap,
+    });
     return actionsCount;
   }
 

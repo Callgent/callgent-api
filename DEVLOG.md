@@ -17,6 +17,12 @@
     npx prisma db seed # init db data
     ```
 
+  - init db test data
+
+    ```shell
+    SEED_TEST_DATA=1 npx prisma db seed
+    ```
+
 - start server
 
   ```shell

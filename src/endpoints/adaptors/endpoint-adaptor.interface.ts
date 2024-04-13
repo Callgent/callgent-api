@@ -35,8 +35,13 @@ export interface EndpointAdaptor {
 export interface AdaptedDataSource {}
 
 export class ApiSpec {
-  actions: { name: string; content: any }[];
-  schemas: { name: string; content: any }[];
+  apis: {
+    name: string;
+    signature: string;
+    documents: string;
+    arrowFunc: string;
+    content: any;
+  }[];
 }
 
 export class EndpointParam {

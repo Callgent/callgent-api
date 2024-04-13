@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
@@ -7,9 +8,31 @@ import {
   EndpointAdaptor,
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
+import $RefParser from '@apidevtools/json-schema-ref-parser';
+
+class RequestJson {
+  url: string;
+  method: string;
+  headers?: { [key: string]: string };
+  query?: { [key: string]: string };
+  params?: { [key: string]: string };
+  files?: { [key: string]: any };
+  body?: any;
+  form?: any;
+}
+
+class ResponseJson {
+  data: any;
+  dataType: string;
+  headers?: { [key: string]: string };
+  status?: number;
+  statusText?: string;
+}
 
 @EndpointAdaptorName('restAPI', 'both')
 export class RestAPIAdaptor implements EndpointAdaptor {
+  constructor(private readonly agentsService: AgentsService) {}
+
   getConfig(): EndpointConfig {
     return {
       server: {
@@ -112,25 +135,41 @@ export class RestAPIAdaptor implements EndpointAdaptor {
   }
 
   async parseApis(apiTxt: { text: string; format?: string }) {
-    const ret: ApiSpec = { actions: [], schemas: [] };
+    const ret: ApiSpec = { apis: [] };
 
     const { text, format } = apiTxt;
     if (!format || format === 'openAPI') {
-      const { paths, components } = JSON.parse(text);
-      if (components?.schemas)
-        Object.entries(components.schemas).forEach(([name, schema]) => {
-          ret.schemas.push({ name, content: schema });
-        });
+      let json = JSON.parse(text);
+      try {
+        json = await $RefParser.dereference(json);
+      } catch (err) {
+        throw new BadRequestException(err);
+      }
+      const { paths } = json;
 
       if (paths) {
-        Object.entries(paths).forEach(([path, pathApis]) => {
-          Object.entries(pathApis).forEach(([method, methodApis]) => {
-            ret.actions.push({
-              name: RestAPIAdaptor.formalActionName(method, path),
-              content: methodApis,
+        const ps = Object.entries(paths);
+        for (const [path, pathApis] of ps) {
+          const entries = Object.entries(pathApis);
+          for (const [method, restApi] of entries) {
+            // wrap schema
+
+            const apiName = RestAPIAdaptor.formalActionName(method, path);
+            const func = await this.agentsService.api2Function(
+              'restAPI',
+              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ data: any; dataType: string; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
+              {
+                apiName,
+                apiContent: JSON.stringify(restApi),
+              },
+            );
+            ret.apis.push({
+              name: apiName,
+              ...func,
+              content: restApi,
             });
-          });
-        });
+          }
+        }
       }
 
       return ret;
@@ -138,6 +177,8 @@ export class RestAPIAdaptor implements EndpointAdaptor {
 
     throw new BadRequestException('Unsupported format: ' + format);
   }
+
+  // async invoke() {}
 
   async getCallback(
     callback: string,
@@ -147,6 +188,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     // FIXME
     return callback;
   }
+
   toJson(
     rawData: object,
     // request: boolean,
@@ -184,7 +226,8 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     throw new Error('Method not implemented.');
   }
 
-  async invoke(params: object) {
+  async invoke(req: RequestJson): Promise<ResponseJson> {
+    //
     throw new Error('Method not implemented.');
   }
 

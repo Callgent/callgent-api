@@ -2453,147 +2453,147 @@
 							"description": "The URL to the post's page."
 						}
 					}
-				},
-				"StatusChange": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "A unique identifier for the status change."
-						},
-						"changeComment": {
-							"$ref": "#/components/schemas/Comment",
-							"description": "The comment attached to this status change. Only imageURLs and value fields are included."
-						},
-						"changer": {
-							"$ref": "#/components/schemas/User",
-							"description": "The user who changed the status."
-						},
-						"created": {
-							"type": "string",
-							"description": "Time at which the status was changed, in ISO 8601 format."
-						},
-						"post": {
-							"$ref": "#/components/schemas/Post",
-							"description": "The post that had its status changed."
-						},
-						"status": {
-							"type": "string",
-							"description": "The status the post was changed to."
-						}
+				}
+			},
+			"StatusChange": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the status change."
+					},
+					"changeComment": {
+						"$ref": "#/components/schemas/Comment",
+						"description": "The comment attached to this status change. Only imageURLs and value fields are included."
+					},
+					"changer": {
+						"$ref": "#/components/schemas/User",
+						"description": "The user who changed the status."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the status was changed, in ISO 8601 format."
+					},
+					"post": {
+						"$ref": "#/components/schemas/Post",
+						"description": "The post that had its status changed."
+					},
+					"status": {
+						"type": "string",
+						"description": "The status the post was changed to."
 					}
-				},
-				"Tag": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "A unique identifier for the tag."
-						},
-						"board": {
-							"$ref": "#/components/schemas/Board",
-							"description": "The board this tag is associated with."
-						},
-						"created": {
-							"type": "string",
-							"description": "Time at which the tag was created, in ISO 8601 format."
-						},
-						"name": {
-							"type": "string",
-							"description": "The name of the tag."
-						},
-						"postCount": {
-							"type": "integer",
-							"description": "The number of posts that have been assigned this tag."
-						},
-						"url": {
-							"type": "string",
-							"description": "The URL to the board, filtered to just posts that have been assigned this tag."
-						}
+				}
+			},
+			"Tag": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the tag."
+					},
+					"board": {
+						"$ref": "#/components/schemas/Board",
+						"description": "The board this tag is associated with."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the tag was created, in ISO 8601 format."
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the tag."
+					},
+					"postCount": {
+						"type": "integer",
+						"description": "The number of posts that have been assigned this tag."
+					},
+					"url": {
+						"type": "string",
+						"description": "The URL to the board, filtered to just posts that have been assigned this tag."
 					}
-				},
-				"User": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "A unique identifier for the user."
+				}
+			},
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the user."
+					},
+					"avatarURL": {
+						"type": "string",
+						"description": "Link to the user's avatar image."
+					},
+					"companies": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/Company"
 						},
-						"avatarURL": {
-							"type": "string",
-							"description": "Link to the user's avatar image."
-						},
-						"companies": {
-							"type": "array",
-							"items": {
-								"$ref": "#/components/schemas/Company"
-							},
-							"description": "A list of companies the user is associated with."
-						},
-						"created": {
-							"type": "string",
-							"description": "Time at which the user was created, in ISO 8601 format."
-						},
-						"customFields": {
-							"type": "object",
-							"description": "Any custom fields associated with the user."
-						},
-						"email": {
-							"type": "string",
-							"description": "The user's email. This field can be null, for example when you create a new user by voting on behalf of them."
-						},
-						"isAdmin": {
-							"type": "boolean",
-							"description": "Whether or not the user is a Canny admin."
-						},
-						"lastActivity": {
-							"type": "string",
-							"description": "Time at which the user interacted with your company for the last time, in ISO 8601 format."
-						},
-						"name": {
-							"type": "string",
-							"description": "The user's name."
-						},
-						"url": {
-							"type": "string",
-							"description": "The URL of the user's profile."
-						},
-						"userID": {
-							"type": "string",
-							"description": "The user's unique identifier in your application. This field can be null. We only have this data if the user was authenticated via single sign-on, or if it was added via API."
-						}
+						"description": "A list of companies the user is associated with."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the user was created, in ISO 8601 format."
+					},
+					"customFields": {
+						"type": "object",
+						"description": "Any custom fields associated with the user."
+					},
+					"email": {
+						"type": "string",
+						"description": "The user's email. This field can be null, for example when you create a new user by voting on behalf of them."
+					},
+					"isAdmin": {
+						"type": "boolean",
+						"description": "Whether or not the user is a Canny admin."
+					},
+					"lastActivity": {
+						"type": "string",
+						"description": "Time at which the user interacted with your company for the last time, in ISO 8601 format."
+					},
+					"name": {
+						"type": "string",
+						"description": "The user's name."
+					},
+					"url": {
+						"type": "string",
+						"description": "The URL of the user's profile."
+					},
+					"userID": {
+						"type": "string",
+						"description": "The user's unique identifier in your application. This field can be null. We only have this data if the user was authenticated via single sign-on, or if it was added via API."
 					}
-				},
-				"Vote": {
-					"type": "object",
-					"properties": {
-						"id": {
-							"type": "string",
-							"description": "A unique identifier for the vote."
-						},
-						"board": {
-							"$ref": "#/components/schemas/Board",
-							"description": "The board this vote is associated with."
-						},
-						"by": {
-							"$ref": "#/components/schemas/User",
-							"description": "The admin who cast this vote on behalf of a user. If the user voted themselves, this field will be null."
-						},
-						"created": {
-							"type": "string",
-							"description": "Time at which the vote was first cast, in ISO 8601 format."
-						},
-						"post": {
-							"$ref": "#/components/schemas/Post",
-							"description": "The post this vote is associated with."
-						},
-						"voter": {
-							"$ref": "#/components/schemas/User",
-							"description": "The user this post is associated with."
-						}
+				}
+			},
+			"Vote": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "A unique identifier for the vote."
+					},
+					"board": {
+						"$ref": "#/components/schemas/Board",
+						"description": "The board this vote is associated with."
+					},
+					"by": {
+						"$ref": "#/components/schemas/User",
+						"description": "The admin who cast this vote on behalf of a user. If the user voted themselves, this field will be null."
+					},
+					"created": {
+						"type": "string",
+						"description": "Time at which the vote was first cast, in ISO 8601 format."
+					},
+					"post": {
+						"$ref": "#/components/schemas/Post",
+						"description": "The post this vote is associated with."
+					},
+					"voter": {
+						"$ref": "#/components/schemas/User",
+						"description": "The user this post is associated with."
 					}
 				}
 			}
-		}
+	}
     }
 }
