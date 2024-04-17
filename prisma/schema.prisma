@@ -257,6 +257,7 @@ model TaskAction {
   cepUuid   String? @db.VarChar(36) /// @description client endpoint uuid
   cAdaptor  String  @db.VarChar(36) /// @description client adaptor key
   callback  Json?   @db.Json /// @description callback params
+  method    String?  @db.VarChar(255) /// @description optional action method
 
   // processing
   returns Boolean @default(false) /// @description whether action has response object

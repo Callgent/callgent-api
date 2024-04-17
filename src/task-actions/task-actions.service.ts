@@ -46,30 +46,96 @@ export class TaskActionsService {
     rawReq: object;
     botletUuids: string[];
     reqEndpointUuid?: string;
-    action?: string;
+    reqMethod?: string;
     callback?: string;
   }) {
+    if (args.botletUuids.length > 1) args.reqMethod = undefined;
     // init task action
-    const { taskAction, botlets, endpoint, adaptor } =
+    const { taskAction, botlets, reqEndpoint, reqAdaptor } =
       await this._$createTaskAction(args);
 
+    // sync respond in time limit
+    let raceWinner = -1;
+
+    const respPromise = this._execute(botlets, taskAction).then((resp) => {
+      if (raceWinner < 0) raceWinner = 0;
+      // load task stage to respond
+      // if stage done, callback
+      return {
+        data: resp,
+        meta: { actionId: taskAction.id },
+      };
+    });
+
+    return Promise.race([
+      respPromise,
+      new Promise((resolve) =>
+        setTimeout(
+          () => {
+            if (raceWinner < 0) raceWinner = 1;
+            // load task stage to respond
+            resolve({ meta: { actionId: taskAction.id } });
+          },
+          2000, // FIXME, read from cep/request
+        ),
+      ),
+    ]);
+  }
+  protected async _execute(botlets: BotletDto[], taskAction: TaskActionDto) {
     // FIXME merge system botlets, e.g., system event register, timer, cmd entry creation
 
     // load botlets methods
     const botletMethods = await this._loadBotletMethods(botlets, taskAction);
 
-    // generate pseudo-command, and upserted vars stack
-    const script = await this.agentsService.genScript(
-      botletMethods,
-      taskAction,
-    );
+    // load task context vars
+    const taskVars = {};
 
-    // create a temp server endpoint to execute the cmd
+    // may get sync response
+    return this._interpret(taskAction, botlets, botletMethods, taskVars);
+  }
 
-    // entering regular instructions execution
-    // this.commandExecutor.cmd(cmd, stateCtx);
+  protected async _interpret(
+    taskAction: TaskActionDto,
+    botlets: BotletDto[],
+    botletMethods: { [name: string]: BotletMethodDto[] },
+    taskVars: { [name: string]: any },
+  ) {
+    let resp,
+      reqVars = {};
+    // interpret request, execute step by step
+    for (;;) {
+      const { method, mapping, progressive, vars } = this._routing(
+        botletMethods,
+        taskAction,
+        resp,
+        { ...taskVars, ...reqVars },
+      );
+      if (!method) break;
 
-    // return this._invocationFlow({ endpoint, adaptor, req }, botletUuid, action);
+      if (progressive) {
+        // request event owner for more req info
+      }
+
+      if (mapping) {
+        //
+      }
+    }
+    return resp;
+  }
+
+  protected async _routing(
+    botletMethods: { [name: string]: BotletMethodDto[] },
+    taskAction: TaskActionDto,
+    resp: any,
+    vars: { [name: string]: any },
+  ) {
+    const botNames = Object.keys(botletMethods);
+    if (botNames.length == 1 && botletMethods[botNames[0]].length == 1)
+      return botletMethods[botNames[0]];
+
+    // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
+    // 可能用到多个，
+    throw new Error('Method not implemented.');
   }
 
   /**
@@ -79,16 +145,26 @@ export class TaskActionsService {
     botlets: BotletDto[],
     taskAction: TaskActionDto,
   ) {
+    const botletMethods: { [name: string]: BotletMethodDto[] } = {};
+
+    if (taskAction.method) {
+      const ms = await this.botletMethodsService.findMany({
+        where: {
+          AND: [
+            { botletUuid: { in: botlets.map((b) => b.uuid) } },
+            { name: taskAction.method },
+          ],
+        },
+      });
+      if (ms?.length)
+        return { [botlets.find((b) => b.uuid === ms[0].botletUuid).name]: ms };
+    }
     // 1. summary to methods
-    const botletMethods: { [uuid: string]: BotletMethodDto[] } = {};
     const sumBots = [];
     const bots2Load = {};
     for (const botlet of botlets) {
       if (botlet.summary) sumBots.push(botlet);
       else bots2Load[botlet.uuid] = botlet;
-    }
-    if (!sumBots?.length) {
-      // LLM to determine related methods
     }
 
     // 2. load methods
@@ -103,6 +179,12 @@ export class TaskActionsService {
         l.push(m);
       }
     }
+
+    // 3. load methods by summary
+    if (!sumBots?.length) {
+      // LLM to determine related methods
+    }
+
     return botletMethods;
   }
 
@@ -115,7 +197,7 @@ export class TaskActionsService {
     rawReq: object;
     botletUuids: string[];
     reqEndpointUuid?: string;
-    action?: string;
+    method?: string;
     callback?: string;
   }) {
     if (!args.botletUuids?.length)
@@ -192,16 +274,13 @@ export class TaskActionsService {
       cepUuid: reqEndpoint?.uuid,
       callback: args.callback,
       createdBy: args.caller,
+      method: args.method,
+      returns: false, // FIXME
     };
     // TODO: some action needn't persist, e.g. (action && !taskId)
     const taskAction = await prisma.taskAction.create({ data });
 
-    return {
-      taskAction,
-      botlets,
-      endpoint: reqEndpoint,
-      adaptor: reqAdaptor,
-    };
+    return { taskAction, botlets, reqEndpoint, reqAdaptor };
   }
 
   /** invocation flow, and lifecycle events */

@@ -57,9 +57,9 @@ export class RestApiController {
     const botlets = botletStr.split(',').filter((b) => !!b);
 
     const basePath = `${botletStr}/${endpoint}/invoke/api/`;
-    let action = req.url.substr(req.url.indexOf(basePath) + basePath.length);
-    if (action)
-      action = RestAPIAdaptor.formalActionName(req.method, '/' + action);
+    let reqMethod = req.url.substr(req.url.indexOf(basePath) + basePath.length);
+    if (reqMethod)
+      reqMethod = RestAPIAdaptor.formalActionName(req.method, '/' + reqMethod);
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller botlet
@@ -71,7 +71,7 @@ export class RestApiController {
       rawReq: req,
       reqAdaptorKey: 'restAPI',
       reqEndpointUuid: endpoint,
-      action,
+      reqMethod,
       callback,
     });
   }
