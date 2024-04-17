@@ -14,10 +14,10 @@ describe('BotletFunctionsController (e2e)', () => {
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it('should add botlet actions', () => {});
+  it('should add botlet functions', () => {});
 });
 
-export const addBotletActions = (apiTxt: BotletApiText) => {
+export const addBotletFunctions = (apiTxt: BotletApiText) => {
   return pactum
     .spec()
     .post('/api/botlet-functions/import')
