@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { EndpointType, PrismaClient } from '@prisma/client';
 import { AgentsService } from '../agents/agents.service';
-import { BotletMethodDto } from './dto/botlet-method.dto';
+import { BotletFunctionDto } from './dto/botlet-function.dto';
 import { BotletsService } from '../botlets/botlets.service';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -117,7 +117,7 @@ export class ExecutionsService {
       ? { AND: [{ name: actionName }, { botletUuid }] }
       : { botletUuid };
     const take = actionName ? 1 : undefined;
-    const actions = await prisma.botletMethod.findMany({ where, take });
+    const actions = await prisma.botletFunction.findMany({ where, take });
     const action = actionName
       ? actions.find((a) => a.name == actionName)
       : await this._routing(req, actions);
@@ -133,14 +133,14 @@ export class ExecutionsService {
     // response to client or next cmd
   }
 
-  protected async _routing(req: RequestPack, actions: BotletMethodDto[]) {
+  protected async _routing(req: RequestPack, actions: BotletFunctionDto[]) {
     return this.agentsService.routeAction(actions, req);
   }
 
   /** call out to server */
   /** invoke with callback */
   @Transactional()
-  async callout(action: BotletMethodDto, req: RequestPack) {
+  async callout(action: BotletFunctionDto, req: RequestPack) {
     // get server endpoint(sep), and sAdaptor
     const sEndpoint = await this.findOne(action.endpointUuid);
     if (!sEndpoint)

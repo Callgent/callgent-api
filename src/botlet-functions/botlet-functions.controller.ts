@@ -26,9 +26,9 @@ import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
-import { BotletMethodsService } from './botlet-methods.service';
-import { BotletMethodDto } from './dto/botlet-method.dto';
-import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
+import { BotletFunctionsService } from './botlet-functions.service';
+import { BotletFunctionDto } from './dto/botlet-function.dto';
+import { UpdateBotletFunctionDto } from './dto/update-botlet-function.dto';
 
 export class BotletApis extends ApiSpec {
   @EntityIdExists('endpoint', 'uuid')
@@ -52,17 +52,17 @@ export class BotletApiText {
   format?: string;
 }
 
-@ApiTags('BotletMethods')
+@ApiTags('BotletFunctions')
 @ApiBearerAuth('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, BotletMethodDto)
+@ApiExtraModels(RestApiResponse, BotletFunctionDto)
 @UseGuards(JwtGuard)
-@Controller('botlet-methods')
-export class BotletMethodsController {
-  constructor(private readonly botletMethodService: BotletMethodsService) {}
+@Controller('botlet-functions')
+export class BotletFunctionsController {
+  constructor(private readonly BotletFunctionService: BotletFunctionsService) {}
 
   @ApiOperation({
     summary:
-      'Create batch of new BotletMethod. Exception if existing one with same name in the same botlet',
+      'Create batch of new BotletFunction. Exception if existing one with same name in the same botlet',
     description: 'return { data: count } on success',
   })
   @Post()
@@ -73,7 +73,7 @@ export class BotletMethodsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
     return {
-      data: await this.botletMethodService.createBatch(
+      data: await this.BotletFunctionService.createBatch(
         endpoint,
         apis,
         req.user?.sub,
@@ -93,7 +93,7 @@ export class BotletMethodsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
     return {
-      data: await this.botletMethodService.importBatch(
+      data: await this.BotletFunctionService.importBatch(
         endpoint,
         apiTxt,
         req.user?.sub,
@@ -107,7 +107,7 @@ export class BotletMethodsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletMethodDto) },
+            data: { $ref: getSchemaPath(BotletFunctionDto) },
           },
         },
       ],
@@ -115,7 +115,7 @@ export class BotletMethodsController {
   })
   @Get('/:uuid')
   async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.botletMethodService.findOne(uuid) };
+    return { data: await this.BotletFunctionService.findOne(uuid) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -129,7 +129,7 @@ export class BotletMethodsController {
           properties: {
             data: {
               type: 'array',
-              items: { $ref: getSchemaPath(BotletMethodDto) },
+              items: { $ref: getSchemaPath(BotletFunctionDto) },
             },
           },
         },
@@ -145,7 +145,7 @@ export class BotletMethodsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.botletMethodService.findAll({
+    return this.BotletFunctionService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -156,17 +156,17 @@ export class BotletMethodsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletMethodDto) } } },
+        { properties: { data: { $ref: getSchemaPath(BotletFunctionDto) } } },
       ],
     },
   })
   @Put('/:uuid')
   async update(
     @Param('uuid') uuid: string,
-    @Body() dto: UpdateBotletMethodDto,
+    @Body() dto: UpdateBotletFunctionDto,
   ) {
     dto.uuid = uuid;
-    return { data: await this.botletMethodService.update(dto) };
+    return { data: await this.BotletFunctionService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -175,7 +175,7 @@ export class BotletMethodsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletMethodDto) },
+            data: { $ref: getSchemaPath(BotletFunctionDto) },
           },
         },
       ],
@@ -183,6 +183,6 @@ export class BotletMethodsController {
   })
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
-    return { data: await this.botletMethodService.delete(uuid) };
+    return { data: await this.BotletFunctionService.delete(uuid) };
   }
 }

@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { EndpointType, PrismaClient } from '@prisma/client';
 import { AgentsService } from '../agents/agents.service';
-import { BotletMethodsService } from '../botlet-methods/botlet-methods.service';
-import { BotletMethodDto } from '../botlet-methods/dto/botlet-method.dto';
+import { BotletFunctionsService } from '../botlet-functions/botlet-functions.service';
+import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { BotletsService } from '../botlets/botlets.service';
 import { BotletDto } from '../botlets/dto/botlet.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -27,7 +27,7 @@ export class TaskActionsService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly botletsService: BotletsService,
     private readonly endpointsService: EndpointsService,
-    private readonly botletMethodsService: BotletMethodsService,
+    private readonly BotletFunctionsService: BotletFunctionsService,
     private readonly tasksService: TasksService,
     private readonly agentsService: AgentsService,
     private readonly tenancyService: PrismaTenancyService,
@@ -46,10 +46,10 @@ export class TaskActionsService {
     rawReq: object;
     botletUuids: string[];
     reqEndpointUuid?: string;
-    reqMethod?: string;
+    reqFunction?: string;
     callback?: string;
   }) {
-    if (args.botletUuids.length > 1) args.reqMethod = undefined;
+    if (args.botletUuids.length > 1) args.reqFunction = undefined;
     // init task action
     const { taskAction, botlets, reqEndpoint, reqAdaptor } =
       await this._$createTaskAction(args);
@@ -84,33 +84,52 @@ export class TaskActionsService {
   protected async _execute(botlets: BotletDto[], taskAction: TaskActionDto) {
     // FIXME merge system botlets, e.g., system event register, timer, cmd entry creation
 
-    // load botlets methods
-    const botletMethods = await this._loadBotletMethods(botlets, taskAction);
+    // load botlets functions
+    const botletFunctions = await this._loadBotletFunctions(
+      botlets,
+      taskAction,
+    );
+
+    // single invocation, no vars, flow controls, and functions
+    if (botlets.length === 1)
+      return this._invoke(taskAction, botlets, botletFunctions);
 
     // load task context vars
     const taskVars = {};
 
     // may get sync response
-    return this._interpret(taskAction, botlets, botletMethods, taskVars);
+    return this._interpret(taskAction, botlets, botletFunctions, taskVars);
+  }
+
+  /**
+   * a single function invocation. simple with no vars/flow controls/functions.
+   * system botlets are involved: collection functions, timer, etc
+   */
+  protected async _invoke(
+    taskAction: TaskActionDto,
+    botlets: BotletDto[],
+    BotletFunctions: { [name: string]: BotletFunctionDto[] },
+  ) {
+    throw new Error('Method not implemented.');
   }
 
   protected async _interpret(
     taskAction: TaskActionDto,
     botlets: BotletDto[],
-    botletMethods: { [name: string]: BotletMethodDto[] },
+    BotletFunctions: { [name: string]: BotletFunctionDto[] },
     taskVars: { [name: string]: any },
   ) {
     let resp,
       reqVars = {};
     // interpret request, execute step by step
     for (;;) {
-      const { method, mapping, progressive, vars } = this._routing(
-        botletMethods,
+      const { func, mapping, progressive, vars } = this._routing(
+        BotletFunctions,
         taskAction,
         resp,
         { ...taskVars, ...reqVars },
       );
-      if (!method) break;
+      if (!func) break;
 
       if (progressive) {
         // request event owner for more req info
@@ -124,14 +143,14 @@ export class TaskActionsService {
   }
 
   protected async _routing(
-    botletMethods: { [name: string]: BotletMethodDto[] },
+    BotletFunctions: { [name: string]: BotletFunctionDto[] },
     taskAction: TaskActionDto,
     resp: any,
     vars: { [name: string]: any },
   ) {
-    const botNames = Object.keys(botletMethods);
-    if (botNames.length == 1 && botletMethods[botNames[0]].length == 1)
-      return botletMethods[botNames[0]];
+    const botNames = Object.keys(BotletFunctions);
+    if (botNames.length == 1 && BotletFunctions[botNames[0]].length == 1)
+      return BotletFunctions[botNames[0]];
 
     // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
     // 可能用到多个，
@@ -139,27 +158,27 @@ export class TaskActionsService {
   }
 
   /**
-   * @returns { 'botlet_name': [methods] }
+   * @returns { 'botlet_name': [functions] }
    */
-  protected async _loadBotletMethods(
+  protected async _loadBotletFunctions(
     botlets: BotletDto[],
     taskAction: TaskActionDto,
   ) {
-    const botletMethods: { [name: string]: BotletMethodDto[] } = {};
+    const BotletFunctions: { [name: string]: BotletFunctionDto[] } = {};
 
-    if (taskAction.method) {
-      const ms = await this.botletMethodsService.findMany({
+    if (taskAction.func) {
+      const ms = await this.BotletFunctionsService.findMany({
         where: {
           AND: [
             { botletUuid: { in: botlets.map((b) => b.uuid) } },
-            { name: taskAction.method },
+            { name: taskAction.func },
           ],
         },
       });
       if (ms?.length)
         return { [botlets.find((b) => b.uuid === ms[0].botletUuid).name]: ms };
     }
-    // 1. summary to methods
+    // 1. summary to functions
     const sumBots = [];
     const bots2Load = {};
     for (const botlet of botlets) {
@@ -167,25 +186,25 @@ export class TaskActionsService {
       else bots2Load[botlet.uuid] = botlet;
     }
 
-    // 2. load methods
+    // 2. load functions
     const bs = Object.keys(bots2Load);
     if (bs.length) {
-      const ms = await this.botletMethodsService.findMany({
+      const ms = await this.BotletFunctionsService.findMany({
         where: { botletUuid: { in: bs } },
       });
       for (const m of ms) {
-        let l = botletMethods[bots2Load[m.botletUuid].name];
-        l || (l = botletMethods[bots2Load[m.botletUuid].name] = []);
+        let l = BotletFunctions[bots2Load[m.botletUuid].name];
+        l || (l = BotletFunctions[bots2Load[m.botletUuid].name] = []);
         l.push(m);
       }
     }
 
-    // 3. load methods by summary
+    // 3. load functions by summary
     if (!sumBots?.length) {
-      // LLM to determine related methods
+      // LLM to determine related functions
     }
 
-    return botletMethods;
+    return BotletFunctions;
   }
 
   @Transactional()
@@ -197,7 +216,7 @@ export class TaskActionsService {
     rawReq: object;
     botletUuids: string[];
     reqEndpointUuid?: string;
-    method?: string;
+    reqFunction?: string;
     callback?: string;
   }) {
     if (!args.botletUuids?.length)
@@ -274,7 +293,7 @@ export class TaskActionsService {
       cepUuid: reqEndpoint?.uuid,
       callback: args.callback,
       createdBy: args.caller,
-      method: args.method,
+      reqFunction: args.reqFunction,
       returns: false, // FIXME
     };
     // TODO: some action needn't persist, e.g. (action && !taskId)
@@ -296,7 +315,7 @@ export class TaskActionsService {
   //       ? { AND: [{ name: actionName }, { botletUuid }] }
   //       : { botletUuid };
   //     const take = actionName ? 1 : undefined;
-  //     const actions = await prisma.botletMethod.findMany({ where, take });
+  //     const actions = await prisma.botletFunction.findMany({ where, take });
   //     const action = actionName
   //       ? actions.find((a) => a.name == actionName)
   //       : await this._routing(req, actions);
@@ -312,14 +331,14 @@ export class TaskActionsService {
   //     // response to client or next cmd
   //   }
 
-  //   protected async _routing(req: RequestPack, actions: BotletMethodDto[]) {
+  //   protected async _routing(req: RequestPack, actions: BotletFunctionDto[]) {
   //     return this.agentsService.routeAction(actions, req);
   //   }
 
   /** call out to server */
   /** invoke with callback */
   //   @Transactional()
-  //   async callout(action: BotletMethodDto, req: RequestPack) {
+  //   async callout(action: BotletFunctionDto, req: RequestPack) {
   //     // get server endpoint(sep), and sAdaptor
   //     const sEndpoint = await this.findOne(action.endpointUuid);
   //     if (!sEndpoint)

@@ -46,7 +46,7 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'callback', required: false })
   @All(':uuids/:endpoint/invoke/api/*')
-  async invokeBotlets(
+  async execute(
     @Req() req,
     @Param('uuids') botletStr: string,
     @Param('endpoint') endpoint?: string,
@@ -57,9 +57,14 @@ export class RestApiController {
     const botlets = botletStr.split(',').filter((b) => !!b);
 
     const basePath = `${botletStr}/${endpoint}/invoke/api/`;
-    let reqMethod = req.url.substr(req.url.indexOf(basePath) + basePath.length);
-    if (reqMethod)
-      reqMethod = RestAPIAdaptor.formalActionName(req.method, '/' + reqMethod);
+    let reqFunction = req.url.substr(
+      req.url.indexOf(basePath) + basePath.length,
+    );
+    if (reqFunction)
+      reqFunction = RestAPIAdaptor.formalActionName(
+        req.method,
+        '/' + reqFunction,
+      );
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller botlet
@@ -71,7 +76,7 @@ export class RestApiController {
       rawReq: req,
       reqAdaptorKey: 'restAPI',
       reqEndpointUuid: endpoint,
-      reqMethod,
+      reqFunction,
       callback,
     });
   }

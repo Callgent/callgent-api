@@ -176,7 +176,7 @@ export class BotletsService {
     if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
     const [botlet, actions, epClient] = await Promise.all([
       prisma.botlet.findUnique({ where: { uuid: endpoint.botletUuid } }),
-      prisma.botletMethod.findMany({
+      prisma.botletFunction.findMany({
         where: { name: act, botletUuid: endpoint.botletUuid },
       }),
       withEndpoint &&

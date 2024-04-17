@@ -9,7 +9,7 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addBotletActions } from './botlet-methods.e2e-spec';
+import { addBotletActions } from './botlet-functions.e2e-spec';
 import { createBotlet } from './botlets.e2e-spec';
 
 /**

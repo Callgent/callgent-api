@@ -9,7 +9,7 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addBotletActions as addBotletMethods } from './botlet-methods.e2e-spec';
+import { addBotletActions as addBotletFunctions } from './botlet-functions.e2e-spec';
 import { createBotlet } from './botlets.e2e-spec';
 
 /**
@@ -48,7 +48,7 @@ describe('Task Actions (e2e)', () => {
     );
     const {
       json: { data: actionCount },
-    } = await addBotletMethods({
+    } = await addBotletFunctions({
       endpoint: serverEndpoint.uuid,
       text: jsonData,
       format: 'openAPI',

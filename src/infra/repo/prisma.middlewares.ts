@@ -26,7 +26,7 @@ export const mainPrismaServiceOptions = (
           User: deleteHandle,
           UserIdentity: deleteHandle,
           Botlet: deleteHandle,
-          BotletMethod: deleteHandle,
+          BotletFunction: deleteHandle,
           Endpoint: deleteHandle,
           Task: deleteHandle,
           TaskAction: deleteHandle,

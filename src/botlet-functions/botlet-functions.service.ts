@@ -8,17 +8,17 @@ import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { UpdateBotletMethodDto } from './dto/update-botlet-method.dto';
+import { UpdateBotletFunctionDto } from './dto/update-botlet-function.dto';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
-export class BotletMethodsService {
+export class BotletFunctionsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly endpointsService: EndpointsService,
   ) {}
-  protected readonly defSelect: Prisma.BotletMethodSelect = {
+  protected readonly defSelect: Prisma.BotletFunctionSelect = {
     id: false,
     tenantId: false,
     createdBy: false,
@@ -34,7 +34,7 @@ export class BotletMethodsService {
 
     const { apis } = spec;
     // validation
-    const actMap = apis.map<Prisma.BotletMethodUncheckedCreateInput>((e) => {
+    const actMap = apis.map<Prisma.BotletFunctionUncheckedCreateInput>((e) => {
       return {
         ...e,
         uuid: Utils.uuid(),
@@ -45,7 +45,7 @@ export class BotletMethodsService {
     });
 
     const prisma = this.txHost.tx as PrismaClient;
-    const { count: actionsCount } = await prisma.botletMethod.createMany({
+    const { count: actionsCount } = await prisma.botletFunction.createMany({
       data: actMap,
     });
     return actionsCount;
@@ -68,9 +68,9 @@ export class BotletMethodsService {
     page,
     perPage,
   }: {
-    select?: Prisma.BotletMethodSelect;
-    where?: Prisma.BotletMethodWhereInput;
-    orderBy?: Prisma.BotletMethodOrderByWithRelationInput;
+    select?: Prisma.BotletFunctionSelect;
+    where?: Prisma.BotletFunctionWhereInput;
+    orderBy?: Prisma.BotletFunctionOrderByWithRelationInput;
     page?: number;
     perPage?: number;
   }) {
@@ -79,7 +79,7 @@ export class BotletMethodsService {
       select,
       async (select) => {
         const result = paginate(
-          prisma.botletMethod,
+          prisma.botletFunction,
           {
             select,
             where,
@@ -98,28 +98,28 @@ export class BotletMethodsService {
   }
 
   findMany(args: {
-    select?: Prisma.BotletMethodSelect;
-    where?: Prisma.BotletMethodWhereInput;
-    orderBy?: Prisma.BotletMethodOrderByWithRelationInput;
+    select?: Prisma.BotletFunctionSelect;
+    where?: Prisma.BotletFunctionWhereInput;
+    orderBy?: Prisma.BotletFunctionOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.botletMethod.findMany({ ...args });
+    return prisma.botletFunction.findMany({ ...args });
   }
 
   @Transactional()
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletMethod.delete({ select, where: { uuid } }),
+      prisma.botletFunction.delete({ select, where: { uuid } }),
     );
   }
 
   @Transactional()
-  update(dto: UpdateBotletMethodDto) {
+  update(dto: UpdateBotletFunctionDto) {
     if (!dto.uuid) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletMethod.update({
+      prisma.botletFunction.update({
         select,
         where: { uuid: dto.uuid },
         data: dto,
@@ -130,7 +130,7 @@ export class BotletMethodsService {
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletMethod.findUnique({
+      prisma.botletFunction.findUnique({
         select,
         where: { uuid },
       }),

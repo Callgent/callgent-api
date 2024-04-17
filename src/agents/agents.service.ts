@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { BotletMethodDto } from '../botlet-methods/dto/botlet-method.dto';
+import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { TaskActionDto } from '../task-actions/dto/task-action.dto';
-import { LLMService as LLMService } from './llm.service';
+import { LLMService } from './llm.service';
 
 @Injectable()
 export class AgentsService {
@@ -25,11 +25,11 @@ export class AgentsService {
   }
 
   async genScript(
-    botletMethods: { [botletName: string]: BotletMethodDto[] },
+    BotletFunctions: { [botletName: string]: BotletFunctionDto[] },
     taskAction: TaskActionDto,
   ) {
-    const ms = Object.values(botletMethods)?.flat();
-    
+    const ms = Object.values(BotletFunctions)?.flat();
+
     if (ms.length > 1) {
       // routing
     }
@@ -50,7 +50,7 @@ export class AgentsService {
     taskaAction: TaskActionDto,
   ) {}
 
-  async routeAction(actions: BotletMethodDto[], req: AdaptedDataSource) {
+  async routeAction(actions: BotletFunctionDto[], req: AdaptedDataSource) {
     if (!actions?.length) return;
     // FIXME：是否需要task上下文来决定路由，
     return actions[0];

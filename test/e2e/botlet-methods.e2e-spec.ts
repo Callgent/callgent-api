@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { BotletApiText } from '../../src/botlet-methods/botlet-methods.controller';
+import { BotletApiText } from '../../src/botlet-functions/botlet-functions.controller';
 import {
   afterAllFn,
   afterEachFn,
@@ -8,7 +8,7 @@ import {
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
 
-describe('BotletMethodsController (e2e)', () => {
+describe('BotletFunctionsController (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
@@ -20,7 +20,7 @@ describe('BotletMethodsController (e2e)', () => {
 export const addBotletActions = (apiTxt: BotletApiText) => {
   return pactum
     .spec()
-    .post('/api/botlet-methods/import')
+    .post('/api/botlet-functions/import')
     .withBearerToken(TestConstant.authToken)
     .withBody(apiTxt)
     .expectStatus(201);

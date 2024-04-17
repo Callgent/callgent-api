@@ -168,7 +168,7 @@ model Botlet {
   @@index([tenantId])
 }
 
-model BotletMethod {
+model BotletFunction {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -180,11 +180,11 @@ model BotletMethod {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   name      String @db.VarChar(255)
-  /// @description js function signature to invoke this botlet method
+  /// @description js signature to invoke this botlet function
   signature String @db.VarChar(255)
   /// @description js function api docs
   documents String @db.VarChar(4095)
-  /// @description js function actual code to invoke this botlet method
+  /// @description js actual code to invoke this botlet function
   arrowFunc String @db.VarChar(1023)
   /// @description endpoint uuid or command or code
   content   Json   @db.Json
@@ -253,11 +253,11 @@ model TaskAction {
 
   // client side information
   /// @description action owner botlet uuid, responsible for progressive response
-  ownerUuid String? @db.VarChar(36)
-  cepUuid   String? @db.VarChar(36) /// @description client endpoint uuid
-  cAdaptor  String  @db.VarChar(36) /// @description client adaptor key
-  callback  Json?   @db.Json /// @description callback params
-  method    String?  @db.VarChar(255) /// @description optional action method
+  ownerUuid   String? @db.VarChar(36)
+  cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
+  cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
+  callback    Json?   @db.Json /// @description callback params
+  reqFunction String? @db.VarChar(255) /// @description optional request function
 
   // processing
   returns Boolean @default(false) /// @description whether action has response object
