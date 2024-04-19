@@ -66,7 +66,7 @@ export class LLMService {
     const keys = Object.keys(isArray ? returnType[0] : returnType);
     const a = isArray ? val : [val];
     for (const v of a) {
-      if (!keys.every((key) => v[key]))
+      if (!keys.every((key) => key in v))
         throw new Error(
           `Return type error, props=${keys.join(',')}, val=${JSON.stringify(
             val,

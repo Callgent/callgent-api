@@ -9,7 +9,7 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addBotletActions } from './botlet-functions.e2e-spec';
+import { addBotletFunctions } from './botlet-functions.e2e-spec';
 import { createBotlet } from './botlets.e2e-spec';
 
 /**
@@ -47,8 +47,8 @@ describe('Botlet Endpoint (e2e)', () => {
       'utf8',
     );
     const {
-      json: { data: actionCount },
-    } = await addBotletActions({
+      json: { data: functionCount },
+    } = await addBotletFunctions({
       endpoint: serverEndpoint.uuid,
       text: jsonData,
       format: 'openAPI',
@@ -61,7 +61,7 @@ describe('Botlet Endpoint (e2e)', () => {
       json: { data },
     } = await invokeBotletByApi(botlet.uuid);
 
-    console.log({ serverEndpoint, actionCount });
+    console.log({ serverEndpoint, functionCount });
   });
 
   it(`(POST): add a new client endpoint with auth`, async () => {});

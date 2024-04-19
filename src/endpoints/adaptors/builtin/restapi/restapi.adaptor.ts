@@ -157,7 +157,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
             const apiName = RestAPIAdaptor.formalActionName(method, path);
             const func = await this.agentsService.api2Function(
               'restAPI',
-              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ data: any; dataType: string; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
+              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ apiResult: any; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
               {
                 apiName,
                 apiContent: JSON.stringify(restApi),
@@ -198,7 +198,12 @@ export class RestAPIAdaptor implements EndpointAdaptor {
   }
 
   req2Json(request) {
-    const { url, method, headers, query, params, body, raw } = request;
+    const { method, headers, query, body, raw } = request;
+    if (request.url.indexOf('/invoke/api/') < 0)
+      throw new Error(
+        'Unsupported URL, should be /botlets/:uuids/:endpoint/invoke/api/*',
+      );
+    const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
 
     let files: Record<string, any> = {};
     if (request.file) {
@@ -214,9 +219,8 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     return {
       url,
       method,
-      headers,
+      headers: { ...headers, authorization: undefined }, // filter botlet authorization
       query,
-      params,
       files,
       [type]: body,
     };

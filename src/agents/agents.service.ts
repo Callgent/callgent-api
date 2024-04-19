@@ -20,7 +20,28 @@ export class AgentsService {
         handle,
         ...args,
       },
-      { signature: '', documents: '', arrowFunc: '' },
+      { funName: '', params: [''], documents: '', fullCode: '' },
+    );
+  }
+
+  req2Invoke(
+    taskAction: { req: any; reqFunction: string },
+    botletName: string,
+    botletFunctions: {
+      name: string;
+      funName: string;
+      params: string[];
+      documents: string;
+    }[],
+  ) {
+    return this.llmService.template(
+      'req2Invoke',
+      {
+        botletName,
+        botletFunctions,
+        taskAction,
+      },
+      { funName: '', mapping: '', question: '' },
     );
   }
 
@@ -34,15 +55,15 @@ export class AgentsService {
       // routing
     }
 
-    return this.llmService.template(
-      'api2Function',
-      {
-        format,
-        handle,
-        ...args,
-      },
-      { signature: '', documents: '', arrowFunc: '' },
-    );
+    // return this.llmService.template(
+    //   'api2Function',
+    //   {
+    //     format,
+    //     handle,
+    //     ...args,
+    //   },
+    //   { signature: '', documents: '', fullCode: '' },
+    // );
   }
 
   async genPseudoCmd(

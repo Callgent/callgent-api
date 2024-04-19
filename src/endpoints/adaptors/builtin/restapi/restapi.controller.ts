@@ -38,21 +38,21 @@ export class RestApiController {
     description:
       '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
   })
-  @ApiHeader({ name: 'taskId', required: false })
+  @ApiHeader({ name: 'x-b-taskId', required: false })
   @ApiHeader({
-    name: 'owner',
+    name: 'x-b-owner',
     required: false,
     description: 'action request owner, responsible for progressive response',
   })
-  @ApiHeader({ name: 'callback', required: false })
+  @ApiHeader({ name: 'x-b-callback', required: false })
   @All(':uuids/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
     @Param('uuids') botletStr: string,
     @Param('endpoint') endpoint?: string,
-    @Headers('taskId') taskId?: string,
-    @Headers('owner') owner?: string,
-    @Headers('callback') callback?: string,
+    @Headers('x-b-taskId') taskId?: string,
+    @Headers('x-b-owner') owner?: string,
+    @Headers('x-b-callback') callback?: string,
   ) {
     const botlets = botletStr.split(',').filter((b) => !!b);
 

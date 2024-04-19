@@ -47,7 +47,7 @@ describe('Task Actions (e2e)', () => {
       'utf8',
     );
     const {
-      json: { data: actionCount },
+      json: { data: functionCount },
     } = await addBotletFunctions({
       endpoint: serverEndpoint.uuid,
       text: jsonData,
@@ -61,7 +61,7 @@ describe('Task Actions (e2e)', () => {
       json: { data },
     } = await invokeBotletByApi(botlet.uuid);
 
-    console.log({ serverEndpoint, actionCount });
+    console.log({ serverEndpoint, functionCount });
   });
 });
 

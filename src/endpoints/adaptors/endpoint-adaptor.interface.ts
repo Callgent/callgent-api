@@ -37,9 +37,10 @@ export interface AdaptedDataSource {}
 export class ApiSpec {
   apis: {
     name: string;
-    signature: string;
+    funName: string;
+    params: string[];
     documents: string;
-    arrowFunc: string;
+    fullCode: string;
     content: any;
   }[];
 }

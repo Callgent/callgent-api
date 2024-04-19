@@ -180,12 +180,13 @@ model BotletFunction {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   name      String @db.VarChar(255)
-  /// @description js signature to invoke this botlet function
-  signature String @db.VarChar(255)
+  /// @description js function name to invoke this botlet function
+  funName String @db.VarChar(31)
+  params String[] @db.VarChar(31)
   /// @description js function api docs
   documents String @db.VarChar(4095)
   /// @description js actual code to invoke this botlet function
-  arrowFunc String @db.VarChar(1023)
+  fullCode String @db.VarChar(1023)
   /// @description endpoint uuid or command or code
   content   Json   @db.Json
 
@@ -260,10 +261,12 @@ model TaskAction {
   reqFunction String? @db.VarChar(255) /// @description optional request function
 
   // processing
-  returns Boolean @default(false) /// @description whether action has response object
-  stage   Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
-  req     Json    @db.Json /// @description request object
-  res     Json?   @db.Json /// @description response object
+  returns    Boolean @default(false) /// @description whether action has response object
+  req        Json    @db.Json /// @description request object
+  res        Json?   @db.Json /// @description response object
+  stage      Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
+  statusCode Int     @default(0) /// execution status code
+  message    String? @db.VarChar(255) /// @description error message
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)

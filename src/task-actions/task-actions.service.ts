@@ -76,7 +76,7 @@ export class TaskActionsService {
             // load task stage to respond
             resolve({ meta: { actionId: taskAction.id } });
           },
-          2000, // FIXME, read from cep/request
+          2000000, // FIXME, read from cep/request
         ),
       ),
     ]);
@@ -92,7 +92,11 @@ export class TaskActionsService {
 
     // single invocation, no vars, flow controls, and functions
     if (botlets.length === 1)
-      return this._invoke(taskAction, botlets, botletFunctions);
+      return this._invoke(
+        taskAction,
+        botlets[0],
+        botletFunctions[botlets[0].name],
+      );
 
     // load task context vars
     const taskVars = {};
@@ -103,33 +107,58 @@ export class TaskActionsService {
 
   /**
    * a single function invocation. simple with no vars/flow controls/functions.
-   * system botlets are involved: collection functions, timer, etc
+   * system botlets are involved: collection functions, timer, etc.
    */
   protected async _invoke(
     taskAction: TaskActionDto,
-    botlets: BotletDto[],
-    BotletFunctions: { [name: string]: BotletFunctionDto[] },
+    botlet: BotletDto,
+    botletFunctions: BotletFunctionDto[],
   ) {
-    throw new Error('Method not implemented.');
+    // FIXME task ctx msgs
+    // 生成args映射方法，
+    const { funName, mapping, question } = await this._mapping(
+      taskAction,
+      botlet.name,
+      botletFunctions,
+    );
+    if (question) return; // FIXME, ask owner for args
+
+    const fun = botletFunctions.find((f) => f.name === funName);
+    if (!fun) return; // FIXME
+
+    // doInvoke
+  }
+
+  /** args mapping to a single invocation, w/o vars/flows/functions */
+  protected async _mapping(
+    taskAction: TaskActionDto,
+    botletName: string,
+    botletFunctions: BotletFunctionDto[],
+  ) {
+    return this.agentsService.req2Invoke(
+      taskAction,
+      botletName,
+      botletFunctions,
+    );
   }
 
   protected async _interpret(
     taskAction: TaskActionDto,
     botlets: BotletDto[],
-    BotletFunctions: { [name: string]: BotletFunctionDto[] },
+    botletFunctions: { [botletName: string]: BotletFunctionDto[] },
     taskVars: { [name: string]: any },
   ) {
     let resp,
       reqVars = {};
     // interpret request, execute step by step
     for (;;) {
-      const { func, mapping, progressive, vars } = this._routing(
-        BotletFunctions,
+      const { funName, mapping, progressive, vars } = await this._routing(
+        botletFunctions,
         taskAction,
         resp,
         { ...taskVars, ...reqVars },
       );
-      if (!func) break;
+      if (!funName) break;
 
       if (progressive) {
         // request event owner for more req info
@@ -143,14 +172,14 @@ export class TaskActionsService {
   }
 
   protected async _routing(
-    BotletFunctions: { [name: string]: BotletFunctionDto[] },
+    BotletFunctions: { [botletName: string]: BotletFunctionDto[] },
     taskAction: TaskActionDto,
     resp: any,
     vars: { [name: string]: any },
-  ) {
-    const botNames = Object.keys(BotletFunctions);
-    if (botNames.length == 1 && BotletFunctions[botNames[0]].length == 1)
-      return BotletFunctions[botNames[0]];
+  ): Promise<{ funName; mapping; progressive; vars }> {
+    // const botNames = Object.keys(BotletFunctions);
+    // if (botNames.length == 1 && BotletFunctions[botNames[0]].length == 1)
+    //   return BotletFunctions[botNames[0]];
 
     // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
     // 可能用到多个，
@@ -164,14 +193,14 @@ export class TaskActionsService {
     botlets: BotletDto[],
     taskAction: TaskActionDto,
   ) {
-    const BotletFunctions: { [name: string]: BotletFunctionDto[] } = {};
+    const BotletFunctions: { [botletName: string]: BotletFunctionDto[] } = {};
 
-    if (taskAction.func) {
+    if (taskAction.reqFunction) {
       const ms = await this.BotletFunctionsService.findMany({
         where: {
           AND: [
             { botletUuid: { in: botlets.map((b) => b.uuid) } },
-            { name: taskAction.func },
+            { name: taskAction.reqFunction },
           ],
         },
       });
