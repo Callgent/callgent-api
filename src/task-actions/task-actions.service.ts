@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EndpointType, PrismaClient } from '@prisma/client';
 import { AgentsService } from '../agents/agents.service';
 import { BotletFunctionsService } from '../botlet-functions/botlet-functions.service';
@@ -16,6 +17,7 @@ import { Utils } from '../infra/libs/utils';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { TasksService } from '../tasks/tasks.service';
 import { TaskActionDto } from './dto/task-action.dto';
+import { ProgressiveRequestEvent } from './events/progressive-request.event';
 
 /**
  * A task action belongs to a task. Triggered by an external user or system,
@@ -27,10 +29,11 @@ export class TaskActionsService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly botletsService: BotletsService,
     private readonly endpointsService: EndpointsService,
-    private readonly BotletFunctionsService: BotletFunctionsService,
+    private readonly botletFunctionsService: BotletFunctionsService,
     private readonly tasksService: TasksService,
     private readonly agentsService: AgentsService,
     private readonly tenancyService: PrismaTenancyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -121,7 +124,13 @@ export class TaskActionsService {
       botlet.name,
       botletFunctions,
     );
-    if (question) return; // FIXME, ask owner for args
+    if (question) {
+      // invoke event owner for more request info
+      this.eventEmitter.emit(
+        ProgressiveRequestEvent.eventName,
+        new ProgressiveRequestEvent(data),
+      );
+    }
 
     const fun = botletFunctions.find((f) => f.name === funName);
     if (!fun) return; // FIXME
@@ -196,7 +205,7 @@ export class TaskActionsService {
     const BotletFunctions: { [botletName: string]: BotletFunctionDto[] } = {};
 
     if (taskAction.reqFunction) {
-      const ms = await this.BotletFunctionsService.findMany({
+      const ms = await this.botletFunctionsService.findMany({
         where: {
           AND: [
             { botletUuid: { in: botlets.map((b) => b.uuid) } },
@@ -218,7 +227,7 @@ export class TaskActionsService {
     // 2. load functions
     const bs = Object.keys(bots2Load);
     if (bs.length) {
-      const ms = await this.BotletFunctionsService.findMany({
+      const ms = await this.botletFunctionsService.findMany({
         where: { botletUuid: { in: bs } },
       });
       for (const m of ms) {

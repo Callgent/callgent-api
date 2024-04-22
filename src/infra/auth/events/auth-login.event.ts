@@ -2,7 +2,7 @@
  * listener must return the user payload to be used in security context or jwt
  */
 export class AuthLoginEvent {
-  public static readonly eventName = 'auth.login';
+  public static readonly eventName = 'auth.login' as const;
 
   constructor(
     public readonly authType: 'password' | 'oauth',
