@@ -11,6 +11,7 @@ import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
+import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
 import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from './dto/endpoint.dto';
@@ -22,6 +23,7 @@ export class EndpointsService {
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     id: false,
@@ -78,15 +80,36 @@ export class EndpointsService {
   }
 
   findFirstByType(
-    botletUuids: string[],
-    adaptorKey: string,
     type: EndpointType,
+    botletUuid: string,
+    adaptorKey: string,
+    uuid?: string,
   ) {
+    uuid || (uuid = undefined);
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpoint.findFirst({
-      where: { botletUuid: { in: botletUuids }, adaptorKey, type },
+      where: { botletUuid, adaptorKey, type, uuid },
       orderBy: { priority: 'desc' },
     });
+  }
+
+  /** bypassTenancy before query, setTenantId after query */
+  async $findFirstByType(
+    type: EndpointType,
+    botletUuid: string,
+    adaptorKey: string,
+    endpoint?: string,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return this.tenancyService.bypassTenancy(prisma).then(() =>
+      this.findFirstByType(type, botletUuid, adaptorKey, endpoint).then(
+        async (v) => {
+          await this.tenancyService.bypassTenancy(prisma, false);
+          v && this.tenancyService.setTenantId(v.tenantId);
+          return v;
+        },
+      ),
+    );
   }
 
   findOneAuth(uuid: string, userKey: string) {

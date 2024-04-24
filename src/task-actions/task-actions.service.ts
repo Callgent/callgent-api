@@ -1,10 +1,6 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EndpointType, PrismaClient } from '@prisma/client';
 import { AgentsService } from '../agents/agents.service';
@@ -13,11 +9,10 @@ import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { BotletsService } from '../botlets/botlets.service';
 import { BotletDto } from '../botlets/dto/botlet.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
-import { Utils } from '../infra/libs/utils';
+import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { TasksService } from '../tasks/tasks.service';
 import { TaskActionDto } from './dto/task-action.dto';
-import { ProgressiveRequestEvent } from './events/progressive-request.event';
 
 /**
  * A task action belongs to a task. Triggered by an external user or system,
@@ -37,53 +32,52 @@ export class TaskActionsService {
   ) {}
 
   /**
-   * external client call in to a group of botlets.
-   * @param action ignored if multiple botlets
+   * external client call in to a botlet.
    */
   @Transactional()
-  async $execute(args: {
+  async createAction(args: {
     owner?: string;
     caller: string;
     taskId?: string;
     reqAdaptorKey: string;
     rawReq: object;
-    botletUuids: string[];
+    botletUuid: string;
     reqEndpointUuid?: string;
-    reqFunction?: string;
+    funName?: string;
     callback?: string;
   }) {
-    if (args.botletUuids.length > 1) args.reqFunction = undefined;
     // init task action
-    const { taskAction, botlets, reqEndpoint, reqAdaptor } =
-      await this._$createTaskAction(args);
+    // const { taskAction, botlets, reqEndpoint, reqAdaptor } =
+    await this._$createTaskAction(args);
 
     // sync respond in time limit
     let raceWinner = -1;
 
-    const respPromise = this._execute(botlets, taskAction).then((resp) => {
-      if (raceWinner < 0) raceWinner = 0;
-      // load task stage to respond
-      // if stage done, callback
-      return {
-        data: resp,
-        meta: { actionId: taskAction.id },
-      };
-    });
+    // const respPromise = this._execute(botlets, taskAction).then((resp) => {
+    //   if (raceWinner < 0) raceWinner = 0;
+    //   // load task stage to respond
+    //   // if stage done, callback
+    //   return {
+    //     data: resp,
+    //     meta: { actionId: taskAction.id },
+    //   };
+    // });
 
-    return Promise.race([
-      respPromise,
-      new Promise((resolve) =>
-        setTimeout(
-          () => {
-            if (raceWinner < 0) raceWinner = 1;
-            // load task stage to respond
-            resolve({ meta: { actionId: taskAction.id } });
-          },
-          2000000, // FIXME, read from cep/request
-        ),
-      ),
-    ]);
+    // return Promise.race([
+    //   respPromise,
+    //   new Promise((resolve) =>
+    //     setTimeout(
+    //       () => {
+    //         if (raceWinner < 0) raceWinner = 1;
+    //         // load task stage to respond
+    //         resolve({ meta: { actionId: taskAction.id } });
+    //       },
+    //       2000000, // FIXME, read from cep/request
+    //     ),
+    //   ),
+    // ]);
   }
+
   protected async _execute(botlets: BotletDto[], taskAction: TaskActionDto) {
     // FIXME merge system botlets, e.g., system event register, timer, cmd entry creation
 
@@ -93,7 +87,7 @@ export class TaskActionsService {
       taskAction,
     );
 
-    // single invocation, no vars, flow controls, and functions
+    // single invocation, no vars, flow controls, lambdas and parallels
     if (botlets.length === 1)
       return this._invoke(
         taskAction,
@@ -109,7 +103,7 @@ export class TaskActionsService {
   }
 
   /**
-   * a single function invocation. simple with no vars/flow controls/functions.
+   * a single function invocation. simple with no vars/flow controls/lambdas/parallels.
    * system botlets are involved: collection functions, timer, etc.
    */
   protected async _invoke(
@@ -126,10 +120,11 @@ export class TaskActionsService {
     );
     if (question) {
       // invoke event owner for more request info
-      this.eventEmitter.emit(
-        ProgressiveRequestEvent.eventName,
-        new ProgressiveRequestEvent(data),
-      );
+      // this.eventEmitter.addListener;
+      // this.eventEmitter.emit(
+      //   ProgressiveRequestEvent.eventName,
+      //   new ProgressiveRequestEvent(data),
+      // );
     }
 
     const fun = botletFunctions.find((f) => f.name === funName);
@@ -204,12 +199,12 @@ export class TaskActionsService {
   ) {
     const BotletFunctions: { [botletName: string]: BotletFunctionDto[] } = {};
 
-    if (taskAction.reqFunction) {
+    if (taskAction.funName) {
       const ms = await this.botletFunctionsService.findMany({
         where: {
           AND: [
             { botletUuid: { in: botlets.map((b) => b.uuid) } },
-            { name: taskAction.reqFunction },
+            { name: taskAction.funName },
           ],
         },
       });
@@ -252,92 +247,84 @@ export class TaskActionsService {
     taskId?: string;
     reqAdaptorKey: string;
     rawReq: object;
-    botletUuids: string[];
+    botletUuid: string;
     reqEndpointUuid?: string;
-    reqFunction?: string;
+    funName?: string;
     callback?: string;
-  }) {
-    if (!args.botletUuids?.length)
-      throw new BadRequestException('botletUuids must be specified');
+  }) {}
 
+  async createTaskAction(reqEvent: ClientRequestEvent) {
     // client adaptor
     const reqAdaptor = this.endpointsService.getAdaptor(
-      args.reqAdaptorKey,
+      reqEvent.dataType,
       EndpointType.CLIENT,
     );
     if (!reqAdaptor)
       throw new NotFoundException(
-        `Client endpoint adaptor not found, key=${args.reqAdaptorKey}`,
+        `Client endpoint adaptor not found, key=${reqEvent.dataType}`,
       );
 
     // tenantId
     const prisma = this.txHost.tx as PrismaClient;
     await this.tenancyService.bypassTenancy(prisma);
 
-    const reqEndpoint = args.reqEndpointUuid
-      ? await this.endpointsService.findOne(args.reqEndpointUuid)
-      : await this.endpointsService.findFirstByType(
-          args.botletUuids,
-          args.reqAdaptorKey,
-          EndpointType.CLIENT,
-        );
+    const reqEndpoint = await this.endpointsService.findOne(reqEvent.srcUuid);
     if (
       !reqEndpoint ||
       reqEndpoint.type != EndpointType.CLIENT ||
-      reqEndpoint.adaptorKey != args.reqAdaptorKey ||
-      !args.botletUuids.includes(reqEndpoint.botletUuid)
+      reqEndpoint.adaptorKey != reqEvent.dataType
     )
       throw new NotFoundException(
-        `Client endpoint not found, uuid=${args.reqEndpointUuid}`,
+        `Client endpoint not found, uuid=${reqEvent.srcUuid}`,
       );
 
     this.tenancyService.setTenantId(reqEndpoint.tenantId);
     await this.tenancyService.bypassTenancy(prisma, false);
 
     // load botlets
-    const botlets = await this.botletsService.findMany(args.botletUuids, {
-      uuid: true,
-      name: true,
-      summary: true,
-    });
-    // TODO add system botlets
+    // const botlets = await this.botletsService.findMany(reqEvent.botletUuids, {
+    //   uuid: true,
+    //   name: true,
+    //   summary: true,
+    // });
+    // // TODO add system botlets
 
-    // new task
-    const task = args.taskId
-      ? await this.tasksService.findOne(args.taskId, { uuid: true })
-      : await this.tasksService.create({}, args.caller, { uuid: true });
-    if (!task)
-      throw new NotFoundException('Task not found, uuid=' + args.taskId);
+    // // new task
+    // const task = reqEvent.taskId
+    //   ? await this.tasksService.findOne(reqEvent.taskId, { uuid: true })
+    //   : await this.tasksService.create({}, reqEvent.caller, { uuid: true });
+    // if (!task)
+    //   throw new NotFoundException('Task not found, uuid=' + reqEvent.taskId);
 
-    // get callback
-    args.callback = await reqAdaptor.getCallback(
-      args.callback,
-      args.rawReq,
-      reqEndpoint,
-    );
+    // // get callback
+    // reqEvent.callback = await reqAdaptor.getCallback(
+    //   reqEvent.callback,
+    //   reqEvent.rawReq,
+    //   reqEndpoint,
+    // );
 
-    const req = reqAdaptor.toJson(args.rawReq, true, reqEndpoint);
+    // const req = reqAdaptor.toJson(reqEvent.rawReq, true, reqEndpoint);
 
-    // action owner default to caller's botlet
-    if (!args.owner && args.caller) {
-    }
+    // // action owner default to caller's botlet
+    // if (!reqEvent.owner && reqEvent.caller) {
+    // }
 
-    const data = {
-      req,
-      taskUuid: task.uuid,
-      owner: args.owner,
-      uuid: Utils.uuid(),
-      cAdaptor: args.reqAdaptorKey,
-      cepUuid: reqEndpoint?.uuid,
-      callback: args.callback,
-      createdBy: args.caller,
-      reqFunction: args.reqFunction,
-      returns: false, // FIXME
-    };
-    // TODO: some action needn't persist, e.g. (action && !taskId)
-    const taskAction = await prisma.taskAction.create({ data });
+    // const data = {
+    //   req,
+    //   taskUuid: task.uuid,
+    //   owner: reqEvent.owner,
+    //   uuid: Utils.uuid(),
+    //   cAdaptor: reqEvent.reqAdaptorKey,
+    //   cepUuid: reqEndpoint?.uuid,
+    //   callback: reqEvent.callback,
+    //   createdBy: reqEvent.caller,
+    //   funName: reqEvent.funName,
+    //   returns: false, // FIXME
+    // };
+    // // TODO: some action needn't persist, e.g. (action && !taskId)
+    // const taskAction = await prisma.taskAction.create({ data });
 
-    return { taskAction, botlets, reqEndpoint, reqAdaptor };
+    // return { taskAction, botlets, reqEndpoint, reqAdaptor };
   }
 
   /** invocation flow, and lifecycle events */

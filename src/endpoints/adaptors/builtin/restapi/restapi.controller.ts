@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  NotFoundException,
   Param,
   Req,
   UseGuards,
@@ -11,24 +12,31 @@ import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { TaskActionsService } from '../../../../task-actions/task-actions.service';
 import { RestAPIAdaptor } from './restapi.adaptor';
+import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
+import { ClientRequestEvent } from '../../../events/client-request.event';
+import { EndpointsService } from '../../../endpoints.service';
+import { EndpointType } from '@prisma/client';
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
 @UseGuards(new JwtGuard(true))
 @Controller('botlets')
 export class RestApiController {
-  constructor(protected readonly taskActionsService: TaskActionsService) {}
+  constructor(
+    protected readonly endpointsService: EndpointsService,
+    protected readonly eventListenersService: EventListenersService,
+  ) {}
 
   @ApiOperation({
     description: 'rest-api client endpoint entry of multiple botlets',
   })
   @ApiParam({
-    name: 'uuids',
+    name: 'x-botlet-uuid',
     required: true,
     description: "comma separated botlet uuids, eg: 'uuid1,uuid2,uuid3'. ",
   })
   @ApiParam({
-    name: 'endpoint',
+    name: 'x-botlet-endpoint',
     required: false,
     description: 'endpoint uuid, optional: "/botlets/the-uuid`//`invoke/api/"',
   })
@@ -38,47 +46,44 @@ export class RestApiController {
     description:
       '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
   })
-  @ApiHeader({ name: 'x-b-taskId', required: false })
+  @ApiHeader({ name: 'x-botlet-ctxId', required: false })
   @ApiHeader({
-    name: 'x-b-owner',
+    name: 'x-botlet-progressive',
     required: false,
-    description: 'action request owner, responsible for progressive response',
+    description: 'progressive request responder',
   })
-  @ApiHeader({ name: 'x-b-callback', required: false })
-  @All(':uuids/:endpoint/invoke/api/*')
+  @ApiHeader({ name: 'x-botlet-callback', required: false })
+  @All(':x-botlet-uuid/:x-botlet-endpoint/invoke/api/*')
   async execute(
     @Req() req,
-    @Param('uuids') botletStr: string,
-    @Param('endpoint') endpoint?: string,
-    @Headers('x-b-taskId') taskId?: string,
-    @Headers('x-b-owner') owner?: string,
-    @Headers('x-b-callback') callback?: string,
+    @Param('x-botlet-uuid') botletUuid: string,
+    @Param('x-botlet-endpoint') endpoint?: string,
+    @Headers('x-botlet-ctxUuid') ctxUuid?: string,
+    @Headers('x-botlet-progressive') progressive?: string,
+    @Headers('x-botlet-callback') callback?: string,
   ) {
-    const botlets = botletStr.split(',').filter((b) => !!b);
-
-    const basePath = `${botletStr}/${endpoint}/invoke/api/`;
-    let reqFunction = req.url.substr(
-      req.url.indexOf(basePath) + basePath.length,
-    );
-    if (reqFunction)
-      reqFunction = RestAPIAdaptor.formalActionName(
-        req.method,
-        '/' + reqFunction,
-      );
+    const basePath = `${botletUuid}/${endpoint}/invoke/api/`;
+    let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
+    if (funName)
+      funName = RestAPIAdaptor.formalActionName(req.method, '/' + funName);
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller botlet
-    return this.taskActionsService.$execute({
-      taskId,
-      caller,
-      owner,
-      botletUuids: botlets,
-      rawReq: req,
-      reqAdaptorKey: 'restAPI',
-      reqEndpointUuid: endpoint,
-      reqFunction,
-      callback,
-    });
+    // find botlet cep, then set tenantId
+    const cep = await this.endpointsService.$findFirstByType(
+      EndpointType.CLIENT,
+      botletUuid,
+      'restAPI',
+      endpoint,
+    );
+    if (!cep)
+      throw new NotFoundException(
+        'restAPI endpoint not found for botlet: ' + botletUuid,
+      );
+    return this.eventListenersService.emit(
+      new ClientRequestEvent(cep.uuid, cep.adaptorKey, { ctxUuid, req, caller, callback, progressive }),
+      // FIXME sync timeout
+    );
   }
 
   @ApiOperation({

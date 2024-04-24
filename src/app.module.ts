@@ -14,6 +14,7 @@ import { ReposModule } from './infra/repo/repos.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
+import { EventListenersModule } from './event-listeners/event-listeners.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     BotletFunctionsModule,
     AgentsModule,
     TaskActionsModule,
+    EventListenersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

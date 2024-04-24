@@ -25,7 +25,7 @@ export class AgentsService {
   }
 
   req2Invoke(
-    taskAction: { req: any; reqFunction: string },
+    taskAction: { req: any; funName: string },
     botletName: string,
     botletFunctions: {
       name: string;

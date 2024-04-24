@@ -21,6 +21,25 @@ main()
   });
 
 async function initData() {
+  const eventListenerDto: Prisma.EventListenerUncheckedCreateInput = {
+    id: 1,
+    srcUuid: 'GLOBAL',
+    tenantId: 0,
+    eventType: 'CLIENT_REQUEST',
+    dataType: '*',
+    serviceType: 'SERVICE',
+    serviceName: 'TaskActionsService',
+    funName: 'createAction',
+    createdBy: 'GLOBAL',
+  };
+
+  const eventListener = await prisma.eventListener.upsert({
+    where: { id: 1 },
+    update: eventListenerDto,
+    create: eventListenerDto,
+  });
+  console.log({ eventListener });
+
   const llmTplA2FDto: Prisma.LlmTemplateUncheckedCreateInput = {
     id: 1,
     name: 'api2Function',
@@ -53,7 +72,7 @@ and an service \`invoker\` function.
 
 Please choose one function to fulfill below request:
 {
-{{ if (it.taskAction.reqFunction) { }}"requesting function": "{{=it.taskAction.reqFunction}}",
+{{ if (it.taskAction.funName) { }}"requesting function": "{{=it.taskAction.funName}}",
 {{ } }}"request from": "{{=it.taskAction.cAdaptor}}",
 "request_object": {{=JSON.stringify(it.taskAction.req)}},
 }

@@ -216,6 +216,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
 
     const type = request.isFormSubmission ? 'form' : 'body';
 
+    // FIXME filter all botlet- args, change authorization to botlet-authorization
     return {
       url,
       method,

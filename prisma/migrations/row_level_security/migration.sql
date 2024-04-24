@@ -9,9 +9,9 @@ ALTER TABLE "UserIdentity" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "Botlet" FORCE ROW LEVEL SECURITY;
 
 -- Create row security policies
-CREATE POLICY tenant_isolation_policy ON "User" USING ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int);
-CREATE POLICY tenant_isolation_policy ON "UserIdentity" USING ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int);
-CREATE POLICY tenant_isolation_policy ON "Botlet" USING ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int);
+CREATE POLICY tenant_isolation_policy ON "User" USING (("tenantId" = 0) OR ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int));
+CREATE POLICY tenant_isolation_policy ON "UserIdentity" USING (("tenantId" = 0) OR ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int));
+CREATE POLICY tenant_isolation_policy ON "Botlet" USING (("tenantId" = 0) OR ("tenantId" = current_setting('tenancy.tenantId', TRUE)::int));
 
 -- Create policies to bypass RLS (optional)
 CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');

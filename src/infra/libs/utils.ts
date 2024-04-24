@@ -3,9 +3,12 @@ import { nanoid } from 'nanoid';
 import { jsonrepair } from 'jsonrepair';
 
 export class Utils {
-  // Define a static async method to generate UUIDs
+  /** @returns a random uuid, specifically not starts with '.' or '-' */
   static uuid(size?: number) {
-    return nanoid(size);
+    for (;;) {
+      const id = nanoid(size);
+      if (id[0] != '.' && id[0] != '-') return id;
+    }
   }
 
   static async hashSalted(pwd: string): Promise<string> {

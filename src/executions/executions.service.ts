@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { EndpointType, PrismaClient } from '@prisma/client';
 import { AgentsService } from '../agents/agents.service';
-import { BotletFunctionDto } from './dto/botlet-function.dto';
+import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { BotletsService } from '../botlets/botlets.service';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -90,23 +90,23 @@ export class ExecutionsService {
     // FIXME merge system botlets, e.g., system event register, cmd entry creation
 
     // generate pseudo-command, and upserted vars stack
-    const cmd = await this.agentsService.genPseudoCmd(stateCtx, botlets, req);
+    const cmd = await this.agentsService.genPseudoCmd(botlets, stateCtx as any);
 
     // create a temp server endpoint to execute the cmd
 
     // entering regular instructions execution
-    this.commandExecutor.cmd(cmd, stateCtx);
+    // this.commandExecutor.cmd(cmd, stateCtx);
 
     return this._invocationFlow(
       { endpoint: reqEndpoint, adaptor: reqAdaptor, req: rawReq },
-      botletUuid,
+      botletUuids[0],
       action,
     );
   }
 
   /** invocation flow, and lifecycle events */
   protected async _invocationFlow(
-    req: RequestPack,
+    req: any,
     botletUuid: string,
     actionName?: string,
   ) {
@@ -133,21 +133,21 @@ export class ExecutionsService {
     // response to client or next cmd
   }
 
-  protected async _routing(req: RequestPack, actions: BotletFunctionDto[]) {
+  protected async _routing(req: any, actions: BotletFunctionDto[]) {
     return this.agentsService.routeAction(actions, req);
   }
 
   /** call out to server */
   /** invoke with callback */
   @Transactional()
-  async callout(action: BotletFunctionDto, req: RequestPack) {
+  async callout(action: BotletFunctionDto, req: any) {
     // get server endpoint(sep), and sAdaptor
-    const sEndpoint = await this.findOne(action.endpointUuid);
+    const sEndpoint = null; // await this.findOne(action.endpointUuid);
     if (!sEndpoint)
       throw new NotFoundException(
         `Endpoint not found, uuid=${action.endpointUuid}`,
       );
-    const sAdaptor = this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
+    const sAdaptor = null; // this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
     if (!sAdaptor)
       throw new NotFoundException(
         `Endpoint#${action.endpointUuid} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
