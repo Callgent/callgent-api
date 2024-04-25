@@ -74,11 +74,13 @@ export class EndpointsService {
     return Object.keys(client ? this.clientsList : this.serversList);
   }
 
+  @Transactional()
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpoint.findUnique({ where: { uuid } });
   }
 
+  @Transactional()
   findFirstByType(
     type: EndpointType,
     botletUuid: string,
@@ -94,6 +96,7 @@ export class EndpointsService {
   }
 
   /** bypassTenancy before query, setTenantId after query */
+  @Transactional()
   async $findFirstByType(
     type: EndpointType,
     botletUuid: string,
@@ -104,14 +107,15 @@ export class EndpointsService {
     return this.tenancyService.bypassTenancy(prisma).then(() =>
       this.findFirstByType(type, botletUuid, adaptorKey, endpoint).then(
         async (v) => {
-          await this.tenancyService.bypassTenancy(prisma, false);
           v && this.tenancyService.setTenantId(v.tenantId);
+          await this.tenancyService.bypassTenancy(prisma, false);
           return v;
         },
       ),
     );
   }
 
+  @Transactional()
   findOneAuth(uuid: string, userKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpointAuth.findUnique({

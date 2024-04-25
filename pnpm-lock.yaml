@@ -83,8 +83,8 @@ dependencies:
     specifier: ^10.3.10
     version: 10.3.10
   jsonrepair:
-    specifier: ^3.6.1
-    version: 3.6.1
+    specifier: ^3.7.0
+    version: 3.7.0
   module:
     specifier: ^1.2.5
     version: 1.2.5
@@ -201,6 +201,9 @@ devDependencies:
   eslint-config-prettier:
     specifier: ^9.0.0
     version: 9.0.0(eslint@8.42.0)
+  eslint-plugin-await-persisted:
+    specifier: file:eslint-rules/await-persisted
+    version: file:eslint-rules/await-persisted
   eslint-plugin-prettier:
     specifier: ^5.0.0
     version: 5.0.0(eslint-config-prettier@9.0.0)(eslint@8.42.0)(prettier@3.0.0)
@@ -5865,8 +5868,8 @@ packages:
     engines: {'0': node >= 0.2.0}
     dev: true
 
-  /jsonrepair@3.6.1:
-    resolution: {integrity: sha512-3yMISA+ma94/Sr8aDmB6mki6dKRoad4qMjddL+0gdymCnhjWPhzbNCyvx7ji7QroeicTSQW0lm77SC8Ecl/k3w==}
+  /jsonrepair@3.7.0:
+    resolution: {integrity: sha512-TwE50n4P4gdVfMQF2q+X+IGy4ntFfcuHHE8zjRyBcdtrRK0ORZsjOZD6zmdylk4p277nQBAlHgsEPWtMIQk4LQ==}
     hasBin: true
     dev: false
 
@@ -9088,4 +9091,10 @@ packages:
   /yocto-queue@1.0.0:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
+    dev: true
+
+  file:eslint-rules/await-persisted:
+    resolution: {directory: eslint-rules/await-persisted, type: directory}
+    name: eslint-plugin-await-persisted
+    version: 1.0.0
     dev: true

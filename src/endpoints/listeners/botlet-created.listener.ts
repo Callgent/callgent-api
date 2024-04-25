@@ -25,10 +25,14 @@ export class BotletCreatedListener {
           botletUuid: botlet.uuid,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: { path: 'restAPI' },
+          host: {},
           createdBy: botlet.createdBy,
         })
-        .then((endpoint) => this.endpointsService.init(endpoint.uuid, [])),
+        .then((endpoint) => {
+          // no await init, it may be slow
+          this.endpointsService.init(endpoint.uuid, []);
+          return endpoint;
+        }),
 
       // TODO API event endpoint
 
@@ -41,17 +45,11 @@ export class BotletCreatedListener {
           host: { mail: `botlet+${botlet.uuid}@c.botlet.io` },
           createdBy: botlet.createdBy,
         })
-        .then((endpoint) => this.endpointsService.init(endpoint.uuid, [])),
-
-      // no default server endpoint
-      // this.endpointsService.create({
-      //   botletUuid: botlet.uuid,
-      //   type: 'SERVER',
-      //   adaptorKey: 'mail',
-      //   authType: 'NONE',
-      //   host: {},
-      //   createdBy: botlet.createdBy,
-      // }),
+        .then((endpoint) => {
+          // no await init, it may be slow
+          this.endpointsService.init(endpoint.uuid, []);
+          return endpoint;
+        }),
     ]);
 
     return results;

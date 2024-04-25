@@ -32,8 +32,9 @@ export class JwtAuthService {
   }
 
   sign(payload: JwtPayload) {
-    payload.jti = Utils.uuid();
-    payload.iat = Math.floor(Date.now() / 1000);
+    const n = Date.now();
+    payload.iat = Math.floor(n / 1000);
+    payload.jti = Utils.intToBase64(n) + Utils.uuid(2);
     return this.jwtService.sign(payload, { expiresIn: this.expiresIn });
   }
 

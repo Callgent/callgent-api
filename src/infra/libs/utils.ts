@@ -1,14 +1,23 @@
 import * as bcrypt from 'bcrypt';
-import { nanoid } from 'nanoid';
 import { jsonrepair } from 'jsonrepair';
+import { nanoid, urlAlphabet } from 'nanoid';
 
 export class Utils {
-  /** @returns a random uuid, specifically not starts with '.' or '-' */
+  /** @returns a random uuid, specifically not starts with '-' */
   static uuid(size?: number) {
     for (;;) {
       const id = nanoid(size);
-      if (id[0] != '.' && id[0] != '-') return id;
+      if (id[0] != '-') return id;
     }
+  }
+
+  static intToBase64(num: number) {
+    let result = '';
+    while (num > 0) {
+      result += urlAlphabet[num % 64];
+      num = Math.floor(num / 64);
+    }
+    return result;
   }
 
   static async hashSalted(pwd: string): Promise<string> {

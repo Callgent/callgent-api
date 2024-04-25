@@ -180,7 +180,6 @@ function registerApi(
       iss: 'test.only',
       sub: 'TEST_USER_UUID',
       aud: 'test.client.uuid',
-      iat: Date.now(),
       username: 'user@example.com',
     });
     // const appToken = app.get(JwtAuthService).sign({

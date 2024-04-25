@@ -9,13 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
-import { TaskActionsService } from '../../../../task-actions/task-actions.service';
-import { RestAPIAdaptor } from './restapi.adaptor';
-import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
-import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EndpointsService } from '../../../endpoints.service';
 import { EndpointType } from '@prisma/client';
+import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
+import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
+import { EndpointsService } from '../../../endpoints.service';
+import { ClientRequestEvent } from '../../../events/client-request.event';
+import { RestAPIAdaptor } from './restapi.adaptor';
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
@@ -31,12 +30,12 @@ export class RestApiController {
     description: 'rest-api client endpoint entry of multiple botlets',
   })
   @ApiParam({
-    name: 'x-botlet-uuid',
+    name: 'uuid',
     required: true,
     description: "comma separated botlet uuids, eg: 'uuid1,uuid2,uuid3'. ",
   })
   @ApiParam({
-    name: 'x-botlet-endpoint',
+    name: 'endpoint',
     required: false,
     description: 'endpoint uuid, optional: "/botlets/the-uuid`//`invoke/api/"',
   })
@@ -53,11 +52,11 @@ export class RestApiController {
     description: 'progressive request responder',
   })
   @ApiHeader({ name: 'x-botlet-callback', required: false })
-  @All(':x-botlet-uuid/:x-botlet-endpoint/invoke/api/*')
+  @All(':uuid/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
-    @Param('x-botlet-uuid') botletUuid: string,
-    @Param('x-botlet-endpoint') endpoint?: string,
+    @Param('uuid') botletUuid: string,
+    @Param('endpoint') endpoint?: string,
     @Headers('x-botlet-ctxUuid') ctxUuid?: string,
     @Headers('x-botlet-progressive') progressive?: string,
     @Headers('x-botlet-callback') callback?: string,
@@ -81,7 +80,13 @@ export class RestApiController {
         'restAPI endpoint not found for botlet: ' + botletUuid,
       );
     return this.eventListenersService.emit(
-      new ClientRequestEvent(cep.uuid, cep.adaptorKey, { ctxUuid, req, caller, callback, progressive }),
+      new ClientRequestEvent(cep.uuid, cep.adaptorKey, {
+        ctxUuid,
+        req,
+        caller,
+        callback,
+        progressive,
+      }),
       // FIXME sync timeout
     );
   }

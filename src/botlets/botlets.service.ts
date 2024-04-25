@@ -50,6 +50,7 @@ export class BotletsService {
     return ret;
   }
 
+  @Transactional()
   findAll({
     select,
     where,
@@ -86,6 +87,7 @@ export class BotletsService {
     );
   }
 
+  @Transactional()
   async findMany(uuids: string[], select?: Prisma.BotletSelect) {
     const prisma = this.txHost.tx as PrismaClient;
 
@@ -129,6 +131,7 @@ export class BotletsService {
     );
   }
 
+  @Transactional()
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>

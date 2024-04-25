@@ -56,12 +56,12 @@ describe('Task Actions (e2e)', () => {
 
     // mount server endpoint auth
 
+    console.log({ serverEndpoint, functionCount });
+
     // request for task by botlet api
     const {
       json: { data },
     } = await invokeBotletByApi(botlet.uuid);
-
-    console.log({ serverEndpoint, functionCount });
   });
 });
 

@@ -64,18 +64,19 @@ const initOriginalPrismaService = (
         'info',
       ];
   }
-  console.log('log_level:', log_name, log);
+  console.log('log_level:', log_level, log_name, log);
   // hack, @see mainPrismaServiceOptions: config.get('LOG_LEVELS_PRISMA')
   process.env.LOG_LEVELS_PRISMA = JSON.stringify(log);
 
   // create as same as prod, from mainPrismaServiceOptions
   originalPrismaService = prismaTenancyUseFactory(prisma, store);
 
-  prisma.$on('query', (e) => {
-    if (log_level < 6 && e.query.startsWith('SELECT ')) return;
-    if (log_level < 6 && e.query.indexOf('SAVEPOINT') >= 0) return;
-    console.log(`Query: ${e.query}\n\tParams: ${e.params}`);
-  });
+  log_level > 3 &&
+    prisma.$on('query', (e) => {
+      if (log_level < 6 && e.query.startsWith('SELECT ')) return;
+      if (log_level < 6 && e.query.indexOf('SAVEPOINT') >= 0) return;
+      console.log(`Query: ${e.query}\n\tParams: ${e.params}`);
+    });
 };
 
 // TODO reset prisma db beforeAll https://github.com/selimb/fast-prisma-tests
