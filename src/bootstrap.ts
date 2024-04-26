@@ -167,13 +167,6 @@ function registerApi(
   ///// api docs
   const devDocVersion = configService.get<string>('DOCUMENTATION_VERSION');
   if (devDocVersion) {
-    const config = new DocumentBuilder()
-      .setTitle(docTitle)
-      .setDescription(docDesc)
-      .setVersion(devDocVersion)
-      .addBearerAuth(undefined, 'defaultBearerAuth')
-      .build();
-
     const devJwtToken = app.get(JwtAuthService).sign({
       tenantId: 1,
       id: testUserId,
@@ -182,26 +175,25 @@ function registerApi(
       aud: 'test.client.uuid',
       username: 'user@example.com',
     });
-    // const appToken = app.get(JwtAuthService).sign({
-    //   sub: 'TEST_USER_UUID',
-    //   aud: 'appKey',
-    // });
-    // logger.warn('App-Token: %s', appToken);
-
     // console.debug('devJwtToken:', devJwtToken);
+
+    const config = new DocumentBuilder()
+      .setTitle(docTitle)
+      .setDescription(docDesc)
+      .setVersion(devDocVersion)
+      // .addBearerAuth(schema, 'defaultBearerAuth')
+      .addSecurity('defaultBearerAuth', {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-botlet-authorization',
+      })
+      .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('docs/api', app, document, {
       swaggerOptions: {
         authAction: {
           defaultBearerAuth: {
-            name: 'defaultBearerAuth',
-            schema: {
-              description: 'Default',
-              type: 'http',
-              in: 'header',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-            },
+            schema: { type: 'apiKey', in: 'header' },
             value: devJwtToken,
           },
         },
