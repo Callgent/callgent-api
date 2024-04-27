@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
@@ -53,7 +53,7 @@ export class BotletApiText {
 }
 
 @ApiTags('BotletFunctions')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, BotletFunctionDto)
 @UseGuards(JwtGuard)
 @Controller('botlet-functions')

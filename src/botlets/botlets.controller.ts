@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
@@ -27,7 +27,7 @@ import { CreateBotletDto } from './dto/create-botlet.dto';
 import { UpdateBotletDto } from './dto/update-botlet.dto';
 
 @ApiTags('Botlets')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, BotletDto)
 @UseGuards(JwtGuard)
 @Controller('botlets')

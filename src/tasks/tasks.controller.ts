@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
@@ -26,7 +26,7 @@ import { TaskDto } from './dto/task.dto';
 import { TasksService } from './tasks.service';
 
 @ApiTags('Tasks')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, TaskDto)
 @UseGuards(JwtGuard)
 @Controller(':botlet/tasks')

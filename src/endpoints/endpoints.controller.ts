@@ -2,7 +2,7 @@ import {
   Body,
   Controller,
   Get,
-  NotFoundException,
+  Inject,
   Param,
   Patch,
   Post,
@@ -10,20 +10,21 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { EndpointType } from '@prisma/client';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { EndpointConfig } from './adaptors/endpoint-adaptor.interface';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointsService } from './endpoints.service';
 
 @ApiTags('Endpoints')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @UseGuards(JwtGuard)
 @Controller('endpoints')
 export class EndpointsController {
-  constructor(private readonly endpointsService: EndpointsService) {}
+  constructor(
+    @Inject('EndpointsService')
+    private readonly endpointsService: EndpointsService,
+  ) {}
 
   @Get()
   list(@Query('client') client?: boolean) {

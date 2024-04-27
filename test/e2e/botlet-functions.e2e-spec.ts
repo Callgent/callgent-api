@@ -21,7 +21,7 @@ export const addBotletFunctions = (apiTxt: BotletApiText) => {
   return pactum
     .spec()
     .post('/api/botlet-functions/import')
-    .withBearerToken(TestConstant.authToken)
+    .withHeaders('x-botlet-authorization', TestConstant.authToken)
     .withBody(apiTxt)
     .expectStatus(201);
 };

@@ -74,7 +74,7 @@ export const createEndpoint = (
   return pactum
     .spec()
     .post(`/api/endpoints/${adaptorKey}/botlets`)
-    .withBearerToken(TestConstant.authToken)
+    .withHeaders('x-botlet-authorization', TestConstant.authToken)
     .withBody(endpointDto)
     .expectStatus(201);
 };
@@ -83,7 +83,7 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
   return pactum
     .spec()
     .put(`/api/endpoints/auth`)
-    .withBearerToken(TestConstant.authToken)
+    .withHeaders('x-botlet-authorization', TestConstant.authToken)
     .withBody(endpointAuthDto)
     .expectStatus(200);
 };
@@ -92,6 +92,6 @@ export const invokeBotletByApi = (botletUuid) => {
   return pactum
     .spec()
     .post(`/api/botlets/${botletUuid}/invoke/api/boards/list`)
-    .withBearerToken(TestConstant.authToken)
+    .withHeaders('x-botlet-authorization', TestConstant.authToken)
     .expectStatus(200);
 };

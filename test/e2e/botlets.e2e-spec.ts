@@ -35,7 +35,10 @@ export const createBotlet = (
   return pactum
     .spec()
     .post('/api/botlets')
-    .withBearerToken(auth ? TestConstant.authToken : 'invalid auth token')
+    .withHeaders(
+      'x-botlet-authorization',
+      auth ? TestConstant.authToken : 'invalid auth token',
+    )
     .withBody(dto)
     .expectStatus(auth ? 201 : 401);
 };
@@ -51,7 +54,10 @@ export const invokeBotlet = (
   return pactum
     .spec()
     .post('/api/botlets')
-    .withBearerToken(auth ? TestConstant.authToken : 'invalid auth token')
+    .withHeaders(
+      'x-botlet-authorization',
+      auth ? TestConstant.authToken : 'invalid auth token',
+    )
     .withBody(dto)
     .expectStatus(auth ? 201 : 401);
 };

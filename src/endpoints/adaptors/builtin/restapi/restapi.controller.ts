@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Inject,
   NotFoundException,
   Param,
   Req,
@@ -22,6 +23,7 @@ import { RestAPIAdaptor } from './restapi.adaptor';
 @Controller('botlets')
 export class RestApiController {
   constructor(
+    @Inject('EndpointsService')
     protected readonly endpointsService: EndpointsService,
     protected readonly eventListenersService: EventListenersService,
   ) {}
@@ -45,7 +47,7 @@ export class RestApiController {
     description:
       '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
   })
-  @ApiHeader({ name: 'x-botlet-ctxId', required: false })
+  @ApiHeader({ name: 'x-botlet-taskId', required: false })
   @ApiHeader({
     name: 'x-botlet-progressive',
     required: false,
@@ -57,7 +59,7 @@ export class RestApiController {
     @Req() req,
     @Param('uuid') botletUuid: string,
     @Param('endpoint') endpoint?: string,
-    @Headers('x-botlet-ctxUuid') ctxUuid?: string,
+    @Headers('x-botlet-taskId') taskId?: string,
     @Headers('x-botlet-progressive') progressive?: string,
     @Headers('x-botlet-callback') callback?: string,
   ) {
@@ -81,7 +83,7 @@ export class RestApiController {
       );
     return this.eventListenersService.emit(
       new ClientRequestEvent(cep.uuid, cep.adaptorKey, {
-        ctxUuid,
+        taskId,
         req,
         caller,
         callback,

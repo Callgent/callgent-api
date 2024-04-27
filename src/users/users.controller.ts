@@ -1,6 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiExtraModels,
   ApiOkResponse,
   ApiTags,
@@ -14,7 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthUtils } from '../infra/auth/auth.utils';
 
 @ApiTags('Users')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(UpdateUserDto)
 @Controller('users')
 export class UsersController {
