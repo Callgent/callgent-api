@@ -8,13 +8,14 @@ import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
 import { BotletFunctionsModule } from './botlet-functions/botlet-functions.module';
 import { BotletsModule } from './botlets/botlets.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
+import { EventListenersModule } from './event-listeners/event-listeners.module';
+import { EventStoresModule } from './event-stores/event-stores.module';
 import { AuthModule } from './infra/auth/auth.module';
 import { LoggingModule } from './infra/logging/logging.module';
 import { ReposModule } from './infra/repo/repos.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
-import { EventListenersModule } from './event-listeners/event-listeners.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { EventListenersModule } from './event-listeners/event-listeners.module';
     AgentsModule,
     TaskActionsModule,
     EventListenersModule,
+    EventStoresModule,
   ],
   controllers: [AppController],
   providers: [AppService],

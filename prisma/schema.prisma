@@ -31,16 +31,16 @@ datasource db {
 //////////////////// Authentication and Account ////////////////////////////
 
 model Tenant {
-  id       Int     @id @default(autoincrement())
+  id         Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String  @unique @db.VarChar(36)
-  mailHost String? @unique @db.VarChar(36) /// @description unique tenant mail host
-  name     String? @db.VarChar(50)
-  avatar   String? @db.VarChar(1023)
-  type     Int     @default(1) /// @description account type: 1: individual, 2: organization.
-  status   Int     @default(0) /// @description user status: 0: pending, 1: active, -1: inactive.
+  uuid       String  @unique @db.VarChar(36)
+  mailHost   String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  name       String? @db.VarChar(50)
+  avatar     String? @db.VarChar(1023)
+  type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
+  statusCode Int     @default(0) /// @description user statusCode: 0: pending, 1: active, -1: inactive.
 
   User User[]
 
@@ -185,7 +185,7 @@ model BotletFunction {
 
   name      String   @db.VarChar(255)
   /// @description js function name to invoke this botlet function
-  funName   String   @db.VarChar(31)
+  funName   String   @db.VarChar(255)
   params    String[] @db.VarChar(31)
   /// @description js function api docs
   documents String   @db.VarChar(4095)
@@ -228,10 +228,10 @@ model Task {
   // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  status  Int     @default(-1) /// @description Task status, -1: pending, 0: done, <-1: failed
-  name    String? @db.VarChar(64) /// @description task name
-  brief   String? @db.VarChar(255) /// @description task brief or description
-  content Json? /// @description optional task content
+  statusCode Int     @default(-1) /// @description Task statusCode, -1: pending, 0: done, <-1: failed
+  name       String? @db.VarChar(64) /// @description task name
+  brief      String? @db.VarChar(255) /// @description task brief or description
+  content    Json? /// @description optional task content
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -260,11 +260,11 @@ model TaskAction {
 
   // client side information
   /// @description action owner botlet uuid, responsible for progressive response
-  ownerUuid String? @db.VarChar(36)
-  cepUuid   String? @db.VarChar(36) /// @description client endpoint uuid
-  cAdaptor  String  @db.VarChar(36) /// @description client adaptor key
-  callback  Json?   @db.Json /// @description callback params
-  funName   String? @db.VarChar(255) /// @description optional botlet function name
+  cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
+  funName     String? @db.VarChar(255) /// @description optional botlet function name
+  cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
+  callback    Json?   @db.Json /// @description callback url template or botlet function
+  progressive String? @db.VarChar(36) /// @description progressive requesting url template or botlet function
 
   // processing
   returns    Boolean @default(false) /// @description whether action has response object
@@ -422,9 +422,9 @@ model PersistedAsync {
   /// @DtoEntityHidden
   id BigInt @id @default(autoincrement())
 
-  status  Int    @default(-1) /// @description status, -1: pending, 1: sent, 0: done, <-1: failed
-  service String @db.VarChar(127) /// @description callback service name
-  method  String @db.VarChar(127) /// @description callback method name
+  statusCode Int    @default(-1) /// @description statusCode, -1: pending, 1: sent, 0: done, <-1: failed
+  service    String @db.VarChar(127) /// @description callback service name
+  method     String @db.VarChar(127) /// @description callback method name
 
   parentAsyncId BigInt? @db.BigInt /// @description parent async id
 
@@ -434,13 +434,22 @@ model PersistedAsync {
   deletedAt DateTime? /// @description logical deletion.
 }
 
+enum ServiceType {
+  SERVICE
+  BOTLET
+}
+
 model EventListener {
   /// @DtoEntityHidden
-  id       Int @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   srcUuid String @db.VarChar(36) /// @description event source id
 
@@ -448,9 +457,9 @@ model EventListener {
   dataType  String @db.VarChar(36)
   priority  Int?   @default(0)
 
-  serviceType String @db.VarChar(36) // botlet, service
-  serviceName String @db.VarChar(36)
-  funName     String @db.VarChar(36)
+  serviceType ServiceType // botlet, service
+  serviceName String      @db.VarChar(255)
+  funName     String      @db.VarChar(255)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -464,4 +473,45 @@ model EventListener {
 
   @@index([srcUuid])
   @@index([tenantId])
+}
+
+model EventStore {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  srcId     String  @db.VarChar(36)
+  tgtId     String? @db.VarChar(36)
+  eventType String  @db.VarChar(36)
+  dataType  String  @db.VarChar(36)
+
+  data    Json? @db.Json
+  context Json? @db.Json
+
+  /// @description statusCode, -1: processing, 0: done, 1: pending, >1: error
+  statusCode       Int     @default(-1)
+  message          String? @db.VarChar(255)
+  stopPropagation  Boolean
+  defaultPrevented Boolean
+  listenerUuid     String? @db.VarChar(36)
+  funName          String? @db.VarChar(255)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantId])
+  @@index([uuid])
+  @@index([srcId])
+  @@index([tgtId])
 }
