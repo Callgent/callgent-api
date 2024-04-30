@@ -44,7 +44,7 @@ export class UsersService {
    * @param uid
    * @param provider
    * @param prisma
-   * @param options {noTenant: 'true: w/o tenant limitation', evenInvalid: 'true: return deleted or any tenant.status'}
+   * @param options {noTenant: 'true: w/o tenant limitation', evenInvalid: 'true: return deleted or any tenant.statusCode'}
    */
   async findUserIdentity(
     uid: string,
@@ -66,7 +66,7 @@ export class UsersService {
             OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
           },
         }
-      : { AND: { uid, provider, user: { tenant: { status: { gt: 0 } } } } };
+      : { AND: { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } } };
     const ui = await prisma.userIdentity.findFirst({
       where,
       include: {
@@ -105,12 +105,12 @@ export class UsersService {
           'Sorry, current account has no access to our services',
         );
       }
-      if (!(uiInDb.user?.tenant?.status > 0)) {
+      if (!(uiInDb.user?.tenant?.statusCode > 0)) {
         this.logger.warn('account is invalid, %j', uiInDb);
         throw new ForbiddenException(
           `Sorry, current account is in ${
-            uiInDb.user?.tenant?.status == 0 ? 'pending' : 'inactive'
-          } status, please try again later.`,
+            uiInDb.user?.tenant?.statusCode == 0 ? 'pending' : 'inactive'
+          } statusCode, please try again later.`,
         );
       }
 
@@ -152,12 +152,12 @@ export class UsersService {
         mailHost,
         'Sorry, current account has no access to our services',
       );
-    if (!(tenant.status > 0))
+    if (!(tenant.statusCode > 0))
       throw new ForbiddenException(
         mailHost,
         `Sorry, current account is in ${
-          tenant.status == 0 ? 'pending' : 'inactive'
-        } status, please try again later.`,
+          tenant.statusCode == 0 ? 'pending' : 'inactive'
+        } statusCode, please try again later.`,
       );
 
     return uiInDb.user;
@@ -190,7 +190,7 @@ export class UsersService {
           mailHost,
           name: mailHost,
           type: 1,
-          status: 1, // active by default
+          statusCode: 1, // active by default
         },
       });
     }

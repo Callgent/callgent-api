@@ -60,6 +60,7 @@ model User {
   uuid   String  @unique @db.VarChar(36)
   name   String  @db.VarChar(36)
   avatar String? @db.VarChar(1023)
+  locale String? @default("en_US") @db.VarChar(10)
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id])
   /// @DtoRelationIncludeId
@@ -460,6 +461,7 @@ model EventListener {
   serviceType ServiceType // botlet, service
   serviceName String      @db.VarChar(255)
   funName     String      @db.VarChar(255)
+  // TODO add the listener's input/output props in event.context, for automatic checking
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -487,8 +489,12 @@ model EventStore {
   // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
+  /// @Description src entity uuid which bind to the listener
   srcId     String  @db.VarChar(36)
-  tgtId     String? @db.VarChar(36)
+  /// @Description parent event uuid of emitting chain
+  parentId  String? @db.VarChar(36)
+  /// @Description target uuid to relate several events
+  targetId  String? @db.VarChar(36)
   eventType String  @db.VarChar(36)
   dataType  String  @db.VarChar(36)
 
@@ -510,8 +516,9 @@ model EventStore {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  @@index([srcId])
+  @@index([parentId])
+  @@index([targetId])
   @@index([tenantId])
   @@index([uuid])
-  @@index([srcId])
-  @@index([tgtId])
 }

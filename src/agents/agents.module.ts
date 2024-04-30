@@ -4,7 +4,10 @@ import { LLMService } from './llm.service';
 
 @Global()
 @Module({
-  providers: [AgentsService, LLMService],
-  exports: [AgentsService],
+  providers: [
+    { provide: 'AgentsService', useClass: AgentsService },
+    LLMService,
+  ],
+  exports: ['AgentsService'],
 })
 export class AgentsModule {}

@@ -1,4 +1,5 @@
 import { EndpointDto } from '../../../dto/endpoint.dto';
+import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
   AdaptedDataSource,
@@ -9,12 +10,14 @@ import {
 
 @EndpointAdaptorName('webpage', 'both')
 export class WebpageAdaptor implements EndpointAdaptor {
-  getCallback(callback: string, rawReq: object, reqEndpoint?: EndpointDto): Promise<string> {
+  getCallback(
+    callback: string,
+    rawReq: object,
+    reqEndpoint?: EndpointDto,
+  ): Promise<string> {
     throw new Error('Method not implemented.');
   }
-  toJson(rawData: object, request: boolean, endpoint: EndpointDto): AdaptedDataSource {
-    throw new Error('Method not implemented.');
-  }
+
   getConfig(): EndpointConfig {
     return {
       host: { address: { type: 'url', name: 'Page URL' } },
@@ -73,6 +76,10 @@ export class WebpageAdaptor implements EndpointAdaptor {
     // - script to operate the page
     // auth handler
     throw new Error('Method not implemented.');
+  }
+
+  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+    //
   }
 
   parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {

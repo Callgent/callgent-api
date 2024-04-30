@@ -1,19 +1,29 @@
+import { JsonValue } from '@prisma/client/runtime/library';
 import { EventObject } from '../../event-listeners/event-object';
 
-/** event from client endpoint */
+/**
+ * event from client endpoint, processing:
+ * 1. adaptor preprocessing
+ * 2. create task action
+ * 3. function mapping
+ * 4. args mapping
+ * 5. invocation
+ */
 export class ClientRequestEvent extends EventObject {
   constructor(
-    // srcType: string,
-    /** event src uuid, may be endpoint, task, action, lambda... */
-    srcUuid: string,
+    /** client endpoint uuid */
+    cepId: string,
+    /** empty to create new task */
+    taskId: string,
     dataType: string,
+    /** raw request, will not be persisted */
+    public readonly rawReq: any,
     public readonly data: {
-      /** taskId, or actionId if starts with '.' */
-      ctxUuid?: string;
+      botletId: string;
+      botletName: string;
       /** empty means anonymous */
       caller?: string;
-      /** raw request */
-      req: unknown;
+      req?: JsonValue;
       /** requested botlet function name */
       funName?: string;
       /** url template for progressive requesting, `botlet:funName[@botlet]` to invoke botlet */
@@ -22,6 +32,6 @@ export class ClientRequestEvent extends EventObject {
       callback?: string;
     },
   ) {
-    super(srcUuid, 'CLIENT_REQUEST', dataType);
+    super(cepId, 'CLIENT_REQUEST', dataType, taskId);
   }
 }

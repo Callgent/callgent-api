@@ -5,8 +5,10 @@ import { BotletFunctionsService } from './botlet-functions.service';
 
 @Module({
   imports: [EndpointsModule],
-  providers: [BotletFunctionsService],
+  providers: [
+    { provide: 'BotletFunctionsService', useClass: BotletFunctionsService },
+  ],
   controllers: [BotletFunctionsController],
-  exports: [BotletFunctionsService],
+  exports: ['BotletFunctionsService'],
 })
 export class BotletFunctionsModule {}

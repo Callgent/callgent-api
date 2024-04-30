@@ -132,13 +132,16 @@ export class BotletsService {
   }
 
   @Transactional()
-  findOne(uuid: string) {
+  findOne(uuid: string, select?: Prisma.BotletSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.botlet.findUnique({
-        select,
-        where: { uuid },
-      }),
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.botlet.findUnique({
+          select,
+          where: { uuid },
+        }),
+      this.defSelect,
     );
   }
 

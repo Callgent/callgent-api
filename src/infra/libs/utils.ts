@@ -70,6 +70,10 @@ export class Utils {
       throw new Error(`(${e.message}): toJSON(${txt}, ${isArray})`);
     }
   }
+
+  static sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 }
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */

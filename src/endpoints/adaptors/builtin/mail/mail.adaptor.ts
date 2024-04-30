@@ -1,20 +1,22 @@
 import { EndpointDto } from '../../../dto/endpoint.dto';
+import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  AdaptedDataSource,
   ApiSpec,
   EndpointAdaptor,
-  EndpointConfig,
+  EndpointConfig
 } from '../../endpoint-adaptor.interface';
 
 @EndpointAdaptorName('mail', 'both')
 export class MailAdaptor implements EndpointAdaptor {
-  getCallback(callback: string, rawReq: object, reqEndpoint?: EndpointDto): Promise<string> {
+  getCallback(
+    callback: string,
+    rawReq: object,
+    reqEndpoint?: EndpointDto,
+  ): Promise<string> {
     throw new Error('Method not implemented.');
   }
-  toJson(rawData: object, request: boolean, endpoint: EndpointDto): AdaptedDataSource {
-    throw new Error('Method not implemented.');
-  }
+
   getConfig(): EndpointConfig {
     return {};
   }
@@ -28,6 +30,10 @@ export class MailAdaptor implements EndpointAdaptor {
   async initServer(initParams: object, endpoint: EndpointDto) {
     // throw new Error('Method not implemented.');
     return '';
+  }
+
+  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+    //
   }
 
   parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {

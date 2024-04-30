@@ -6,10 +6,12 @@ import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
 import { BotletCreatedListener } from './listeners/botlet-created.listener';
+import { BotletsModule } from '../botlets/botlets.module';
 
 @Module({
+  imports: [BotletsModule],
   providers: [
-    EndpointsService,
+    { provide: 'EndpointsService', useClass: EndpointsService },
     BotletCreatedListener,
     {
       provide: 'restAPI-EndpointAdaptor',
@@ -25,6 +27,6 @@ import { BotletCreatedListener } from './listeners/botlet-created.listener';
     },
   ],
   controllers: [EndpointsController, RestApiController],
-  exports: [EndpointsService],
+  exports: ['EndpointsService'],
 })
 export class EndpointsModule {}

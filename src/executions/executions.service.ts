@@ -2,12 +2,11 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { EndpointType, PrismaClient } from '@prisma/client';
-import { AgentsService } from '../agents/agents.service';
-import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { BotletsService } from '../botlets/botlets.service';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -23,8 +22,8 @@ export class ExecutionsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly botletsService: BotletsService,
+    @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
-    private readonly agentsService: AgentsService,
     private readonly commandExecutor: CommandExecutor,
   ) {}
 
@@ -81,7 +80,7 @@ export class ExecutionsService {
           .join(', ')}`,
       );
 
-    const req = reqAdaptor.toJson(rawReq, true, reqEndpoint);
+    // const req = reqAdaptor.toJson(rawReq, true, reqEndpoint);
 
     // FIXME when to persist req/resp into task
     // FIXME task ctx, and vars stack
@@ -90,77 +89,77 @@ export class ExecutionsService {
     // FIXME merge system botlets, e.g., system event register, cmd entry creation
 
     // generate pseudo-command, and upserted vars stack
-    const cmd = await this.agentsService.genPseudoCmd(botlets, stateCtx as any);
+    // const cmd = await this.agentsService.genPseudoCmd(botlets, stateCtx as any);
 
     // create a temp server endpoint to execute the cmd
 
     // entering regular instructions execution
     // this.commandExecutor.cmd(cmd, stateCtx);
 
-    return this._invocationFlow(
-      { endpoint: reqEndpoint, adaptor: reqAdaptor, req: rawReq },
-      botletUuids[0],
-      action,
-    );
+    // return this._invocationFlow(
+    //   { endpoint: reqEndpoint, adaptor: reqAdaptor, req: rawReq },
+    //   botletUuids[0],
+    //   action,
+    // );
   }
 
   /** invocation flow, and lifecycle events */
-  protected async _invocationFlow(
-    req: any,
-    botletUuid: string,
-    actionName?: string,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
+  // protected async _invocationFlow(
+  //   req: any,
+  //   botletUuid: string,
+  //   actionName?: string,
+  // ) {
+  //   const prisma = this.txHost.tx as PrismaClient;
 
-    // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
-    const where = actionName
-      ? { AND: [{ name: actionName }, { botletUuid }] }
-      : { botletUuid };
-    const take = actionName ? 1 : undefined;
-    const actions = await prisma.botletFunction.findMany({ where, take });
-    const action = actionName
-      ? actions.find((a) => a.name == actionName)
-      : await this._routing(req, actions);
-    if (!action)
-      throw new BadRequestException(
-        'Action entry not found on botlet: ' + botletUuid,
-      );
+  //   // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
+  //   const where = actionName
+  //     ? { AND: [{ name: actionName }, { botletUuid }] }
+  //     : { botletUuid };
+  //   const take = actionName ? 1 : undefined;
+  //   const actions = await prisma.botletFunction.findMany({ where, take });
+  //   const action = actionName
+  //     ? actions.find((a) => a.name == actionName)
+  //     : await this._routing(req, actions);
+  //   if (!action)
+  //     throw new BadRequestException(
+  //       'Action entry not found on botlet: ' + botletUuid,
+  //     );
 
-    // may reply ack to client directly, async result
-    const resp = await this.callout(action, req);
+  //   // may reply ack to client directly, async result
+  //   const resp = await this.callout(action, req);
 
-    // task ctx io
-    // response to client or next cmd
-  }
+  //   // task ctx io
+  //   // response to client or next cmd
+  // }
 
-  protected async _routing(req: any, actions: BotletFunctionDto[]) {
-    return this.agentsService.routeAction(actions, req);
-  }
+  // protected async _routing(req: any, actions: BotletFunctionDto[]) {
+  //   return this.agentsService.routeAction(actions, req);
+  // }
 
   /** call out to server */
   /** invoke with callback */
-  @Transactional()
-  async callout(action: BotletFunctionDto, req: any) {
-    // get server endpoint(sep), and sAdaptor
-    const sEndpoint = null; // await this.findOne(action.endpointUuid);
-    if (!sEndpoint)
-      throw new NotFoundException(
-        `Endpoint not found, uuid=${action.endpointUuid}`,
-      );
-    const sAdaptor = null; // this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
-    if (!sAdaptor)
-      throw new NotFoundException(
-        `Endpoint#${action.endpointUuid} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
-      );
+  // @Transactional()
+  // async callout(action: BotletFunctionDto, req: any) {
+  //   // get server endpoint(sep), and sAdaptor
+  //   const sEndpoint = null; // await this.findOne(action.endpointUuid);
+  //   if (!sEndpoint)
+  //     throw new NotFoundException(
+  //       `Endpoint not found, uuid=${action.endpointUuid}`,
+  //     );
+  //   const sAdaptor = null; // this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
+  //   if (!sAdaptor)
+  //     throw new NotFoundException(
+  //       `Endpoint#${action.endpointUuid} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
+  //     );
 
-    //// async/sync execute action command, given action params/code/req/[specific mapping], with cb
-    // do specific/AI mapping from task ctx
-    const params = await this.agentsService.mapParams(action.content, req);
-    // [async preparing]
-    // invoking adaptor
-    const resp = await sAdaptor.invoke(params);
-    // response handling
-    return resp;
-    //// end exec.
-  }
+  //   //// async/sync execute action command, given action params/code/req/[specific mapping], with cb
+  //   // do specific/AI mapping from task ctx
+  //   const params = await this.agentsService.mapParams(action.content, req);
+  //   // [async preparing]
+  //   // invoking adaptor
+  //   const resp = await sAdaptor.invoke(params);
+  //   // response handling
+  //   return resp;
+  //   //// end exec.
+  // }
 }

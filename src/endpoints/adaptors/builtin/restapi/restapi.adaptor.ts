@@ -1,14 +1,14 @@
-import { BadRequestException } from '@nestjs/common';
+import $RefParser from '@apidevtools/json-schema-ref-parser';
+import { BadRequestException, Inject } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
+import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  AdaptedDataSource,
   ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
-import $RefParser from '@apidevtools/json-schema-ref-parser';
 
 class RequestJson {
   url: string;
@@ -31,7 +31,9 @@ class ResponseJson {
 
 @EndpointAdaptorName('restAPI', 'both')
 export class RestAPIAdaptor implements EndpointAdaptor {
-  constructor(private readonly agentsService: AgentsService) {}
+  constructor(
+    @Inject('AgentsService') private readonly agentsService: AgentsService,
+  ) {}
 
   getConfig(): EndpointConfig {
     return {
@@ -134,6 +136,23 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     throw new Error('Method not implemented.');
   }
 
+  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+    if (!reqEvent.rawReq)
+      throw new BadRequestException(
+        'Missing request object for ClientRequestEvent',
+      );
+    const { callback, progressive } = reqEvent.data;
+
+    // read callback from cep config
+    if (!callback) {
+    }
+    // read progressive from cep config
+    if (!progressive) {
+    }
+
+    reqEvent.data.req = this.req2Json(reqEvent.rawReq);
+  }
+
   async parseApis(apiTxt: { text: string; format?: string }) {
     const ret: ApiSpec = { apis: [] };
 
@@ -189,16 +208,8 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     return callback;
   }
 
-  toJson(
-    rawData: object,
-    // request: boolean,
-    // endpoint: EndpointDto,
-  ): AdaptedDataSource {
-    return this.req2Json(rawData);
-  }
-
   req2Json(request) {
-    const { method, headers, query, body, raw } = request;
+    const { method, headers: rawHeaders, query, body, raw } = request;
     if (request.url.indexOf('/invoke/api/') < 0)
       throw new Error(
         'Unsupported URL, should be /botlets/:uuids/:endpoint/invoke/api/*',
@@ -217,15 +228,16 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     const type = request.isFormSubmission ? 'form' : 'body';
 
     // filter all x-botlet- args
+    const headers = { ...rawHeaders };
     Object.keys(headers).forEach((key) => {
       if (key.startsWith('x-botlet-')) delete headers[key];
     });
 
-    // FIXME change authorization to botlet-authorization
+    // FIXME change authorization to x-botlet-authorization
     return {
       url,
       method,
-      headers: { ...headers, authorization: undefined }, // filter botlet authorization
+      headers: { ...headers }, // filter botlet authorization
       query,
       files,
       [type]: body,

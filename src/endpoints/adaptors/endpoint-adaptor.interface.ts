@@ -1,7 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { EndpointDto } from '../dto/endpoint.dto';
+import { ClientRequestEvent } from '../events/client-request.event';
 
 export interface EndpointAdaptor {
+  preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
   /** Endpoint config. */
   getConfig(): EndpointConfig;
 
@@ -18,18 +20,11 @@ export interface EndpointAdaptor {
   /** get callback param */
   getCallback(
     callback: string,
-    rawReq: object,
+    rawReq: unknown,
     reqEndpoint?: EndpointDto,
   ): Promise<string>;
   /** send response back to client */
   callback(resp: any): Promise<boolean>;
-
-  /** wrap raw data to adapted data source */
-  toJson(
-    rawData: object,
-    request: boolean,
-    endpoint: EndpointDto,
-  ): AdaptedDataSource;
 }
 
 export interface AdaptedDataSource {}

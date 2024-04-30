@@ -1,5 +1,5 @@
 import { Transactional } from '@nestjs-cls/transactional';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { BotletCreatedEvent } from '../../botlets/events/botlet-created.event';
 import { EndpointsService } from '../endpoints.service';
@@ -7,7 +7,10 @@ import { EndpointsService } from '../endpoints.service';
 @Injectable()
 export class BotletCreatedListener {
   private readonly logger = new Logger(BotletCreatedListener.name);
-  constructor(private readonly endpointsService: EndpointsService) {}
+  constructor(
+    @Inject('EndpointsService')
+    private readonly endpointsService: EndpointsService,
+  ) {}
 
   /** create a botlet with default api receiver endpoint, and mail receiver/sender endpoint */
   @Transactional()

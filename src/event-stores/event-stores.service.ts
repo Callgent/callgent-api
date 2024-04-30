@@ -11,16 +11,19 @@ export class EventStoresService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {}
 
-  /** create random tgtId if not set, else check if exists */
-  async upsertTgtId(event: EventObject) {
-    if (event.tgtId) {
+  /** create random targetId if not set, else load all events of targetId */
+  async loadTargetEvents(event: EventObject) {
+    const { uuid, targetId } = event;
+    if (targetId) {
       const prisma = this.txHost.tx as PrismaClient;
-      const e = await prisma.eventStore.findFirst({
-        select: { id: true },
-        where: { tgtId: event.tgtId },
+      const es = await prisma.eventStore.findMany({
+        select: { uuid: true, eventType: true, dataType: true, data: true }, // TODO, what to select
+        where: { AND: [{ uuid: { not: uuid } }, { targetId }] },
+        orderBy: { id: 'asc' },
       });
-      if (!e)
-        throw new NotFoundException('Invalid event.tgtId: ' + event.tgtId);
-    } else event.tgtId = Utils.uuid(); // create new tgtId
+      if (!es?.length)
+        throw new NotFoundException('Invalid event.targetId: ' + targetId);
+      event.context.tgtEvents = es;
+    } else event.targetId = Utils.uuid(); // create new targetId
   }
 }

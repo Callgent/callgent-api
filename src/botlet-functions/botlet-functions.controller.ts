@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Post,
   Put,
@@ -58,7 +59,10 @@ export class BotletApiText {
 @UseGuards(JwtGuard)
 @Controller('botlet-functions')
 export class BotletFunctionsController {
-  constructor(private readonly BotletFunctionService: BotletFunctionsService) {}
+  constructor(
+    @Inject('BotletFunctionsService')
+    private readonly BotletFunctionService: BotletFunctionsService,
+  ) {}
 
   @ApiOperation({
     summary:

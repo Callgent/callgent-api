@@ -16,6 +16,7 @@ import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { EndpointsService } from '../../../endpoints.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RestAPIAdaptor } from './restapi.adaptor';
+import { BotletsService } from '../../../../botlets/botlets.service';
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
@@ -23,6 +24,7 @@ import { RestAPIAdaptor } from './restapi.adaptor';
 @Controller('botlets')
 export class RestApiController {
   constructor(
+    protected readonly botletsService: BotletsService,
     @Inject('EndpointsService')
     protected readonly endpointsService: EndpointsService,
     protected readonly eventListenersService: EventListenersService,
@@ -57,13 +59,13 @@ export class RestApiController {
   @All(':uuid/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
-    @Param('uuid') botletUuid: string,
+    @Param('uuid') botletId: string,
     @Param('endpoint') endpoint?: string,
     @Headers('x-botlet-taskId') taskId?: string,
     @Headers('x-botlet-progressive') progressive?: string,
     @Headers('x-botlet-callback') callback?: string,
   ) {
-    const basePath = `${botletUuid}/${endpoint}/invoke/api/`;
+    const basePath = `${botletId}/${endpoint}/invoke/api/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName)
       funName = RestAPIAdaptor.formalActionName(req.method, '/' + funName);
@@ -73,21 +75,25 @@ export class RestApiController {
     // find botlet cep, then set tenantId
     const cep = await this.endpointsService.$findFirstByType(
       EndpointType.CLIENT,
-      botletUuid,
+      botletId,
       'restAPI',
       endpoint,
     );
     if (!cep)
       throw new NotFoundException(
-        'restAPI endpoint not found for botlet: ' + botletUuid,
+        'restAPI endpoint not found for botlet: ' + botletId,
       );
+    const botlet = await this.botletsService.findOne(botletId, { name: true });
+    if (!botlet) throw new NotFoundException('botlet not found: ' + botletId);
+
     return this.eventListenersService.emit(
-      new ClientRequestEvent(cep.uuid, cep.adaptorKey, {
-        taskId,
-        req,
+      new ClientRequestEvent(cep.uuid, taskId, cep.adaptorKey, req, {
+        botletId,
+        botletName: botlet.name,
         caller,
         callback,
         progressive,
+        funName,
       }),
       // FIXME sync timeout
     );

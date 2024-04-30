@@ -16,12 +16,14 @@ import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorato
 import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
+import { ClientRequestEvent } from './events/client-request.event';
 
 @Injectable()
 export class EndpointsService {
   constructor(
     private readonly moduleRef: ModuleRef,
-    @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
+    @Inject(ModulesContainer)
+    private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly tenancyService: PrismaTenancyService,
   ) {}
@@ -233,5 +235,20 @@ export class EndpointsService {
   ) {
     const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
     return adaptor.parseApis(apiTxt);
+  }
+
+  /** preprocess req from cep, by adaptor */
+  @Transactional()
+  async preprocessClientRequest(reqEvent: ClientRequestEvent) {
+    const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
+    if (!adaptor)
+      throw new Error(
+        `Invalid adaptor ${reqEvent.dataType} from cep ${reqEvent.srcId}`,
+      );
+
+    const endpoint = await this.findOne(reqEvent.srcId);
+
+    await adaptor.preprocess(reqEvent, endpoint);
+    return reqEvent;
   }
 }
