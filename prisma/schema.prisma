@@ -477,6 +477,11 @@ model EventListener {
   @@index([tenantId])
 }
 
+enum EventCallbackType {
+  URL
+  EVENT
+}
+
 model EventStore {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
@@ -490,13 +495,15 @@ model EventStore {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   /// @Description src entity uuid which bind to the listener
-  srcId     String  @db.VarChar(36)
-  /// @Description parent event uuid of emitting chain
-  parentId  String? @db.VarChar(36)
+  srcId        String            @db.VarChar(36)
   /// @Description target uuid to relate several events
-  targetId  String? @db.VarChar(36)
-  eventType String  @db.VarChar(36)
-  dataType  String  @db.VarChar(36)
+  targetId     String?           @db.VarChar(36)
+  eventType    String            @db.VarChar(36)
+  dataType     String            @db.VarChar(36)
+  /// @Description callback url or parent event id
+  callback     String?           @db.VarChar(1023)
+  /// @Description callback type, 'URL' or 'EVENT'
+  callbackType EventCallbackType @default(EVENT)
 
   data    Json? @db.Json
   context Json? @db.Json
@@ -517,7 +524,6 @@ model EventStore {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([srcId])
-  @@index([parentId])
   @@index([targetId])
   @@index([tenantId])
   @@index([uuid])

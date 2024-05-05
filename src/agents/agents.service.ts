@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
 import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { TaskActionDto } from '../task-actions/dto/task-action.dto';
@@ -31,7 +31,9 @@ export class AgentsService {
   }
 
   /** args mapping to a single invocation, w/o vars/flows/functions */
-  async map2Function(reqEvent: ClientRequestEvent) {
+  async map2Function(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     const {
       uuid,
       srcId,
@@ -58,26 +60,32 @@ export class AgentsService {
         botletFunctions,
       },
       { funName: '', mapping: '', question: '' },
-    );
+    ); // TODO check `funName` exists in botletFunctions, validating `mapping`
     reqEvent.context.function = mapped;
 
     if (mapped.question) {
       if (!progressive) throw new BadRequestException(mapped.question);
 
       // emit progressive requesting event
-      const result = await this.eventListenersService.emit(
-        new ProgressiveRequestEvent(srcId, uuid, cepAdaptor, { progressive }),
-      );
-      if (Array.isArray(result)) {
-        const [, funName] = result;
-        if (funName) return [reqEvent, 'map2FunctionProgressive'];
+      const { event: prEvent, statusCode } =
+        await this.eventListenersService.emit(
+          new ProgressiveRequestEvent(srcId, uuid, cepAdaptor, { progressive }),
+        );
+      if (!statusCode) {
+        // direct return, no persistent async
+        return this.map2FunctionProgressive(prEvent, reqEvent);
       }
+      if (statusCode == 1)
+        return { event: reqEvent, callbackName: 'map2FunctionProgressive' };
+      throw new HttpException(prEvent.message, statusCode);
     }
-    return reqEvent;
   }
 
   /** progressive response, to continue mapping */
-  async map2FunctionProgressive(reqEvent: ClientRequestEvent, resp?: any) {
+  async map2FunctionProgressive(
+    event: ProgressiveRequestEvent,
+    reqEvent?: ClientRequestEvent,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     // handle resp
   }
 

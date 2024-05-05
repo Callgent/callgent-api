@@ -239,7 +239,9 @@ export class EndpointsService {
 
   /** preprocess req from cep, by adaptor */
   @Transactional()
-  async preprocessClientRequest(reqEvent: ClientRequestEvent) {
+  async preprocessClientRequest(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
     if (!adaptor)
       throw new Error(
@@ -249,6 +251,5 @@ export class EndpointsService {
     const endpoint = await this.findOne(reqEvent.srcId);
 
     await adaptor.preprocess(reqEvent, endpoint);
-    return reqEvent;
   }
 }

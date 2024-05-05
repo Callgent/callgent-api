@@ -1,3 +1,4 @@
+import { EventCallbackType } from '@prisma/client';
 import { JsonValue } from '@prisma/client/runtime/library';
 import { Utils } from '../infra/libs/utils';
 
@@ -9,8 +10,9 @@ export class EventObject {
     public readonly dataType: string,
     /** target uuid to relate several events */
     public targetId: string,
-    /** parent event uuid of emitting chain */
-    public readonly parentId?: string,
+    /** url template for response callback, `botlet:funName[@botlet]` to invoke botlet */
+    public callback?: string,
+    public readonly callbackType: EventCallbackType = 'EVENT',
   ) {
     this.uuid = Utils.uuid();
   }

@@ -28,7 +28,9 @@ export class BotletFunctionsService {
   };
 
   @Transactional()
-  async loadFunctions(reqEvent: ClientRequestEvent) {
+  async loadFunctions(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     const { funName, botletId } = reqEvent.data;
 
     // TODO if too many functions, use summary first
@@ -44,7 +46,6 @@ export class BotletFunctionsService {
         }`,
       );
     reqEvent.context.functions = funcs as any[];
-    return reqEvent;
   }
 
   /**

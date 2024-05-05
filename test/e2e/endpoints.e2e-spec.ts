@@ -27,45 +27,50 @@ describe('Botlet Endpoint (e2e)', () => {
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it(`(POST): add a new canny.io rest-api server endpoint`, async () => {
-    // create the botlet
-    const {
-      json: { data: botlet },
-    } = await createBotlet();
+  it(`(POST): add a new canny.io rest-api server endpoint to invoke 400`, async () => {
+    const botlet = await prepareCannyBotlet();
 
-    // add api server endpoint
-    const {
-      json: { data: serverEndpoint },
-    } = await createEndpoint('restAPI', {
-      botletUuid: botlet.uuid,
-      type: 'SERVER',
-      host: { url: 'https://canny.io/api/v1' },
-    });
+    // request for task by botlet api
+    await invokeBotletByApi(botlet.uuid).expectStatus(400);
+  });
 
-    const jsonData = await fs.readFile(
-      './test/e2e/data/canny-apis.json',
-      'utf8',
-    );
-    const {
-      json: { data: functionCount },
-    } = await addBotletFunctions({
-      endpoint: serverEndpoint.uuid,
-      text: jsonData,
-      format: 'openAPI',
-    });
+  it(`(POST): add a new canny.io rest-api server endpoint to invoke 200`, async () => {
+    const botlet = await prepareCannyBotlet();
 
     // mount server endpoint auth
 
     // request for task by botlet api
-    const {
-      json: { data },
-    } = await invokeBotletByApi(botlet.uuid);
+    await invokeBotletByApi(botlet.uuid).expectStatus(400);
+  });
+});
 
-    console.log({ serverEndpoint, functionCount });
+export const prepareCannyBotlet = async () => {
+  // create the botlet
+  const {
+    json: { data: botlet },
+  } = await createBotlet();
+
+  // add api server endpoint
+  const {
+    json: { data: serverEndpoint },
+  } = await createEndpoint('restAPI', {
+    botletUuid: botlet.uuid,
+    type: 'SERVER',
+    host: { url: 'https://canny.io/api/v1' },
   });
 
-  it(`(POST): add a new client endpoint with auth`, async () => {});
-});
+  const jsonData = await fs.readFile('./test/e2e/data/canny-apis.json', 'utf8');
+  const {
+    json: { data: functionCount },
+  } = await addBotletFunctions({
+    endpoint: serverEndpoint.uuid,
+    text: jsonData,
+    format: 'openAPI',
+  });
+  console.log({ serverEndpoint, functionCount });
+
+  return botlet;
+};
 
 export const createEndpoint = (
   adaptorKey: string,
@@ -88,10 +93,11 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
     .expectStatus(200);
 };
 
-export const invokeBotletByApi = (botletUuid) => {
+export const invokeBotletByApi = (botletUuid, body?: any) => {
   return pactum
     .spec()
-    .post(`/api/botlets/${botletUuid}/invoke/api/boards/list`)
+    .post(`/api/botlets/${botletUuid}//invoke/api/boards/list`)
     .withHeaders('x-botlet-authorization', TestConstant.authToken)
+    .withBody(body)
     .expectStatus(200);
 };

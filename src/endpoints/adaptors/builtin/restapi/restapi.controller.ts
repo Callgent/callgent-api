@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpException,
   Inject,
   NotFoundException,
   Param,
@@ -86,17 +87,28 @@ export class RestApiController {
     const botlet = await this.botletsService.findOne(botletId, { name: true });
     if (!botlet) throw new NotFoundException('botlet not found: ' + botletId);
 
-    return this.eventListenersService.emit(
-      new ClientRequestEvent(cep.uuid, taskId, cep.adaptorKey, req, {
-        botletId,
-        botletName: botlet.name,
-        caller,
-        callback,
-        progressive,
-        funName,
-      }),
-      // FIXME sync timeout
-    );
+    const { event, statusCode, message } =
+      await this.eventListenersService.emit(
+        new ClientRequestEvent(
+          cep.uuid,
+          taskId,
+          cep.adaptorKey,
+          req,
+          callback,
+          {
+            botletId,
+            botletName: botlet.name,
+            caller,
+            progressive,
+            funName,
+          },
+        ),
+        // FIXME sync timeout
+      );
+    // FIXME data
+    if (statusCode < 400) return { event, statusCode, message };
+
+    throw new HttpException(message, statusCode);
   }
 
   @ApiOperation({

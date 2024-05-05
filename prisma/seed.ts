@@ -95,19 +95,19 @@ function initEventListeners() {
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
-    {
-      id: elId++,
-      uuid: 'PR-MAP-2-ARGS',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
-      eventType: 'CLIENT_REQUEST',
-      dataType: '*',
-      serviceType: 'SERVICE',
-      serviceName: 'SandBoxService',
-      funName: 'map2Args',
-      createdBy: 'GLOBAL',
-      priority: (priority = 0),
-    },
+    // {
+    //   id: elId++,
+    //   uuid: 'PR-MAP-2-ARGS',
+    //   srcUuid: 'GLOBAL',
+    //   tenantId: 0,
+    //   eventType: 'CLIENT_REQUEST',
+    //   dataType: '*',
+    //   serviceType: 'SERVICE',
+    //   serviceName: 'SandBoxService',
+    //   funName: 'map2Args',
+    //   createdBy: 'GLOBAL',
+    //   priority: (priority = 0),
+    // },
   ];
 
   return els.map((el) =>
@@ -122,10 +122,11 @@ function initEventListeners() {
 }
 
 async function initLlmTemplates() {
-  const llmTplA2FDto: Prisma.LlmTemplateUncheckedCreateInput = {
-    id: 1,
-    name: 'api2Function',
-    prompt: `Please convert below API doc of format {{=it.format}}:
+  const llmTemplates: Prisma.LlmTemplateUncheckedCreateInput[] = [
+    {
+      id: 1,
+      name: 'api2Function',
+      prompt: `Please convert below API doc of format {{=it.format}}:
 { "{{=it.apiName}}": {{=it.apiContent}} }
 
 into a js function, the function must be as follows:
@@ -134,12 +135,11 @@ async (invoker: {{=it.handle}}, ...apiParams) {...; const json = await invoker(.
 
 please generate the js function with **full implementation and error handling**! output a single-line json object:
 {"funName":"function name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
-  };
-
-  const llmTplR2IDto: Prisma.LlmTemplateUncheckedCreateInput = {
-    id: 2,
-    name: 'map2Function',
-    prompt: `given below service functions:
+    },
+    {
+      id: 2,
+      name: 'map2Function',
+      prompt: `given below service functions:
 class {{=it.botletName}} {{{~ it.botletFunctions :fun }}
   "function name: {{=fun.name}}": {"params":[{{=fun.params}}], "documents":"{{=fun.documents}}"},
 {{~}}
@@ -156,24 +156,18 @@ and code for request_object to chosen function args mapping. if any data missing
 
 output a single-line json object:
 { "funName": "the function name to be invoked", "params":"param names of the chosen function", "mapping": "the js function (invoker, request_object)=>{...;return functionArgsArray;}, full implementation to return the **real** args from request_object to invoke the chosen service function. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
-  };
-
-  return [
-    prisma.llmTemplate
-      .upsert({
-        where: { id: 1 },
-        update: llmTplA2FDto,
-        create: llmTplA2FDto,
-      })
-      .then((llmTplA2F) => console.log({ llmTplA2F })),
-    prisma.llmTemplate
-      .upsert({
-        where: { id: 2 },
-        update: llmTplR2IDto,
-        create: llmTplR2IDto,
-      })
-      .then((llmTplR2I) => console.log({ llmTplR2I })),
+    },
   ];
+
+  return llmTemplates.map((llmTpl) =>
+    prisma.llmTemplate
+      .upsert({
+        where: { id: llmTpl.id },
+        update: llmTpl,
+        create: llmTpl,
+      })
+      .then((llmTpl) => console.log({ llmTpl })),
+  );
 }
 
 function initTestData() {

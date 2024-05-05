@@ -136,12 +136,18 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     throw new Error('Method not implemented.');
   }
 
-  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+  async preprocess(
+    reqEvent: ClientRequestEvent,
+    endpoint: EndpointDto,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     if (!reqEvent.rawReq)
       throw new BadRequestException(
         'Missing request object for ClientRequestEvent',
       );
-    const { callback, progressive } = reqEvent.data;
+    const {
+      callback,
+      data: { progressive },
+    } = reqEvent;
 
     // read callback from cep config
     if (!callback) {

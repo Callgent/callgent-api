@@ -18,6 +18,7 @@ export class ClientRequestEvent extends EventObject {
     dataType: string,
     /** raw request, will not be persisted */
     public readonly rawReq: any,
+    callback: string,
     public readonly data: {
       botletId: string;
       botletName: string;
@@ -28,10 +29,8 @@ export class ClientRequestEvent extends EventObject {
       funName?: string;
       /** url template for progressive requesting, `botlet:funName[@botlet]` to invoke botlet */
       progressive?: string;
-      /** url template for response callback, `botlet:funName[@botlet]` to invoke botlet */
-      callback?: string;
     },
   ) {
-    super(cepId, 'CLIENT_REQUEST', dataType, taskId);
+    super(cepId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
   }
 }

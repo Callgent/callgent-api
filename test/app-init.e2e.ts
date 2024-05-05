@@ -73,9 +73,10 @@ const initOriginalPrismaService = (
 
   log_level > 3 &&
     prisma.$on('query', (e) => {
+      if (!e.params?.length || e.params == '[]') return;
       if (log_level < 6 && e.query.startsWith('SELECT ')) return;
       if (log_level < 6 && e.query.indexOf('SAVEPOINT') >= 0) return;
-      console.log(`Query: ${e.query}\n\tParams: ${e.params}`);
+      console.log(`Params: ${e.params}`);
     });
 };
 
@@ -118,6 +119,7 @@ export const beforeAllFn = async () => {
 
 export const afterAllFn = async () => {
   await testApp?.close();
+  await pactum.sleep(2000);
   testApp = null;
 };
 
