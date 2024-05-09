@@ -174,6 +174,7 @@ function initTestData() {
   const tenant: Prisma.TenantUncheckedCreateInput = {
     id: 1,
     uuid: 'TEST_TENANT_UUID',
+    statusCode: 1,
   };
 
   const userUuid = 'TEST_USER_UUID';
@@ -190,7 +191,7 @@ function initTestData() {
     provider: 'local',
     uid: 'test@botlet.io',
     // password123
-    credentials: '$2b$10$KNpEa4ghz5PAS.wdI3lnu.dEjS8vyTkg1G287UoNjQWeDJr.qM3F.',
+    credentials: '$2b$10$JmQ5gwQevEGI6t.HLrCw3ugQNf9.8KaqC1OaaC5mCMClii.zKveYm',
     name: 'test-user',
     email: 'test@botlet.io',
     email_verified: true,
