@@ -14,7 +14,11 @@ export class AuthLoginListener {
 
   @OnEvent(AuthLoginEvent.eventName, { async: false })
   async handleEvent(event: AuthLoginEvent) {
-    this.logger.debug('Handling event: %j', { ...event, request: undefined });
+    this.logger.debug('Handling event: %j', {
+      ...event,
+      request: undefined,
+      credentials: '***',
+    });
 
     let user: UserDto;
     if (event.authType == 'password') {

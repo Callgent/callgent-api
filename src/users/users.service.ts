@@ -1,6 +1,6 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
@@ -37,6 +37,7 @@ export class UsersService {
     valid = valid && (await Utils.hashCompare(password, ui.credentials));
 
     if (valid) return ui.user;
+    throw new UnauthorizedException();
   }
 
   /**
