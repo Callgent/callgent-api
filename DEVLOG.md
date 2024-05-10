@@ -119,6 +119,56 @@ all validation is based on bearer token, with payload:
   }
   ```
 
+##### change `authorization` to `x-botlet-authorization` header
+
+extract token from header:
+
+```typescript
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        // ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
+        (request) => request?.headers['x-botlet-authorization'],
+    })}
+```
+
+###### swagger support
+
+1. config swagger
+
+   ```typescript
+    const config = new DocumentBuilder()
+      // ...
+      // .addBearerAuth(schema, 'defaultBearerAuth')
+      .addSecurity('defaultBearerAuth', {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-botlet-authorization',
+      })
+      .build();
+
+   ```
+
+2. set default token for API test
+
+   ```typescript
+   const devJwtToken = 'test-jwt-token';
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs/api', app, document, {
+      swaggerOptions: {
+        authAction: {
+          defaultBearerAuth: {
+            schema: { type: 'apiKey', in: 'header' },
+            value: devJwtToken,
+          },
+        },
+      },
+    });
+   ```
+
+3. On controller, change from `@ApiBearerAuth('defaultBearerAuth')` to `@ApiSecurity('defaultBearerAuth')`.  
+
 #### local auth
 
 login with email and password, TODO: email verification is required.
@@ -127,7 +177,7 @@ login with email and password, TODO: email verification is required.
 
 need NOT scope to get user email:
 
-- google: add 'https://www.googleapis.com/auth/userinfo.email' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
+- google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
 - github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
 - facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
 
