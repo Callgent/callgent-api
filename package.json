@@ -48,7 +48,7 @@
     "@nestjs/platform-fastify": "^10.3.3",
     "@nestjs/swagger": "^7.2.0",
     "@nodeteam/nestjs-prisma-pagination": "^1.0.6",
-    "@prisma/client": "5.10.2",
+    "@prisma/client": "5.13.0",
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
