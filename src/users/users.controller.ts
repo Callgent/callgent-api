@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  ApiBody,
+  ApiConsumes,
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
@@ -71,20 +83,21 @@ export class UsersController {
       ],
     },
   })
-  @Post('confirm-email/request')
-  async sendConfirmEmail(@Body() vo: ValidationEmailVo) {
-    const sent = await this.userService.sendValidationEmail(vo);
+  @UseGuards(new JwtGuard(true))
+  @Post('send-confirm-email')
+  async sendConfirmEmail(@Body() vo: ValidationEmailVo, @Req() req) {
+    const uuid = req.user?.sub;
+    const sent = await this.userService.sendValidationEmail(vo, uuid);
 
     return { data: sent };
   }
 
-  @Post('confirm-email')
-  async confirmEmail(@Body() vo: ValidationEmailVo) {
-    // const user = await this.userService.findOne(uuid);
-    // const token = user
-    //   ? req.headers.authorization?.split(' ')[1] ||
-    //     req.cookies[AuthUtils.getAuthCookieName(this.configService)]
-    //   : undefined;
-    // return { data: user, meta: { token } };
+  @ApiConsumes('text/plain')
+  @ApiBody({ required: false, description: 'pwd if reset', type: 'string' })
+  @Patch('confirm-email/:token')
+  async confirmEmail(@Param('token') token: string, @Body() pwd?: string) {
+    await this.userService.validateEmail(token, pwd);
+    // TODO trigger login
+    return { data: true };
   }
 }

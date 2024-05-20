@@ -89,6 +89,7 @@ export class UsersService {
 
   /**
    * register a new user if identity not existing; return user if existing and valid;
+   * @param ui - { email?, uid, provider, name?, credentials }
    * @returns user. undefined if existing but pending
    * @throws ForbiddenException if any of userIdentity/user/tenant is softly deleted
    */
@@ -141,7 +142,7 @@ export class UsersService {
 
     // create user and identity
     if (ui.provider === 'local' && ui.credentials)
-      ui.credentials = await Utils.hashSalted(ui.credentials);
+      ui.credentials = await this.updateLocalPassword(ui.credentials);
     uiInDb = await prisma.userIdentity.create({
       include: { user: { include: { tenant: true } } },
       data: {
@@ -220,24 +221,26 @@ export class UsersService {
   /**
    * @param email
    * @param resetPwd
+   * @param userId current user uuid, may null
    * @param create whether create account if not found
    */
   @Transactional()
-  async sendValidationEmail(args: ValidationEmailVo) {
+  async sendValidationEmail(args: ValidationEmailVo, userId: string) {
     const { email, create } = args;
     const ui = await this.findUserIdentity(email, 'local', {
       noTenant: true,
       evenInvalid: true,
     });
 
-    if (!ui) {
-      if (!create)
+    if (ui) {
+      if (this._accountDeactivated(ui))
         throw new BadRequestException(
-          'Sorry, the email is not registered, ' + email,
+          'Sorry, the user account is deactivated:' + email,
         );
-    } else if (this._accountDeactivated(ui))
+      userId = undefined;
+    } else if (!create)
       throw new BadRequestException(
-        'Sorry, the user account is deactivated:' + email,
+        'Sorry, the email is not registered, ' + email,
       );
 
     // force reset password if no credentials
@@ -245,7 +248,7 @@ export class UsersService {
 
     // generate token
     const token = await this.authTokensService.issue(
-      { sub: email, exp: 60 * 60, resetPwd, create },
+      { sub: email, exp: 60 * 60, resetPwd, create, userId },
       'API_KEY',
     );
     // send mail
@@ -254,6 +257,63 @@ export class UsersService {
       'validation-email',
       { token, resetPwd, create },
     );
+  }
+
+  @Transactional()
+  async validateEmail(token: string, pwd: string) {
+    const payload = await this.authTokensService.verify(token, 'API_KEY');
+    if (!payload) throw new UnauthorizedException();
+
+    const { sub: email, resetPwd, create, userId } = payload;
+
+    let ui = await this.findUserIdentity(email, 'local', {
+      noTenant: true,
+      evenInvalid: true,
+    });
+
+    if (ui) {
+      if (this._accountDeactivated(ui))
+        throw new BadRequestException(
+          'Sorry, the user account is deactivated:' + email,
+        );
+      if (resetPwd) await this.updateLocalPassword(pwd, ui.id);
+    } else {
+      if (!create)
+        throw new BadRequestException(
+          'Sorry, the user account is not found: ' + email,
+        );
+
+      if (userId) {
+        // FIXME associate to user
+      } else {
+        ui = await this.registerUserFromIdentity({
+          uid: email,
+          email,
+          provider: 'local',
+          credentials: pwd,
+        });
+      }
+    }
+  }
+
+  @Transactional()
+  async updateLocalPassword(pwd: string, id?: number) {
+    // FIXME check pwd complexity
+
+    const credentials = pwd ? await Utils.hashSalted(pwd) : undefined;
+    if (id) {
+      if (!(pwd?.length >= 8))
+        throw new BadRequestException(
+          'Password should be at least 8 characters',
+        );
+
+      const prisma = this.txHost.tx as PrismaClient;
+      prisma.userIdentity.update({
+        where: { id },
+        data: { credentials },
+      });
+    }
+    return credentials;
   }
 
   private _accountDeactivated(ui: any) {

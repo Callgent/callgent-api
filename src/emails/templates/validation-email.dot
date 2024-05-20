@@ -9,7 +9,7 @@
 
 <p>{{=it.resetPwd ? 'Someone has requested a link to change your password. You can do this' : 'You can confirm your account email' }} through the link below:</p>
 
-<p><a href="{{=it.configs.get('FRONTEND_SITE_URL')}}/confirm-email/{{=it.token}}{{=it.resetPwd ? '?resetPwd=1' : ''}}">{{=it.resetPwd ? 'Change my password' : 'Confirm my account' }}</a></p>
+<p><a href="{{=it.configs.get('FRONTEND_SITE_URL')}}/user/confirm-email/{{=it.token}}{{=it.resetPwd ? '?resetPwd=1' : ''}}">{{=it.resetPwd ? 'Change my password' : 'Confirm my account' }}</a></p>
 
 <p>If you did not request this, please ignore it.</p>
 
