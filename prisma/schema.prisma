@@ -59,6 +59,7 @@ model User {
   /// @DtoPlainApiResponse
   uuid   String  @unique @db.VarChar(36)
   name   String  @db.VarChar(36)
+  email  String? @db.VarChar(255) /// @description account primary verified email
   avatar String? @db.VarChar(1023)
   locale String? @default("en_US") @db.VarChar(10)
 
@@ -304,8 +305,9 @@ model AuthToken {
   payload Json
   revoked Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
 }
 
 enum EndpointType {

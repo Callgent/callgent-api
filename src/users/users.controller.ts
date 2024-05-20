@@ -1,17 +1,19 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
-  ApiSecurity,
   ApiExtraModels,
   ApiOkResponse,
+  ApiOperation,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { AuthUtils } from '../infra/auth/auth.utils';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ValidationEmailVo } from './dto/validation-email.vo';
 import { UsersService } from './users.service';
-import { ConfigService } from '@nestjs/config';
-import { AuthUtils } from '../infra/auth/auth.utils';
 
 @ApiTags('Users')
 @ApiSecurity('defaultBearerAuth')
@@ -56,5 +58,33 @@ export class UsersController {
       : undefined;
 
     return { data: user, meta: { token } };
+  }
+
+  @ApiOperation({
+    summary: 'Reset password by sending validation email with reset url',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { type: 'boolean' } } },
+      ],
+    },
+  })
+  @Post('confirm-email/request')
+  async sendConfirmEmail(@Body() vo: ValidationEmailVo) {
+    const sent = await this.userService.sendValidationEmail(vo);
+
+    return { data: sent };
+  }
+
+  @Post('confirm-email')
+  async confirmEmail(@Body() vo: ValidationEmailVo) {
+    // const user = await this.userService.findOne(uuid);
+    // const token = user
+    //   ? req.headers.authorization?.split(' ')[1] ||
+    //     req.cookies[AuthUtils.getAuthCookieName(this.configService)]
+    //   : undefined;
+    // return { data: user, meta: { token } };
   }
 }

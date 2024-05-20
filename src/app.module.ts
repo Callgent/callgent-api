@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
 import { BotletFunctionsModule } from './botlet-functions/botlet-functions.module';
 import { BotletsModule } from './botlets/botlets.module';
+import { EmailsModule } from './emails/emails.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
 import { EventStoresModule } from './event-stores/event-stores.module';
@@ -39,6 +40,7 @@ import { UsersModule } from './users/users.module';
     TaskActionsModule,
     EventListenersModule,
     EventStoresModule,
+    EmailsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

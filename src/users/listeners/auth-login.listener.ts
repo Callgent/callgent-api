@@ -30,7 +30,8 @@ export class AuthLoginListener {
 
       // oauth tenant type always 1
       // const tenantType = event.request?.query?.tenantType || 1;
-      user = await this.usersService.registerUserFromIdentity(userIdentity);
+      user = (await this.usersService.registerUserFromIdentity(userIdentity))
+        .user;
     } else throw new BadRequestException('Invalid auth type:' + event.authType);
 
     const payload: JwtPayload = {

@@ -6,8 +6,8 @@
     <a href="https://discord.gg/V9HKBukSRp" target="_blank">
         <img src="https://img.shields.io/discord/1215998670265127102?logo=discord"
             alt="chat on Discord"></a>
-    <a href="https://twitter.com/intent/follow?screen_name=BotletIO" target="_blank">
-        <img src="https://img.shields.io/twitter/follow/BotletIO?style=social&logo=X"
+    <a href="https://twitter.com/intent/follow?screen_name=callgent_com" target="_blank">
+        <img src="https://img.shields.io/twitter/follow/callgent_com?style=social&logo=X"
             alt="follow on Twitter"></a>
     <!-- <a href="https://hub.docker.com/u/langgenius" target="_blank">
         <img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/langgenius/dify-web"></a> -->

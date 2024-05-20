@@ -1,16 +1,20 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
+import { EmailsService } from '../emails/emails.service';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
+import { ValidationEmailVo } from './dto/validation-email.vo';
 
 /** FIXME CreateUserEvent: init a botlet with sep for user */
 @Injectable()
@@ -19,6 +23,8 @@ export class UsersService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly tenancyService: PrismaTenancyService,
+    private readonly emailsService: EmailsService,
+    private readonly authTokensService: AuthTokensService,
   ) {}
   protected readonly defSelect: Prisma.BotletSelect = {
     id: false,
@@ -32,9 +38,7 @@ export class UsersService {
    * @returns valid user object or undefined
    */
   async login(email: string, password: string) {
-    const prisma = this.txHost.tx as PrismaClient;
-
-    const ui = await this.findUserIdentity(email, 'local', prisma, {
+    const ui = await this.findUserIdentity(email, 'local', {
       noTenant: true,
     });
 
@@ -55,12 +59,12 @@ export class UsersService {
   async findUserIdentity(
     uid: string,
     provider: string,
-    prisma: PrismaClient,
     options?: {
       noTenant?: boolean;
       evenInvalid?: boolean;
     },
   ) {
+    const prisma = this.txHost.tx as PrismaClient;
     if (options?.noTenant) await this.tenancyService.bypassTenancy(prisma);
 
     // find user identity
@@ -94,7 +98,7 @@ export class UsersService {
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
 
     const prisma = this.txHost.tx as PrismaClient;
-    let uiInDb = await this.findUserIdentity(ui.uid, ui.provider, prisma, {
+    let uiInDb = await this.findUserIdentity(ui.uid, ui.provider, {
       noTenant: true,
       evenInvalid: true,
     });
@@ -120,7 +124,7 @@ export class UsersService {
         );
       }
 
-      return uiInDb.user;
+      return uiInDb;
     }
 
     // register tenant from mail host
@@ -166,7 +170,7 @@ export class UsersService {
         } statusCode, please try again later.`,
       );
 
-    return uiInDb.user;
+    return uiInDb;
   }
 
   /**
@@ -210,6 +214,54 @@ export class UsersService {
         select,
         where: { uuid },
       }),
+    );
+  }
+
+  /**
+   * @param email
+   * @param resetPwd
+   * @param create whether create account if not found
+   */
+  @Transactional()
+  async sendValidationEmail(args: ValidationEmailVo) {
+    const { email, create } = args;
+    const ui = await this.findUserIdentity(email, 'local', {
+      noTenant: true,
+      evenInvalid: true,
+    });
+
+    if (!ui) {
+      if (!create)
+        throw new BadRequestException(
+          'Sorry, the email is not registered, ' + email,
+        );
+    } else if (this._accountDeactivated(ui))
+      throw new BadRequestException(
+        'Sorry, the user account is deactivated:' + email,
+      );
+
+    // force reset password if no credentials
+    const resetPwd = !ui?.credentials || args.resetPwd;
+
+    // generate token
+    const token = await this.authTokensService.issue(
+      { sub: email, exp: 60 * 60, resetPwd, create },
+      'API_KEY',
+    );
+    // send mail
+    return this.emailsService.sendTemplateMail(
+      [{ email, name: ui?.name || email }],
+      'validation-email',
+      { token, resetPwd, create },
+    );
+  }
+
+  private _accountDeactivated(ui: any) {
+    return (
+      ui.deletedAt ||
+      ui.user.deletedAt ||
+      ui.user.tenant.deletedAt ||
+      ui.user.tenant.statusCode !== 1
     );
   }
 }
