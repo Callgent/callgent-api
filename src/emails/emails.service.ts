@@ -44,7 +44,7 @@ export class EmailsService implements OnModuleInit {
     htmlContent: string,
     sender?: { name: string; email: string },
   ) {
-    const apiKey = this.configService.get('BREVO_API_KEY');
+    const apiKey = this.configService.get('EMAIL_BREVO_API_KEY');
     sender ||
       (sender = JSON.parse(this.configService.get('EMAIL_DEFAULT_SENDER')));
 
