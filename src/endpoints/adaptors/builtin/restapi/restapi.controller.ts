@@ -118,7 +118,7 @@ export class RestApiController {
   @Get('/invoke/result/:requestId')
   async invokeResult(@Param('requestId') reqId: string) {
     // FIXME
-    return reqId;
+    return null;
   }
 
   /**

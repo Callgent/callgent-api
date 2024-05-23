@@ -302,7 +302,7 @@ export class UsersService {
 
     const credentials = pwd ? await Utils.hashSalted(pwd) : undefined;
     if (id) {
-      if (!(pwd?.length >= 8))
+      if (!pwd || pwd?.length < 8)
         throw new BadRequestException(
           'Password should be at least 8 characters',
         );
