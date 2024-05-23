@@ -12,6 +12,7 @@ import {
   prismaTenancyUseFactory,
 } from '../src/infra/repo/tenancy/prisma-tenancy.provider';
 import { PrismaTenancyService } from '../src/infra/repo/tenancy/prisma-tenancy.service';
+import { ConfigService } from '@nestjs/config';
 
 export let testApp: NestFastifyApplication;
 let moduleFixture: TestingModule;
@@ -63,17 +64,20 @@ const initOriginalPrismaService = (
         'info',
       ];
   }
-  console.log('log_level:', log_name, log);
+  console.log('log_level:', log_level, log_name, log);
   // hack, @see mainPrismaServiceOptions: config.get('LOG_LEVELS_PRISMA')
   process.env.LOG_LEVELS_PRISMA = JSON.stringify(log);
-  prisma.$on('query', (e) => {
-    if (log_level < 6 && e.query.startsWith('SELECT ')) return;
-    if (log_level < 6 && e.query.indexOf('SAVEPOINT') >= 0) return;
-    console.log(`Query: ${e.query}\n\tParams: ${e.params}`);
-  });
 
   // create as same as prod, from mainPrismaServiceOptions
   originalPrismaService = prismaTenancyUseFactory(prisma, store);
+
+  log_level > 3 &&
+    prisma.$on('query', (e) => {
+      if (!e.params?.length || e.params == '[]') return;
+      if (log_level < 6 && e.query.startsWith('SELECT ')) return;
+      if (log_level < 6 && e.query.indexOf('SAVEPOINT') >= 0) return;
+      console.log(`Params: ${e.params}`);
+    });
 };
 
 // TODO reset prisma db beforeAll https://github.com/selimb/fast-prisma-tests
@@ -115,6 +119,7 @@ export const beforeAllFn = async () => {
 
 export const afterAllFn = async () => {
   await testApp?.close();
+  await pactum.sleep(2000);
   testApp = null;
 };
 
@@ -127,11 +132,15 @@ export async function beforeEachFn() {
 export async function beforeEachFnTenanted(tenantId = 1) {
   await prismaTestingHelper.startNewTransaction({ timeout: 888888 });
   testApp.get(PrismaTenancyService).setTenantId(tenantId);
-  console.log('Starts test transaction, tenantId=', tenantId);
+  console.log('Starts test transaction, tenantId:', tenantId);
 }
 
 // This function must be called after every test
 export async function afterEachFn(): Promise<void> {
   prismaTestingHelper?.rollbackCurrentTransaction();
-  console.log('Rollback test transaction.');
+  // console.log('Rollback test transaction.');
+}
+
+export function getConfigValue(key: string) {
+  return testApp.get(ConfigService).get(key);
 }

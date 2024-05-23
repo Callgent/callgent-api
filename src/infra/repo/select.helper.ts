@@ -1,5 +1,7 @@
 /**
- * @param select if values all false, then do exclusion select: select *, then delete item[key];
+ * helper to support exclusion selection, when param `select`.values() are all false
+ *
+ * @param select if select.values() all false, then do exclusion select: select *, then delete item[key];
  *  if any value null, then delete defaultSelect[key]
  * @param resultKey prop name of the result list from :query: return
  * @param defaultSelect merged: { ...defaultSelect, ...select }

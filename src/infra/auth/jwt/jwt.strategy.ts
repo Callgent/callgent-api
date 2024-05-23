@@ -14,12 +14,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
-        (request) => {
-          if (request && request.cookies) {
-            return request.cookies[AuthUtils.getAuthCookieName(configService)];
-          }
-        },
+        // ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
+        (request) => request?.headers['x-botlet-authorization'],
+        (request) =>
+          request &&
+          request.cookies &&
+          request.cookies[AuthUtils.getAuthCookieName(configService)],
       ]),
       secretOrKey: configService.getOrThrow<string>('JWT_SECRET'),
     });

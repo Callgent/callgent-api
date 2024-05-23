@@ -1,4 +1,5 @@
 import compression from '@fastify/compress';
+import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import {
@@ -15,7 +16,6 @@ import {
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { useContainer } from 'class-validator';
 import { FastifyRequest } from 'fastify';
-import fastifyCookie from 'fastify-cookie';
 import fastifyIp from 'fastify-ip';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -111,7 +111,7 @@ export async function bootstrapForTest(
 ): Promise<NestFastifyApplication> {
   let app: NestFastifyApplication =
     await moduleFixtureForTest.createNestApplication(new FastifyAdapter(), {
-      abortOnError: false,
+      abortOnError: true,
       bufferLogs: false,
     });
   app = await bootstrap(app, process.env.PORT || '0');
@@ -167,42 +167,33 @@ function registerApi(
   ///// api docs
   const devDocVersion = configService.get<string>('DOCUMENTATION_VERSION');
   if (devDocVersion) {
-    const config = new DocumentBuilder()
-      .setTitle(docTitle)
-      .setDescription(docDesc)
-      .setVersion(devDocVersion)
-      .addBearerAuth(undefined, 'defaultBearerAuth')
-      .build();
-
     const devJwtToken = app.get(JwtAuthService).sign({
       tenantId: 1,
       id: testUserId,
       iss: 'test.only',
       sub: 'TEST_USER_UUID',
       aud: 'test.client.uuid',
-      iat: Date.now(),
       username: 'user@example.com',
     });
-    // const appToken = app.get(JwtAuthService).sign({
-    //   sub: 'TEST_USER_UUID',
-    //   aud: 'appKey',
-    // });
-    // logger.warn('App-Token: %s', appToken);
-
     // console.debug('devJwtToken:', devJwtToken);
+
+    const config = new DocumentBuilder()
+      .setTitle(docTitle)
+      .setDescription(docDesc)
+      .setVersion(devDocVersion)
+      // .addBearerAuth(schema, 'defaultBearerAuth')
+      .addSecurity('defaultBearerAuth', {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-botlet-authorization',
+      })
+      .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('docs/api', app, document, {
       swaggerOptions: {
         authAction: {
           defaultBearerAuth: {
-            name: 'defaultBearerAuth',
-            schema: {
-              description: 'Default',
-              type: 'http',
-              in: 'header',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-            },
+            schema: { type: 'apiKey', in: 'header' },
             value: devJwtToken,
           },
         },
@@ -210,7 +201,7 @@ function registerApi(
     });
   }
   logger.log(
-    `API Documentation: http://localhost:${process.env.PORT || 3000}/docs`,
+    `API Documentation: http://localhost:${process.env.PORT || 3000}/docs/api`,
   );
 
   return { defaultApiVersion, devDocVersion };

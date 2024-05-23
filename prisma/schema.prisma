@@ -31,16 +31,16 @@ datasource db {
 //////////////////// Authentication and Account ////////////////////////////
 
 model Tenant {
-  id       Int     @id @default(autoincrement())
+  id         Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String  @unique @db.VarChar(36)
-  mailHost String? @unique @db.VarChar(36) /// @description unique tenant mail host
-  name     String? @db.VarChar(50)
-  avatar   String? @db.VarChar(1023)
-  type     Int     @default(1) /// @description account type: 1: individual, 2: organization.
-  status   Int     @default(0) /// @description user status: 0: pending, 1: active, -1: inactive.
+  uuid       String  @unique @db.VarChar(36)
+  mailHost   String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  name       String? @db.VarChar(50)
+  avatar     String? @db.VarChar(1023)
+  type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
+  statusCode Int     @default(0) /// @description user statusCode: 0: pending, 1: active, -1: inactive.
 
   User User[]
 
@@ -59,10 +59,13 @@ model User {
   /// @DtoPlainApiResponse
   uuid   String  @unique @db.VarChar(36)
   name   String  @db.VarChar(36)
+  email  String? @db.VarChar(255) /// @description account primary verified email
   avatar String? @db.VarChar(1023)
+  locale String? @default("en_US") @db.VarChar(10)
 
   tenant       Tenant         @relation(fields: [tenantId], references: [id])
   /// @DtoRelationIncludeId
+  // add to migration.sql
   tenantId     Int            @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -82,6 +85,7 @@ model UserIdentity {
   id             Int     @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId       Int     @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -146,13 +150,14 @@ model Botlet {
   uuid     String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  name         String  @db.VarChar(255)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  /// @description default receiver type, if caller not specified, or orderly if this is empty
-  receiverType String? @db.VarChar(36)
+  name    String  @db.VarChar(255)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  summary String? @db.VarChar(4095)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -164,7 +169,53 @@ model Botlet {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  @@unique([tenantId, name])
   @@index([tenantId])
+}
+
+model BotletFunction {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  name      String   @db.VarChar(255)
+  /// @description js function name to invoke this botlet function
+  funName   String   @db.VarChar(255)
+  params    String[] @db.VarChar(31)
+  /// @description js function api docs
+  documents String   @db.VarChar(4095)
+  /// @description js actual code to invoke this botlet function
+  fullCode  String   @db.VarChar(1023)
+  /// @description endpoint uuid or command or code
+  content   Json     @db.Json
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  botletUuid   String  @db.VarChar(36)
+  /// @description actual server endpoint, when action type is `ENDPOINT`
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  endpointUuid String? @db.VarChar(36)
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([botletUuid, name])
+  @@index([tenantId])
+  @@index([botletUuid])
 }
 
 model Task {
@@ -176,32 +227,13 @@ model Task {
   uuid     String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  status  Int    @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
-  brief   String @db.VarChar(255) /// @description task brief or description
-  content Json? /// @description optional task content
-
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @example api/email/slack/sms/...
-  callerType     String  @db.VarChar(36) /// @description caller type
-  caller         String? @db.VarChar(255) /// @description empty means anonymous
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @description receiver type, caller may specify this on task creation
-  receiverType   String? @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiver       String? @db.VarChar(255)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiverActual String? @db.VarChar(255)
-  callback       String? @db.VarChar(1023) /// @description empty means needn't response
-
-  /// @DtoReadOnly
-  botletUuid String @db.VarChar(36)
+  statusCode Int     @default(-1) /// @description Task statusCode, -1: pending, 0: done, <-1: failed
+  name       String? @db.VarChar(64) /// @description task name
+  brief      String? @db.VarChar(255) /// @description task brief or description
+  content    Json? /// @description optional task content
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -214,32 +246,9 @@ model Task {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([tenantId])
-  @@index([botletUuid])
 }
 
-/// @description supported receiver types, tenant irrelevant.
-model Receiver {
-  /// @DtoEntityHidden
-  id   Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid String @unique @db.VarChar(36)
-
-  receiverType String?  @db.VarChar(36) /// @description receiver type
-  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-}
-
-/// @DtoIgnoreModel
-/// @description A botlet may have multiple receivers orderly.
-model BotletReceiver {
+model TaskAction {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -248,25 +257,32 @@ model BotletReceiver {
   uuid     String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiverType String?  @db.VarChar(36) /// @description receiver type
-  synced       Boolean? @default(false) /// @description whether synchronous invocation to receiver
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  receiver     String?  @db.VarChar(255)
-  config       Json? /// @description invocation config, e.g. auth
-  order        Int      @default(0) /// @description Task status, 0: pending, 1: done, <0: failed
+  // client side information
+  /// @description action owner botlet uuid, responsible for progressive response
+  cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
+  funName     String? @db.VarChar(255) /// @description optional botlet function name
+  cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
+  callback    Json?   @db.Json /// @description callback url template or botlet function
+  progressive String? @db.VarChar(36) /// @description progressive requesting url template or botlet function
+
+  // processing
+  returns    Boolean @default(false) /// @description whether action has response object
+  req        Json    @db.Json /// @description request object
+  res        Json?   @db.Json /// @description response object
+  stage      Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
+  statusCode Int     @default(0) /// execution status code
+  message    String? @db.VarChar(255) /// @description error message
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  taskUuid String @db.VarChar(36)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  botletUuid String @db.VarChar(36)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(36) /// @description user uuid, anonymous ip, etc.
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -275,7 +291,7 @@ model BotletReceiver {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([tenantId])
-  @@index([botletUuid])
+  @@index([taskUuid])
 }
 
 /// @DtoIgnoreModel
@@ -289,8 +305,15 @@ model AuthToken {
   payload Json
   revoked Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+}
+
+enum EndpointType {
+  CLIENT
+  SERVER
+  EVENT
 }
 
 /// @description a botlet may have multiple endpoints, including receiver & sender
@@ -303,22 +326,26 @@ model Endpoint {
   uuid     String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  receiver Boolean @default(false) /// @description task sender or receiver
-  typeKey  String  @db.VarChar(127) /// @description endpoint type key
-  priority Int     @default(0) /// @description priority in the botlet
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
+  priority   Int          @default(0) /// @description priority in the botlet
 
-  entry            Json             @db.Json /// @description entry address & configs
-  authType         EndpointAuthType /// @description entry auth type: NONE, APP: all task same auth, USER: auth each task owner/assignee
-  /// @DtoCastType(EndpointParam, ../endpoint.interface)
-  reqParamTemplate Json[]           @db.Json /// @description sending/receiving parameters template
-  initParams       Json             @db.Json /// @description initializing parameters
-  content          Json?            @db.Json /// @description generated content/code by init method
+  host       Json  @db.Json /// @description host address & configs
+  initParams Json? @db.Json /// @description initializing parameters
+  content    Json? @db.Json /// @description generated content/code by init method
 
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  botletUuid String @db.VarChar(36)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  botletUuid String @db.VarChar(36) /// @description botlet owning the endpoint
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -340,21 +367,20 @@ enum EndpointAuthType {
   USER /// @description auth each task owner/assignee
 }
 
-/// @DtoIgnoreModel
-/// @description endpoint user auth params
+/// @description endpoint app or user auth credentials
 model EndpointAuth {
   /// @DtoEntityHidden
   id       Int @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
+  // add to migration.sql
   tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  endpointUuid String  @db.VarChar(36) /// @description endpoint uuid.
   userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  endpointUuid String  @db.VarChar(36) /// @description sender endpoint uuid.
 
-  config Json @db.Json /// @description entry config
+  credentials Json @db.Json /// @description auth credentials
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -365,4 +391,142 @@ model EndpointAuth {
   @@unique([endpointUuid, userKey])
   @@index([tenantId])
   @@index([endpointUuid])
+}
+
+/// @DtoIgnoreModel
+model LlmTemplate {
+  /// @DtoEntityHidden
+  id Int @id @default(autoincrement())
+
+  name   String @db.VarChar(32)
+  prompt String @db.VarChar(4096)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([name])
+}
+
+/// @DtoIgnoreModel
+model LlmCache {
+  /// @DtoEntityHidden
+  id Int @id @default(autoincrement())
+
+  name   String @db.VarChar(32)
+  prompt String @db.VarChar(4096)
+  result String @db.VarChar(4096)
+
+  createdAt DateTime @default(now())
+
+  @@unique([prompt, name])
+}
+
+model PersistedAsync {
+  /// @DtoEntityHidden
+  id BigInt @id @default(autoincrement())
+
+  statusCode Int    @default(-1) /// @description statusCode, -1: pending, 1: sent, 0: done, <-1: failed
+  service    String @db.VarChar(127) /// @description callback service name
+  method     String @db.VarChar(127) /// @description callback method name
+
+  parentAsyncId BigInt? @db.BigInt /// @description parent async id
+
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime? /// @description logical deletion.
+}
+
+enum ServiceType {
+  SERVICE
+  BOTLET
+}
+
+model EventListener {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  srcUuid String @db.VarChar(36) /// @description event source id
+
+  eventType String @db.VarChar(36)
+  dataType  String @db.VarChar(36)
+  priority  Int?   @default(0)
+
+  serviceType ServiceType // botlet, service
+  serviceName String      @db.VarChar(255)
+  funName     String      @db.VarChar(255)
+  // TODO add the listener's input/output props in event.context, for automatic checking
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([srcUuid])
+  @@index([tenantId])
+}
+
+enum EventCallbackType {
+  URL
+  EVENT
+}
+
+model EventStore {
+  /// @DtoEntityHidden
+  id       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  uuid     String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+
+  /// @Description src entity uuid which bind to the listener
+  srcId        String            @db.VarChar(36)
+  /// @Description target uuid to relate several events
+  targetId     String?           @db.VarChar(36)
+  eventType    String            @db.VarChar(36)
+  dataType     String            @db.VarChar(36)
+  /// @Description callback url or parent event id
+  callback     String?           @db.VarChar(1023)
+  /// @Description callback type, 'URL' or 'EVENT'
+  callbackType EventCallbackType @default(EVENT)
+
+  data    Json? @db.Json
+  context Json? @db.Json
+
+  /// @description statusCode, -1: processing, 0: done, 1: pending, >1: error
+  statusCode       Int     @default(-1)
+  message          String? @db.VarChar(255)
+  stopPropagation  Boolean
+  defaultPrevented Boolean
+  listenerUuid     String? @db.VarChar(36)
+  funName          String? @db.VarChar(255)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([srcId])
+  @@index([targetId])
+  @@index([tenantId])
+  @@index([uuid])
 }

@@ -1,9 +1,8 @@
-import { Module, Global } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import {
   PrismaTenancyClientProvider,
   TENANTED_PRISMA_SERVICE,
 } from './prisma-tenancy.provider';
-import { PrismaModule } from 'nestjs-prisma';
 import { PrismaTenancyService } from './prisma-tenancy.service';
 
 /**
@@ -12,7 +11,6 @@ import { PrismaTenancyService } from './prisma-tenancy.service';
  */
 @Global()
 @Module({
-  imports: [PrismaModule],
   providers: [PrismaTenancyService, PrismaTenancyClientProvider],
   exports: [PrismaTenancyService, TENANTED_PRISMA_SERVICE],
 })

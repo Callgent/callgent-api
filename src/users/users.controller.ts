@@ -1,20 +1,33 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  ApiBody,
+  ApiConsumes,
   ApiExtraModels,
   ApiOkResponse,
+  ApiOperation,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { AuthUtils } from '../infra/auth/auth.utils';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ValidationEmailVo } from './dto/validation-email.vo';
 import { UsersService } from './users.service';
-import { ConfigService } from '@nestjs/config';
-import { AuthUtils } from '../infra/auth/auth.utils';
 
 @ApiTags('Users')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(UpdateUserDto)
 @Controller('users')
 export class UsersController {
@@ -56,5 +69,34 @@ export class UsersController {
       : undefined;
 
     return { data: user, meta: { token } };
+  }
+
+  @ApiOperation({
+    summary: 'Reset password by sending validation email with reset url',
+  })
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { type: 'boolean' } } },
+      ],
+    },
+  })
+  @UseGuards(new JwtGuard(true))
+  @Post('send-confirm-email')
+  async sendConfirmEmail(@Body() vo: ValidationEmailVo, @Req() req) {
+    const uuid = req.user?.sub;
+    const sent = await this.userService.sendValidationEmail(vo, uuid);
+
+    return { data: sent };
+  }
+
+  @ApiConsumes('text/plain')
+  @ApiBody({ required: false, description: 'pwd if reset', type: 'string' })
+  @Patch('confirm-email/:token')
+  async confirmEmail(@Param('token') token: string, @Body() pwd?: string) {
+    await this.userService.validateEmail(token, pwd);
+    // TODO trigger login
+    return { data: true };
   }
 }

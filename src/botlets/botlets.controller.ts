@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
@@ -27,7 +27,7 @@ import { CreateBotletDto } from './dto/create-botlet.dto';
 import { UpdateBotletDto } from './dto/update-botlet.dto';
 
 @ApiTags('Botlets')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, BotletDto)
 @UseGuards(JwtGuard)
 @Controller('botlets')
@@ -38,21 +38,14 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(BotletDto) },
-          },
-        },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
       ],
     },
   })
   @Post()
   async create(@Req() req, @Body() dto: CreateBotletDto) {
     return {
-      data: await this.botletService.create({
-        ...dto,
-        createdBy: req.user.sub,
-      }),
+      data: await this.botletService.create(dto, req.user.sub),
     };
   }
 
@@ -60,11 +53,7 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(BotletDto) },
-          },
-        },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
       ],
     },
   })
@@ -133,5 +122,28 @@ export class BotletsController {
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
     return { data: await this.botletService.delete(uuid) };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+      ],
+    },
+  })
+  @Post(':uuid/duplicate')
+  async duplicateOverTenancy(
+    @Param('uuid') uuid: string,
+    @Req() req,
+    @Body() dto: CreateBotletDto,
+  ) {
+    return {
+      data: await this.botletService.duplicateOverTenancy(
+        uuid,
+        dto,
+        req.user.sub,
+      ),
+    };
   }
 }

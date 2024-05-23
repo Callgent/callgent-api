@@ -14,7 +14,11 @@ export class AuthLoginListener {
 
   @OnEvent(AuthLoginEvent.eventName, { async: false })
   async handleEvent(event: AuthLoginEvent) {
-    this.logger.debug('Handling event: %j', { ...event, request: undefined });
+    this.logger.debug('Handling event: %j', {
+      ...event,
+      request: undefined,
+      credentials: '***',
+    });
 
     let user: UserDto;
     if (event.authType == 'password') {
@@ -26,7 +30,8 @@ export class AuthLoginListener {
 
       // oauth tenant type always 1
       // const tenantType = event.request?.query?.tenantType || 1;
-      user = await this.usersService.registerUserFromIdentity(userIdentity);
+      user = (await this.usersService.registerUserFromIdentity(userIdentity))
+        .user;
     } else throw new BadRequestException('Invalid auth type:' + event.authType);
 
     const payload: JwtPayload = {

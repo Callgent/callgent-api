@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiSecurity,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
@@ -26,10 +26,10 @@ import { TaskDto } from './dto/task.dto';
 import { TasksService } from './tasks.service';
 
 @ApiTags('Tasks')
-@ApiBearerAuth('defaultBearerAuth')
+@ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, TaskDto)
 @UseGuards(JwtGuard)
-@Controller(':botletUuid/tasks')
+@Controller(':botlet/tasks')
 export class TasksController {
   constructor(private readonly taskService: TasksService) {}
 
@@ -57,24 +57,21 @@ export class TasksController {
   @Post()
   async create(
     @Req() req,
-    @Param('botletUuid') botletUuid: string,
+    @Param('botlet') botletUuid: string,
     @Body() dto: CreateTaskDto,
   ) {
     const user: JwtPayload = req.user;
-    const [task, syncResult] = await this.taskService.create(
-      {
-        ...dto,
-        botletUuid,
-        callerType: user.aud,
-        // assignees are set when processing the task
-        createdBy: user.sub,
-      },
-      { receiver: false, receiverActual: false, receiverType: false },
-    );
-    return {
-      data: task,
-      meta: { syncResult },
-    };
+    // const [task, syncResult] = await this.taskService.create({
+    //   ...dto,
+    //   botletUuid,
+    //   callerType: user.aud,
+    //   // assignees are set when processing the task
+    //   createdBy: user.sub,
+    // });
+    // return {
+    //   data: task,
+    //   meta: { syncResult },
+    // };
   }
 
   @ApiOkResponse({

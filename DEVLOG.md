@@ -17,6 +17,12 @@
     npx prisma db seed # init db data
     ```
 
+  - init db test data
+
+    ```shell
+    SEED_TEST_DATA=1 npx prisma db seed
+    ```
+
 - start server
 
   ```shell
@@ -113,6 +119,56 @@ all validation is based on bearer token, with payload:
   }
   ```
 
+##### change `authorization` to `x-botlet-authorization` header
+
+extract token from header:
+
+```typescript
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        // ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
+        (request) => request?.headers['x-botlet-authorization'],
+    })}
+```
+
+###### swagger support
+
+1. config swagger
+
+   ```typescript
+    const config = new DocumentBuilder()
+      // ...
+      // .addBearerAuth(schema, 'defaultBearerAuth')
+      .addSecurity('defaultBearerAuth', {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-botlet-authorization',
+      })
+      .build();
+
+   ```
+
+2. set default token for API test
+
+   ```typescript
+   const devJwtToken = 'test-jwt-token';
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs/api', app, document, {
+      swaggerOptions: {
+        authAction: {
+          defaultBearerAuth: {
+            schema: { type: 'apiKey', in: 'header' },
+            value: devJwtToken,
+          },
+        },
+      },
+    });
+   ```
+
+3. On controller, change from `@ApiBearerAuth('defaultBearerAuth')` to `@ApiSecurity('defaultBearerAuth')`.  
+
 #### local auth
 
 login with email and password, TODO: email verification is required.
@@ -121,7 +177,7 @@ login with email and password, TODO: email verification is required.
 
 need NOT scope to get user email:
 
-- google: add 'https://www.googleapis.com/auth/userinfo.email' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
+- google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
 - github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
 - facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
 
@@ -138,3 +194,45 @@ need NOT scope to get user email:
 3. add provider config in `oauth-client.module.ts`
 4. add user info retrieval logic in `AutLoginListener#retrieveUserInfoFromOauth()`
 5. finally, `/api/auth/{PROVIDER_KEY}` is ready to use
+
+### `EntityIdExists` validator
+
+We defined a parameter validator `EntityIdExists` to check if an entity exists in the database.
+
+#### Validation on DTO
+
+You may annotate it to your DTO property like this:
+
+```typescript
+export class CreateTaskDto {
+  // ...
+
+  // automatically validation check if the botlet exists in db on controller requesting
+  @EntityIdExists('botlet', 'uuid') // @EntityIdExists('entityType', 'fieldName')
+  botletUuid: string;
+}
+```
+
+#### Validation on prisma generated DTO
+
+Based on `prisma-generator-nestjs-dto`, you may also annotate this decorator in `schema.prisma` file:
+
+```prisma
+model Task {
+  // ...
+  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  botletUuid String @db.VarChar(36)
+}
+```
+
+This makes the generated DTO to be annotated with `@EntityIdExists` decorator.
+
+#### Retrieves the entity instance
+
+This makes sure the `botletUuid` field is a valid UUID of a botlet in the database.  
+you can retrieve the entity instance directly from the dto:
+
+```typescript
+const botlet = EntityIdExists.entity<Botlet>(dto, 'botletUuid') ||
+          (await prisma.botlet.findUnique({ where: {uuid: dto.botletUuid} }));
+```

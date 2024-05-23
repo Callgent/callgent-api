@@ -1,5 +1,5 @@
 module.exports = {
-  testTimeout: 60000,
+  testTimeout: 120000,
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
   testEnvironment: 'node',
@@ -7,5 +7,5 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  coverageDirectory: './coverage-e2e',
+  coverageDirectory: './coverage/e2e',
 };

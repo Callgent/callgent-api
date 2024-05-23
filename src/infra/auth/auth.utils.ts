@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import ms from 'ms';
+import { default as ms } from 'ms';
 
 export class AuthUtils {
   static genAuthCookie(jwtToken: string, configService: ConfigService) {

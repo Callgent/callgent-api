@@ -13,6 +13,7 @@ import { ClsModule } from 'nestjs-cls';
 import { mainPrismaServiceOptions } from './prisma.middlewares';
 import { PrismaTenancyOnPgModule } from './tenancy/prisma-tenancy.module';
 import { TENANTED_PRISMA_SERVICE } from './tenancy/prisma-tenancy.provider';
+import { ValidatorModule } from './validators/validator.module';
 
 @Global()
 @Module({
@@ -42,6 +43,7 @@ import { TENANTED_PRISMA_SERVICE } from './tenancy/prisma-tenancy.provider';
         }),
       ],
     }),
+    ValidatorModule,
   ],
   providers: [
     {

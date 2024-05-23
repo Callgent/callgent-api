@@ -1,16 +1,32 @@
 import { Module } from '@nestjs/common';
-import { WebpageEndpoint } from './builtin/webpage/webpage.endpoint';
+import { MailAdaptor } from './adaptors/builtin/mail/mail.adaptor';
+import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
+import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
+import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
+import { BotletCreatedListener } from './listeners/botlet-created.listener';
+import { BotletsModule } from '../botlets/botlets.module';
 
 @Module({
+  imports: [BotletsModule],
   providers: [
-    EndpointsService,
+    { provide: 'EndpointsService', useClass: EndpointsService },
+    BotletCreatedListener,
     {
-      provide: 'webpage-EndpointService',
-      useClass: WebpageEndpoint,
+      provide: 'restAPI-EndpointAdaptor',
+      useClass: RestAPIAdaptor,
+    },
+    {
+      provide: 'webpage-EndpointAdaptor',
+      useClass: WebpageAdaptor,
+    },
+    {
+      provide: 'webpage-EndpointAdaptor',
+      useClass: MailAdaptor,
     },
   ],
-  controllers: [EndpointsController],
+  controllers: [EndpointsController, RestApiController],
+  exports: ['EndpointsService'],
 })
 export class EndpointsModule {}

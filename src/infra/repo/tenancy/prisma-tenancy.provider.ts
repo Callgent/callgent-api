@@ -1,6 +1,6 @@
 import { getTransactionClsKey } from '@nestjs-cls/transactional/dist/src/lib/symbols';
 import { ClsService } from 'nestjs-cls';
-import { PrismaModule, PrismaService } from 'nestjs-prisma';
+import { PrismaService } from 'nestjs-prisma';
 import { PrismaTenancyService } from './prisma-tenancy.service';
 
 /** 'tenancy.tenantId'  */
@@ -39,7 +39,6 @@ export const TENANTED_PRISMA_SERVICE = Symbol('TENANTED_PRISMA_SERVICE_TOKEN');
 
 export const PrismaTenancyClientProvider = {
   provide: TENANTED_PRISMA_SERVICE,
-  imports: [PrismaModule],
   inject: [PrismaService, ClsService],
   useFactory: prismaTenancyUseFactory,
 };

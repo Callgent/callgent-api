@@ -1,27 +1,40 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InjectionToken,
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { PrismaClient } from '@prisma/client';
-import { CreateEndpointDto } from './dto/create-endpoint.dto';
+import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
+import { Utils } from '../infra/libs/utils';
+import { selectHelper } from '../infra/repo/select.helper';
+import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
+import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
+import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
-import { IS_BOTLET_ENDPOINT_SERVICE } from './endpoint-service.decorator';
-import { EndpointInterface } from './endpoint.interface';
+import { ClientRequestEvent } from './events/client-request.event';
 
 @Injectable()
 export class EndpointsService {
   constructor(
     private readonly moduleRef: ModuleRef,
-    @Inject(ModulesContainer) private modulesContainer: ModulesContainer,
+    @Inject(ModulesContainer)
+    private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
-  private sendersList = {};
-  private receiversList = {};
+  protected readonly defSelect: Prisma.EndpointSelect = {
+    id: false,
+    tenantId: false,
+    createdBy: false,
+    deletedAt: false,
+  };
+  private serversList = {};
+  private clientsList = {};
 
   onModuleInit() {
     const modules = [...this.modulesContainer.values()];
@@ -30,17 +43,17 @@ export class EndpointsService {
       for (const [serviceKey, provider] of nestModule.providers) {
         if (!provider.metatype) continue;
         const name = Reflect.getMetadata(
-          IS_BOTLET_ENDPOINT_SERVICE,
+          IS_BOTLET_ENDPOINT_ADAPTOR,
           provider.metatype,
         );
-        if (name?.indexOf(':') < 0) continue;
-
-        const [key, type] = name.split(/:[^:]+$/);
-        if (type == 'sender' || type == 'both') {
-          this._add2ServiceList(key, serviceKey, false);
-        }
-        if (type == 'receiver' || type == 'both') {
-          this._add2ServiceList(key, serviceKey, true);
+        if (name?.indexOf(':') > 0) {
+          const [key, type] = name.split(/:(?=[^:]*$)/);
+          if (type == 'sender' || type == 'both') {
+            this._add2ServiceList(key, serviceKey, false);
+          }
+          if (type == 'receiver' || type == 'both') {
+            this._add2ServiceList(key, serviceKey, true);
+          }
         }
       }
     }
@@ -49,9 +62,9 @@ export class EndpointsService {
   private _add2ServiceList(
     key: string,
     serviceKey: InjectionToken,
-    receiver: boolean,
+    client: boolean,
   ) {
-    const list = receiver ? this.receiversList : this.sendersList;
+    const list = client ? this.clientsList : this.serversList;
     if (key in list)
       throw new Error(
         `Conflict endpoint key ${key}:[${String(serviceKey)}, ${list[key]}]`,
@@ -59,27 +72,94 @@ export class EndpointsService {
     list[key] = serviceKey;
   }
 
-  list(receiver: boolean) {
-    return Object.keys(receiver ? this.receiversList : this.sendersList);
+  list(client: boolean) {
+    return Object.keys(client ? this.clientsList : this.serversList);
   }
 
+  @Transactional()
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpoint.findUnique({ where: { uuid } });
   }
 
-  /**
-   * @param receiver undefined: both, false: sender, true: receiver
-   */
-  getService(endpointKey: string, receiver?: boolean): EndpointInterface {
-    const list = receiver ? this.receiversList : this.sendersList;
-    if (endpointKey in list)
-      return this.moduleRef.get(list[endpointKey], { strict: true });
+  @Transactional()
+  findFirstByType(
+    type: EndpointType,
+    botletUuid: string,
+    adaptorKey: string,
+    uuid?: string,
+  ) {
+    uuid || (uuid = undefined);
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpoint.findFirst({
+      where: { botletUuid, adaptorKey, type, uuid },
+      orderBy: { priority: 'desc' },
+    });
+  }
 
-    if (receiver === undefined && endpointKey in this.receiversList)
-      return this.moduleRef.get(this.receiversList[endpointKey], {
-        strict: true,
+  /** bypassTenancy before query, setTenantId after query */
+  @Transactional()
+  async $findFirstByType(
+    type: EndpointType,
+    botletUuid: string,
+    adaptorKey: string,
+    endpoint?: string,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return this.tenancyService.bypassTenancy(prisma).then(() =>
+      this.findFirstByType(type, botletUuid, adaptorKey, endpoint).then(
+        async (v) => {
+          v && this.tenancyService.setTenantId(v.tenantId);
+          await this.tenancyService.bypassTenancy(prisma, false);
+          return v;
+        },
+      ),
+    );
+  }
+
+  @Transactional()
+  findOneAuth(uuid: string, userKey: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpointAuth.findUnique({
+      where: {
+        endpointUuid_userKey: { endpointUuid: uuid, userKey: userKey },
+      },
+    });
+  }
+
+  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
+    const list = endpointType == 'SERVER' ? this.serversList : this.clientsList;
+    if (adaptorKey in list)
+      return this.moduleRef.get(list[adaptorKey], { strict: false });
+
+    if (endpointType === undefined && adaptorKey in this.serversList)
+      return this.moduleRef.get(this.serversList[adaptorKey], {
+        strict: false,
       });
+  }
+
+  @Transactional()
+  async create(
+    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'uuid'>,
+    select?: Prisma.EndpointSelect,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const service = this.getAdaptor(dto.adaptorKey, dto.type);
+    if (!service)
+      throw new BadRequestException(
+        'Invalid endpoint adaptor key=' + dto.adaptorKey,
+      );
+
+    const uuid = Utils.uuid();
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.endpoint.create({
+          select,
+          data: { ...dto, uuid },
+        }),
+      this.defSelect,
+    );
   }
 
   @Transactional()
@@ -87,30 +167,89 @@ export class EndpointsService {
     throw new Error('Method not implemented.');
   }
 
-  @Transactional()
-  create(endpointKey: string, botletUuid: string, dto: CreateEndpointDto) {
-    throw new Error('Method not implemented.');
-  }
+  // @Transactional()
+  // upsertEndpointAuth(
+  //   dto: Prisma.EndpointAuthUncheckedCreateInput,
+  //   endpoint: EndpointDto,
+  // ) {
+  //   if (!endpoint) throw new BadRequestException('endpoint not found');
+  //   if (endpoint.authType == 'NONE')
+  //     throw new BadRequestException("auth type `NONE` needn't be set");
+  //   else if (endpoint.authType == 'USER') {
+  //     if (!dto.userKey)
+  //       throw new BadRequestException(
+  //         '`userKey` is required for auth type `USER`',
+  //       );
+  //   } else if (endpoint.authType == 'APP') dto.userKey = '';
+  //   // else
+  //   //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
+  //   dto.endpointUuid = endpoint.uuid;
+
+  //   const prisma = this.txHost.tx as PrismaClient;
+  //   return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
+  //     prisma.endpointAuth.upsert({
+  //       select,
+  //       where: {
+  //         endpointUuid_userKey: {
+  //           endpointUuid: dto.endpointUuid,
+  //           userKey: dto.userKey,
+  //         },
+  //       },
+  //       create: dto,
+  //       update: dto,
+  //     }),
+  //   );
+  // }
 
   @Transactional()
   async init(uuid: string, initParams: object) {
+    return;
     const prisma = this.txHost.tx as PrismaClient;
 
     const endpoint = await this.findOne(uuid);
     if (endpoint) {
-      const service = this.getService(endpoint.typeKey, endpoint.receiver);
-      if (service) {
-        const content = await (endpoint.receiver
-          ? service.initReceiver
-          : service.initSender)(initParams, endpoint);
-        if (content)
-          prisma.endpoint.update({
-            where: { uuid },
-            data: { content },
-          });
-        return content;
+      const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
+      if (adaptor) {
+        // FIXME issue receiver token
+        // const content = await (endpoint.type == 'SENDER'
+        //   ? adaptor.initSender
+        //   : adaptor.initReceiver)(initParams, endpoint as any);
+        // if (content)
+        //   prisma.endpoint.update({
+        //     where: { uuid },
+        //     data: { content },
+        //   });
+        // return content;
+        return;
       }
+      throw new NotFoundException(
+        `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
+      );
     }
     throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+  }
+
+  async parseApis(
+    endpoint: EndpointDto,
+    apiTxt: { text: string; format?: string },
+  ) {
+    const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
+    return adaptor.parseApis(apiTxt);
+  }
+
+  /** preprocess req from cep, by adaptor */
+  @Transactional()
+  async preprocessClientRequest(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+    const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
+    if (!adaptor)
+      throw new Error(
+        `Invalid adaptor ${reqEvent.dataType} from cep ${reqEvent.srcId}`,
+      );
+
+    const endpoint = await this.findOne(reqEvent.srcId);
+
+    await adaptor.preprocess(reqEvent, endpoint);
   }
 }
