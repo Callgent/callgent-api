@@ -15,7 +15,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
-        (request) => request?.headers['x-botlet-authorization'],
+        (request) => request?.headers['x-callgent-authorization'],
         (request) =>
           request &&
           request.cookies &&

@@ -343,7 +343,7 @@ export class UsersService {
     const credentials = pwd ? await Utils.hashSalted(pwd) : undefined;
     if (id) {
       const prisma = this.txHost.tx as PrismaClient;
-      prisma.userIdentity.update({
+      await prisma.userIdentity.update({
         where: { id },
         data: { credentials },
       });

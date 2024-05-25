@@ -233,13 +233,13 @@ export class RestAPIAdaptor implements EndpointAdaptor {
 
     const type = request.isFormSubmission ? 'form' : 'body';
 
-    // filter all x-botlet- args
+    // filter all x-callgent- args
     const headers = { ...rawHeaders };
     Object.keys(headers).forEach((key) => {
-      if (key.startsWith('x-botlet-')) delete headers[key];
+      if (key.startsWith('x-callgent-')) delete headers[key];
     });
 
-    // FIXME change authorization to x-botlet-authorization
+    // FIXME change authorization to x-callgent-authorization
     return {
       url,
       method,
