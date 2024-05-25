@@ -6,6 +6,8 @@ import {
   Patch,
   Post,
   Req,
+  Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthUtils } from '../infra/auth/auth.utils';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { JwtAuthService } from '../infra/auth/jwt/jwt.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';
@@ -34,6 +37,7 @@ export class UsersController {
   constructor(
     protected readonly userService: UsersService,
     protected readonly configService: ConfigService,
+    protected readonly jwtService: JwtAuthService,
   ) {}
 
   @ApiOkResponse({
@@ -91,12 +95,29 @@ export class UsersController {
     return { data: sent };
   }
 
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { type: 'string', description: 'jwt token' } } },
+      ],
+    },
+  })
   @ApiConsumes('text/plain')
   @ApiBody({ required: false, description: 'pwd if reset', type: 'string' })
   @Patch('confirm-email/:token')
-  async confirmEmail(@Param('token') token: string, @Body() pwd?: string) {
-    await this.userService.validateEmail(token, pwd);
-    // TODO trigger login
-    return { data: true };
+  async confirmEmail(
+    @Res() res,
+    @Param('token') token: string,
+    @Body() pwd?: string,
+  ) {
+    const user = await this.userService.validateEmail(token, pwd);
+    if (!user)
+      throw new UnauthorizedException('Invalid or expired confirmation token');
+
+    const jwt = this.jwtService.sign(user);
+    const cookieValue = AuthUtils.genAuthCookie(jwt, this.configService);
+    cookieValue && res.header('Set-Cookie', cookieValue);
+    res.send({ data: jwt });
   }
 }

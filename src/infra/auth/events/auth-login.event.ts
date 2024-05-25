@@ -4,8 +4,11 @@
 export class AuthLoginEvent {
   public static readonly eventName = 'auth.login' as const;
 
+  /**
+   * authType: bypass, no check, auth from request: UserDto
+   */
   constructor(
-    public readonly authType: 'password' | 'oauth',
+    public readonly authType: 'password' | 'oauth' | 'bypass',
     public readonly provider: string,
     public readonly credentials: any,
     public readonly username?: string,

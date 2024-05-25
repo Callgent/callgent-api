@@ -5,11 +5,16 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
 import { EmailsService } from '../emails/emails.service';
+import { AuthLoginEvent } from '../infra/auth/events/auth-login.event';
+import { AuthLoginedEvent } from '../infra/auth/events/auth-logined.event';
+import { JwtPayload } from '../infra/auth/jwt/jwt.service';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
@@ -25,6 +30,7 @@ export class UsersService {
     private readonly tenancyService: PrismaTenancyService,
     private readonly emailsService: EmailsService,
     private readonly authTokensService: AuthTokensService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.BotletSelect = {
     id: false,
@@ -94,7 +100,9 @@ export class UsersService {
    * @throws ForbiddenException if any of userIdentity/user/tenant is softly deleted
    */
   @Transactional()
-  async registerUserFromIdentity(ui: CreateUserIdentityDto) {
+  async registerUserFromIdentity(
+    ui: CreateUserIdentityDto & { email_verified?: boolean },
+  ) {
     const [mailName, mailHost] = ui.email?.split('@') || [];
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
 
@@ -237,6 +245,8 @@ export class UsersService {
         throw new BadRequestException(
           'Sorry, the user account is deactivated:' + email,
         );
+      if (ui.email_verified && !args.resetPwd)
+        throw new BadRequestException(email + ' is already verified');
       userId = undefined;
     } else if (!create)
       throw new BadRequestException(
@@ -248,7 +258,7 @@ export class UsersService {
 
     // generate token
     const token = await this.authTokensService.issue(
-      { sub: email, exp: 60 * 60, resetPwd, create, userId },
+      { sub: email, exp: 60 * 60 * 24, resetPwd, create, userId },
       'API_KEY',
     );
     // send mail
@@ -260,9 +270,9 @@ export class UsersService {
   }
 
   @Transactional()
-  async validateEmail(token: string, pwd: string) {
-    const payload = await this.authTokensService.verify(token, 'API_KEY');
-    if (!payload) throw new UnauthorizedException();
+  async validateEmail(token: string, pwd?: string) {
+    const payload = await this.authTokensService.verify(token, 'API_KEY', true);
+    if (!payload) return;
 
     const { sub: email, resetPwd, create, userId } = payload;
 
@@ -271,42 +281,67 @@ export class UsersService {
       evenInvalid: true,
     });
 
+    const prisma = this.txHost.tx as PrismaClient;
+
     if (ui) {
       if (this._accountDeactivated(ui))
         throw new BadRequestException(
           'Sorry, the user account is deactivated:' + email,
         );
+
       if (resetPwd) await this.updateLocalPassword(pwd, ui.id);
+      else if (ui.email_verified)
+        throw new BadRequestException(email + ' is already verified');
+      else
+        prisma.userIdentity.update({
+          where: { id: ui.id },
+          data: { email_verified: true },
+        });
     } else {
       if (!create)
         throw new BadRequestException(
-          'Sorry, the user account is not found: ' + email,
+          'Sorry, the user account does not exist: ' + email,
         );
 
       if (userId) {
         // FIXME associate to user
+        throw new NotImplementedException('associate to user');
       } else {
         ui = await this.registerUserFromIdentity({
           uid: email,
           email,
           provider: 'local',
           credentials: pwd,
+          email_verified: true,
         });
       }
     }
+    // update user.email
+    await prisma.user.updateMany({
+      data: { email },
+      where: { id: ui.userId, email: { not: null } },
+    });
+
+    // auto login
+    const [user] = await this.eventEmitter.emitAsync(
+      AuthLoginEvent.eventName,
+      new AuthLoginEvent('bypass', ui.provider, pwd, ui.uid, ui.user),
+    );
+    await this.eventEmitter.emitAsync(
+      AuthLoginedEvent.eventName,
+      new AuthLoginedEvent(user),
+    );
+    return user as JwtPayload;
   }
 
   @Transactional()
   async updateLocalPassword(pwd: string, id?: number) {
-    // FIXME check pwd complexity
+    // TODO check pwd complexity
+    if (pwd && (typeof pwd !== 'string' || pwd?.length < 8))
+      throw new BadRequestException('Password should be at least 8 characters');
 
     const credentials = pwd ? await Utils.hashSalted(pwd) : undefined;
     if (id) {
-      if (!pwd || typeof pwd !== 'string' || pwd?.length < 8)
-        throw new BadRequestException(
-          'Password should be at least 8 characters',
-        );
-
       const prisma = this.txHost.tx as PrismaClient;
       prisma.userIdentity.update({
         where: { id },

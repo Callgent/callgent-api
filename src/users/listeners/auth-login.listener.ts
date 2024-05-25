@@ -32,6 +32,8 @@ export class AuthLoginListener {
       // const tenantType = event.request?.query?.tenantType || 1;
       user = (await this.usersService.registerUserFromIdentity(userIdentity))
         .user;
+    } else if (event.authType == 'bypass') {
+      user = event.request;
     } else throw new BadRequestException('Invalid auth type:' + event.authType);
 
     const payload: JwtPayload = {

@@ -13,14 +13,14 @@ export class AuthTokensService {
   ) {}
 
   /**
-   * @param payload { expiresIn?: sec }
-   * @returns payload.jti
+   * @param payload { exp?: sec }
+   * @returns token: payload.jti
    */
   @Transactional()
   async issue(payload: JwtPayload, type: 'JWT' | 'API_KEY') {
     const token = payload.jti || (payload.jti = Utils.uuid());
-    const expiresAt = payload.expiresIn
-      ? new Date(Date.now() + payload.expiresIn * 1000)
+    const expiresAt = payload.exp
+      ? new Date(Date.now() + payload.exp * 1000)
       : undefined;
 
     const prisma = this.txHost.tx as PrismaClient;
@@ -30,17 +30,25 @@ export class AuthTokensService {
     return token;
   }
 
-  async verify(jtiToken: string, type: 'JWT' | 'API_KEY'): Promise<JwtPayload> {
+  /**
+   * @param once whether remove from db
+   */
+  @Transactional()
+  async verify(
+    jtiToken: string,
+    type: 'JWT' | 'API_KEY',
+    once?: boolean,
+  ): Promise<JwtPayload> {
     const prisma = this.txHost.tx as PrismaClient;
     const authToken = await prisma.authToken.findFirst({
       where: { token: jtiToken, type },
     });
-    if (
-      authToken &&
-      !authToken?.revoked &&
-      (!authToken.expiresAt || authToken.expiresAt > new Date())
-    ) {
-      return authToken.payload as JwtPayload;
+    if (authToken) {
+      const expired = authToken.expiresAt < new Date();
+      if (once || expired)
+        await prisma.authToken.delete({ where: { id: authToken.id } });
+      if (!expired && !authToken.revoked)
+        return authToken.payload as JwtPayload;
     }
   }
 
