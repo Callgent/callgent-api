@@ -36,7 +36,7 @@ export const createBotlet = (
     .spec()
     .post('/api/botlets')
     .withHeaders(
-      'x-botlet-authorization',
+      'x-callgent-authorization',
       auth ? TestConstant.authToken : 'invalid auth token',
     )
     .withBody(dto)
@@ -55,7 +55,7 @@ export const invokeBotlet = (
     .spec()
     .post('/api/botlets')
     .withHeaders(
-      'x-botlet-authorization',
+      'x-callgent-authorization',
       auth ? TestConstant.authToken : 'invalid auth token',
     )
     .withBody(dto)

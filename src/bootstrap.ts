@@ -185,7 +185,7 @@ function registerApi(
       .addSecurity('defaultBearerAuth', {
         type: 'apiKey',
         in: 'header',
-        name: 'x-botlet-authorization',
+        name: 'x-callgent-authorization',
       })
       .build();
     const document = SwaggerModule.createDocument(app, config);

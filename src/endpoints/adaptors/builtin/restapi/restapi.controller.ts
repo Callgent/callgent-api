@@ -50,21 +50,21 @@ export class RestApiController {
     description:
       '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
   })
-  @ApiHeader({ name: 'x-botlet-taskId', required: false })
+  @ApiHeader({ name: 'x-callgent-taskId', required: false })
   @ApiHeader({
-    name: 'x-botlet-progressive',
+    name: 'x-callgent-progressive',
     required: false,
     description: 'progressive request responder',
   })
-  @ApiHeader({ name: 'x-botlet-callback', required: false })
+  @ApiHeader({ name: 'x-callgent-callback', required: false })
   @All(':uuid/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
     @Param('uuid') botletId: string,
     @Param('endpoint') endpoint?: string,
-    @Headers('x-botlet-taskId') taskId?: string,
-    @Headers('x-botlet-progressive') progressive?: string,
-    @Headers('x-botlet-callback') callback?: string,
+    @Headers('x-callgent-taskId') taskId?: string,
+    @Headers('x-callgent-progressive') progressive?: string,
+    @Headers('x-callgent-callback') callback?: string,
   ) {
     const basePath = `${botletId}/${endpoint}/invoke/api/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);

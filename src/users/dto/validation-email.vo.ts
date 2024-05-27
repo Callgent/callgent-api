@@ -14,7 +14,7 @@ export class ValidationEmailVo {
   email: string;
 
   @ApiProperty({
-    description: 'If set to true, a new user will be created.',
+    description: 'If true, a new user will be created if not exists.',
     required: false,
     nullable: true,
   })

@@ -119,7 +119,7 @@ all validation is based on bearer token, with payload:
   }
   ```
 
-##### change `authorization` to `x-botlet-authorization` header
+##### change `authorization` to `x-callgent-authorization` header
 
 extract token from header:
 
@@ -129,7 +129,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // ExtractJwt.fromAuthHeaderAsBearerToken(), // For bearer token
-        (request) => request?.headers['x-botlet-authorization'],
+        (request) => request?.headers['x-callgent-authorization'],
     })}
 ```
 
@@ -144,7 +144,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       .addSecurity('defaultBearerAuth', {
         type: 'apiKey',
         in: 'header',
-        name: 'x-botlet-authorization',
+        name: 'x-callgent-authorization',
       })
       .build();
 
