@@ -9,11 +9,11 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addBotletFunctions } from './botlet-functions.e2e-spec';
-import { createBotlet } from './botlets.e2e-spec';
+import { addCallgentFunctions } from './callgent-functions.e2e-spec';
+import { createCallgent } from './callgents.e2e-spec';
 
 /**
- * - create a botlet,
+ * - create a callgent,
  * - choose webpage receiver endpoint,
  * - config entry, params
  * - config init params
@@ -21,40 +21,40 @@ import { createBotlet } from './botlets.e2e-spec';
  * - confirm
  * - progressive request
  */
-describe('Botlet Endpoint (e2e)', () => {
+describe('Callgent Endpoint (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
   it(`(POST): add a new canny.io rest-api server endpoint to invoke 400`, async () => {
-    const botlet = await prepareCannyBotlet();
+    const callgent = await prepareCannyCallgent();
 
-    // request for task by botlet api
-    await invokeBotletByApi(botlet.uuid).expectStatus(400);
+    // request for task by callgent api
+    await invokeCallgentByApi(callgent.uuid).expectStatus(400);
   });
 
   it(`(POST): add a new canny.io rest-api server endpoint to invoke 200`, async () => {
-    const botlet = await prepareCannyBotlet();
+    const callgent = await prepareCannyCallgent();
 
     // mount server endpoint auth
 
-    // request for task by botlet api
-    await invokeBotletByApi(botlet.uuid).expectStatus(400);
+    // request for task by callgent api
+    await invokeCallgentByApi(callgent.uuid).expectStatus(400);
   });
 });
 
-export const prepareCannyBotlet = async () => {
-  // create the botlet
+export const prepareCannyCallgent = async () => {
+  // create the callgent
   const {
-    json: { data: botlet },
-  } = await createBotlet();
+    json: { data: callgent },
+  } = await createCallgent();
 
   // add api server endpoint
   const {
     json: { data: serverEndpoint },
   } = await createEndpoint('restAPI', {
-    botletUuid: botlet.uuid,
+    callgentUuid: callgent.uuid,
     type: 'SERVER',
     host: { url: 'https://canny.io/api/v1' },
   });
@@ -62,14 +62,14 @@ export const prepareCannyBotlet = async () => {
   const jsonData = await fs.readFile('./test/e2e/data/canny-apis.json', 'utf8');
   const {
     json: { data: functionCount },
-  } = await addBotletFunctions({
+  } = await addCallgentFunctions({
     endpoint: serverEndpoint.uuid,
     text: jsonData,
     format: 'openAPI',
   });
   console.log({ serverEndpoint, functionCount });
 
-  return botlet;
+  return callgent;
 };
 
 export const createEndpoint = (
@@ -78,7 +78,7 @@ export const createEndpoint = (
 ) => {
   return pactum
     .spec()
-    .post(`/api/endpoints/${adaptorKey}/botlets`)
+    .post(`/api/endpoints/${adaptorKey}/callgents`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(endpointDto)
     .expectStatus(201);
@@ -93,10 +93,10 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
     .expectStatus(200);
 };
 
-export const invokeBotletByApi = (botletUuid, body?: any) => {
+export const invokeCallgentByApi = (callgentUuid, body?: any) => {
   return pactum
     .spec()
-    .post(`/api/botlets/${botletUuid}//invoke/api/boards/list`)
+    .post(`/api/callgents/${callgentUuid}//invoke/api/boards/list`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(body)
     .expectStatus(200);

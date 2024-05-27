@@ -21,7 +21,7 @@ import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.servi
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';
 
-/** FIXME CreateUserEvent: init a botlet with sep for user */
+/** FIXME CreateUserEvent: init a callgent with sep for user */
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -32,7 +32,7 @@ export class UsersService {
     private readonly authTokensService: AuthTokensService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
-  protected readonly defSelect: Prisma.BotletSelect = {
+  protected readonly defSelect: Prisma.CallgentSelect = {
     id: false,
     tenantId: false,
     createdBy: false,

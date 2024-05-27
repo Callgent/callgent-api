@@ -36,7 +36,7 @@ export class WebpageAdaptor implements EndpointAdaptor {
             name: 'Download Chrome Plugin',
             position: 'bottom',
             value:
-              'Before continue, please confirm this automation does NOT violate any ToS or regulations of the target website!  \nYour need to install the [Botlet Web Page](https://chrome.google.com/webstore/detail/botlet-web-page/pefjgjgjgjgjgjgjgjgjgjgjgjgjgjgj) Chrome plugin, as the operation client.  \n> Note: You need to keep the Chrome open to perform tasks.',
+              'Before continue, please confirm this automation does NOT violate any ToS or regulations of the target website!  \nYour need to install the [Callgent Web Page](https://chrome.google.com/webstore/detail/callgent-web-page/pefjgjgjgjgjgjgjgjgjgjgjgjgjgjgj) Chrome plugin, as the operation client.  \n> Note: You need to keep the Chrome open to perform tasks.',
           },
         ],
       },
@@ -45,7 +45,7 @@ export class WebpageAdaptor implements EndpointAdaptor {
           address: {
             type: 'domain',
             name: 'Custom Domain',
-            value: 'page.botlet.io',
+            value: 'page.callgent.com',
             placeholder: 'Not applicable in Free plan.',
           },
         },

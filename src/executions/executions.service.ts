@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EndpointType, PrismaClient } from '@prisma/client';
-import { BotletsService } from '../botlets/botlets.service';
+import { CallgentsService } from '../callgents/callgents.service';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { JwtPayload } from '../infra/auth/jwt/jwt.service';
@@ -15,33 +15,33 @@ import { CommandExecutor } from './command.executor';
 
 /**
  * An execution belongs to a task. Triggered by an external user or system,
- * to one or more botlets.
+ * to one or more callgents.
  */
 @Injectable()
 export class ExecutionsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly botletsService: BotletsService,
+    private readonly callgentsService: CallgentsService,
     @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
     private readonly commandExecutor: CommandExecutor,
   ) {}
 
   /**
-   * external client call in to a group of botlets.
-   * @param action ignored if multiple botlets
+   * external client call in to a group of callgents.
+   * @param action ignored if multiple callgents
    */
   @Transactional()
   async execute(
-    botletUuids: string[],
+    callgentUuids: string[],
     rawReq: object,
     reqAdaptorKey: string,
     ctx: { taskId?: string; caller?: JwtPayload; callback?: string } = {},
     reqEndpointUuid?: string,
     action?: string,
   ) {
-    if (!botletUuids?.length)
-      throw new BadRequestException('botletUuids must be specified');
+    if (!callgentUuids?.length)
+      throw new BadRequestException('callgentUuids must be specified');
 
     // client adaptor
     const reqAdaptor = this.endpointsService.getAdaptor(
@@ -60,23 +60,23 @@ export class ExecutionsService {
         !reqEndpoint ||
         reqEndpoint.type != EndpointType.CLIENT ||
         reqEndpoint.adaptorKey != reqAdaptorKey ||
-        !botletUuids.includes(reqEndpoint.botletUuid)
+        !callgentUuids.includes(reqEndpoint.callgentUuid)
       )
         throw new NotFoundException(
           `Endpoint not found, uuid=${reqEndpointUuid}`,
         );
     }
 
-    // load botlets
+    // load callgents
     const prisma = this.txHost.tx as PrismaClient;
-    const botlets = await prisma.botlet.findMany({
-      where: { uuid: { in: botletUuids } },
+    const callgents = await prisma.callgent.findMany({
+      where: { uuid: { in: callgentUuids } },
       select: { uuid: true, name: true, summary: true },
     });
-    if (botlets.length != botletUuids.length)
+    if (callgents.length != callgentUuids.length)
       throw new NotFoundException(
-        `Botlet not found, uuid=${botletUuids
-          .filter((x) => !botlets.find((y) => y.uuid == x))
+        `Callgent not found, uuid=${callgentUuids
+          .filter((x) => !callgents.find((y) => y.uuid == x))
           .join(', ')}`,
       );
 
@@ -86,10 +86,10 @@ export class ExecutionsService {
     // FIXME task ctx, and vars stack
     const stateCtx = { stack: [ctx] };
 
-    // FIXME merge system botlets, e.g., system event register, cmd entry creation
+    // FIXME merge system callgents, e.g., system event register, cmd entry creation
 
     // generate pseudo-command, and upserted vars stack
-    // const cmd = await this.agentsService.genPseudoCmd(botlets, stateCtx as any);
+    // const cmd = await this.agentsService.genPseudoCmd(callgents, stateCtx as any);
 
     // create a temp server endpoint to execute the cmd
 
@@ -98,7 +98,7 @@ export class ExecutionsService {
 
     // return this._invocationFlow(
     //   { endpoint: reqEndpoint, adaptor: reqAdaptor, req: rawReq },
-    //   botletUuids[0],
+    //   callgentUuids[0],
     //   action,
     // );
   }
@@ -106,23 +106,23 @@ export class ExecutionsService {
   /** invocation flow, and lifecycle events */
   // protected async _invocationFlow(
   //   req: any,
-  //   botletUuid: string,
+  //   callgentUuid: string,
   //   actionName?: string,
   // ) {
   //   const prisma = this.txHost.tx as PrismaClient;
 
   //   // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
   //   const where = actionName
-  //     ? { AND: [{ name: actionName }, { botletUuid }] }
-  //     : { botletUuid };
+  //     ? { AND: [{ name: actionName }, { callgentUuid }] }
+  //     : { callgentUuid };
   //   const take = actionName ? 1 : undefined;
-  //   const actions = await prisma.botletFunction.findMany({ where, take });
+  //   const actions = await prisma.callgentFunction.findMany({ where, take });
   //   const action = actionName
   //     ? actions.find((a) => a.name == actionName)
   //     : await this._routing(req, actions);
   //   if (!action)
   //     throw new BadRequestException(
-  //       'Action entry not found on botlet: ' + botletUuid,
+  //       'Action entry not found on callgent: ' + callgentUuid,
   //     );
 
   //   // may reply ack to client directly, async result
@@ -132,14 +132,14 @@ export class ExecutionsService {
   //   // response to client or next cmd
   // }
 
-  // protected async _routing(req: any, actions: BotletFunctionDto[]) {
+  // protected async _routing(req: any, actions: CallgentFunctionDto[]) {
   //   return this.agentsService.routeAction(actions, req);
   // }
 
   /** call out to server */
   /** invoke with callback */
   // @Transactional()
-  // async callout(action: BotletFunctionDto, req: any) {
+  // async callout(action: CallgentFunctionDto, req: any) {
   //   // get server endpoint(sep), and sAdaptor
   //   const sEndpoint = null; // await this.findOne(action.endpointUuid);
   //   if (!sEndpoint)

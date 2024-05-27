@@ -51,7 +51,7 @@ function initEventListeners() {
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'BotletFunctionsService',
+      serviceName: 'CallgentFunctionsService',
       funName: 'loadFunctions',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
@@ -140,7 +140,7 @@ please generate the js function with **full implementation and error handling**!
       id: 2,
       name: 'map2Function',
       prompt: `given below service functions:
-class {{=it.botletName}} {{{~ it.botletFunctions :fun }}
+class {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
   "function name: {{=fun.name}}": {"params":[{{=fun.params}}], "documents":"{{=fun.documents}}"},
 {{~}}
 }
@@ -189,13 +189,13 @@ function initTestData() {
     id: 1,
     tenantId: 1,
     provider: 'local',
-    uid: 'test@botlet.io',
+    uid: 'test@callgent.com',
     // password123
     credentials: '$2b$10$JmQ5gwQevEGI6t.HLrCw3ugQNf9.8KaqC1OaaC5mCMClii.zKveYm',
     name: 'test-user',
-    email: 'test@botlet.io',
+    email: 'test@callgent.com',
     email_verified: true,
-    userId: 0,
+    userId: 1,
     userUuid,
   };
 
@@ -209,10 +209,10 @@ function initTestData() {
     },
   };
 
-  const botletDto: Prisma.BotletUncheckedCreateInput = {
+  const callgentDto: Prisma.CallgentUncheckedCreateInput = {
     id: 1,
-    uuid: 'TEST_BOTLET_UUID',
-    name: 'test-botlet',
+    uuid: 'TEST_CALLGENT_UUID',
+    name: 'test-callgent',
     tenantId: 1,
     createdBy: userUuid,
   };
@@ -220,7 +220,7 @@ function initTestData() {
   const cepDto: Prisma.EndpointUncheckedCreateInput = {
     id: 1,
     uuid: 'TEST_CEP_UUID',
-    botletUuid: 'TEST_BOTLET_UUID',
+    callgentUuid: 'TEST_CALLGENT_UUID',
     type: 'CLIENT',
     adaptorKey: 'restAPI',
     host: {},
@@ -235,23 +235,25 @@ function initTestData() {
         update: tenant,
         create: tenant,
       })
-      .then((tenant) => console.log({ tenant })),
-    prisma.user
-      .upsert({
-        where: { id: 1 },
-        update: u,
-        create: u,
-      })
-      .then((user) => {
-        (ui as any).id = 1;
-        (ui as any).userId = user.id;
-        prisma.userIdentity
+      .then((tenant) => {
+        console.log({ tenant });
+        prisma.user
           .upsert({
             where: { id: 1 },
-            update: ui,
-            create: ui,
+            update: u,
+            create: u,
           })
-          .then((userIdentity) => console.log({ user, userIdentity }));
+          .then((user) => {
+            (ui as any).id = 1;
+            (ui as any).userId = user.id;
+            prisma.userIdentity
+              .upsert({
+                where: { id: 1 },
+                update: ui,
+                create: ui,
+              })
+              .then((userIdentity) => console.log({ user, userIdentity }));
+          });
       }),
     prisma.authToken
       .upsert({
@@ -260,13 +262,13 @@ function initTestData() {
         create: authTokenDto,
       })
       .then((authToken) => console.log({ authToken })),
-    prisma.botlet
+    prisma.callgent
       .upsert({
         where: { id: 1 },
-        update: botletDto,
-        create: botletDto,
+        update: callgentDto,
+        create: callgentDto,
       })
-      .then((botlet) => console.log({ botlet })),
+      .then((callgent) => console.log({ callgent })),
     prisma.endpoint
       .upsert({
         where: { id: 1 },
@@ -295,7 +297,7 @@ function initTestData() {
     addLlmCache(
       4,
       'map2Function',
-      'given below service functions:\nclass new-test-botlet {\n  "function name: POST:/boards/list": {"params":[invoker,apiKey], "documents":"This function lists all boards.\n\n@param {Function} invoker - A function that makes the actual API call.\n@param {string} apiKey - Your secret API key.\n\n@returns {Promise<Object>} A promise that resolves to an object containing the API result.\n@property {Array<Object>} boards - An array of board objects.\n@property {string} boards[].id - A unique identifier for the board.\n@property {string} boards[].created - Time at which the board was created, in ISO 8601 format.\n@property {boolean} boards[].isPrivate - Whether or not the board is set as private in the administrative settings.\n@property {string} boards[].name - The board\'s name.\n@property {number} boards[].postCount - The number of non-deleted posts associated with the board. This number includes posts that are marked as closed or complete.\n@property {boolean} boards[].privateComments - Whether or not comments left on posts can be viewed by other end-users.\n@property {string} boards[].url - The URL to the board\'s page.\n@property {boolean} hasMore - Specifies whether this query returns more boards than the limit."},\n\n}\nand an service `invoker` function.\n\nPlease choose one function to fulfill below request:\n{\n"requesting function": "POST:/boards/list",\n"request from": "restAPI",\n"request_object": {"url":"/boards/list","method":"POST","headers":{"host":"127.0.0.1:3300","connection":"close","content-length":"0"},"query":{}},\n}\nand code for request_object to chosen function args mapping. if any data missing/unclear/ambiguous from request_object to invocation args, please ask question to the caller in below json.question field.\n\noutput a single-line json object:\n{ "funName": "the function name to be invoked", "params":"param names of the chosen function", "mapping": "the js function (invoker, request_object)=>{...;return functionArgsArray;}, full implementation to return the **real** args from request_object to invoke the chosen service function. don\'t use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}',
+      'given below service functions:\nclass new-test-callgent {\n  "function name: POST:/boards/list": {"params":[invoker,apiKey], "documents":"This function lists all boards.\n\n@param {Function} invoker - A function that makes the actual API call.\n@param {string} apiKey - Your secret API key.\n\n@returns {Promise<Object>} A promise that resolves to an object containing the API result.\n@property {Array<Object>} boards - An array of board objects.\n@property {string} boards[].id - A unique identifier for the board.\n@property {string} boards[].created - Time at which the board was created, in ISO 8601 format.\n@property {boolean} boards[].isPrivate - Whether or not the board is set as private in the administrative settings.\n@property {string} boards[].name - The board\'s name.\n@property {number} boards[].postCount - The number of non-deleted posts associated with the board. This number includes posts that are marked as closed or complete.\n@property {boolean} boards[].privateComments - Whether or not comments left on posts can be viewed by other end-users.\n@property {string} boards[].url - The URL to the board\'s page.\n@property {boolean} hasMore - Specifies whether this query returns more boards than the limit."},\n\n}\nand an service `invoker` function.\n\nPlease choose one function to fulfill below request:\n{\n"requesting function": "POST:/boards/list",\n"request from": "restAPI",\n"request_object": {"url":"/boards/list","method":"POST","headers":{"host":"127.0.0.1:3300","connection":"close","content-length":"0"},"query":{}},\n}\nand code for request_object to chosen function args mapping. if any data missing/unclear/ambiguous from request_object to invocation args, please ask question to the caller in below json.question field.\n\noutput a single-line json object:\n{ "funName": "the function name to be invoked", "params":"param names of the chosen function", "mapping": "the js function (invoker, request_object)=>{...;return functionArgsArray;}, full implementation to return the **real** args from request_object to invoke the chosen service function. don\'t use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}',
       '{"funName":"POST:/boards/list","params":["invoker","apiKey"],"mapping":"(invoker, request_object)=>{ let apiKey = request_object.params.uuids; return [invoker, apiKey]; }","question":"What is the API key for this request? It is not provided in the request_object."}',
     ),
   ];

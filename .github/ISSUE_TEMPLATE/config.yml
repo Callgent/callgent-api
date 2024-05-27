@@ -1,17 +1,17 @@
 blank_issues_enabled: false
 contact_links:
   - name: Product Feature Request
-    url: https://botlet.canny.io/feature-requests
-    about: Provide feedback to the Botlet team and ask for new features or enhancements!
+    url: https://callgent.canny.io/feature-requests
+    about: Provide feedback to the Callgent team and ask for new features or enhancements!
   - name: Documentation Bug Report
-    url: https://github.com/botlet/botlet-doc/issues/new?template=BUG_REPORT.md&title%5B%5D=BUG
-    about: Create a report to help us improve the Botlet documentation.
+    url: https://github.com/callgent/callgent-doc/issues/new?template=BUG_REPORT.md&title%5B%5D=BUG
+    about: Create a report to help us improve the Callgent documentation.
   # - name: Documentation Request
-  #   url: https://feedback.botlet.io/documentation
+  #   url: https://feedback.callgent.com/documentation
   #   about: Suggest a new part of the documentation we are missing!
-  # - name: Botlet Questions and Discussions
-  #   url: https://forum.botlet.io
+  # - name: Callgent Questions and Discussions
+  #   url: https://forum.callgent.com
   #   about: Please ask and answer questions on the community forums.
   - name: Join the Community Discord
-    url: https://botlet.io/discord
+    url: https://callgent.com/discord
     about: Come and chat with other community members!

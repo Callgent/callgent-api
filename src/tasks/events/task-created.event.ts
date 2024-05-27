@@ -8,6 +8,6 @@ export class TaskCreatedEvent {
    */
   constructor(
     public readonly task: Prisma.TaskUncheckedCreateInput,
-  ) // public readonly receiver?: BotletReceiver,
+  ) // public readonly receiver?: CallgentReceiver,
   {}
 }

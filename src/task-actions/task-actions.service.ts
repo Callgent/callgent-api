@@ -2,8 +2,8 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
-import { BotletDto } from '../botlets/dto/botlet.dto';
+import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
+import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { TasksService } from '../tasks/tasks.service';
@@ -11,7 +11,7 @@ import { TaskActionDto } from './dto/task-action.dto';
 
 /**
  * A task action belongs to a task. Triggered by an external user or system,
- * to one or more botlets.
+ * to one or more callgents.
  */
 @Injectable()
 export class TaskActionsService {
@@ -53,13 +53,13 @@ export class TaskActionsService {
 
   async __createTaskAction(e: ClientRequestEvent) {
     // init task action
-    // const { taskAction, botlets, reqEndpoint, reqAdaptor } =
+    // const { taskAction, callgents, reqEndpoint, reqAdaptor } =
     // await this._$createTaskAction(e);
 
     // sync respond in time limit
     let raceWinner = -1;
 
-    // const respPromise = this._execute(botlets, taskAction).then((resp) => {
+    // const respPromise = this._execute(callgents, taskAction).then((resp) => {
     //   if (raceWinner < 0) raceWinner = 0;
     //   // load task stage to respond
     //   // if stage done, callback
@@ -84,20 +84,20 @@ export class TaskActionsService {
     // ]);
   }
 
-  protected async _execute(botlets: BotletDto[], taskAction: TaskActionDto) {
-    // FIXME merge system botlets, e.g., system event register, timer, cmd entry creation
+  protected async _execute(callgents: CallgentDto[], taskAction: TaskActionDto) {
+    // FIXME merge system callgents, e.g., system event register, timer, cmd entry creation
 
     // load task context vars
     const taskVars = {};
 
     // may get sync response
-    // return this._interpret(taskAction, botlets, botletFunctions, taskVars);
+    // return this._interpret(taskAction, callgents, callgentFunctions, taskVars);
   }
 
   protected async _interpret(
     taskAction: TaskActionDto,
-    botlets: BotletDto[],
-    botletFunctions: { [botletName: string]: BotletFunctionDto[] },
+    callgents: CallgentDto[],
+    callgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
     taskVars: { [name: string]: any },
   ) {
     let resp,
@@ -105,7 +105,7 @@ export class TaskActionsService {
     // interpret request, execute step by step
     for (;;) {
       const { funName, mapping, progressive, vars } = await this._routing(
-        botletFunctions,
+        callgentFunctions,
         taskAction,
         resp,
         { ...taskVars, ...reqVars },
@@ -124,14 +124,14 @@ export class TaskActionsService {
   }
 
   protected async _routing(
-    BotletFunctions: { [botletName: string]: BotletFunctionDto[] },
+    CallgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
     taskAction: TaskActionDto,
     resp: any,
     vars: { [name: string]: any },
   ): Promise<{ funName; mapping; progressive; vars }> {
-    // const botNames = Object.keys(BotletFunctions);
-    // if (botNames.length == 1 && BotletFunctions[botNames[0]].length == 1)
-    //   return BotletFunctions[botNames[0]];
+    // const botNames = Object.keys(CallgentFunctions);
+    // if (botNames.length == 1 && CallgentFunctions[botNames[0]].length == 1)
+    //   return CallgentFunctions[botNames[0]];
 
     // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
     // 可能用到多个，
@@ -141,23 +141,23 @@ export class TaskActionsService {
   /** invocation flow, and lifecycle events */
   //   protected async _invocationFlow(
   //     req: RequestPack,
-  //     botletUuid: string,
+  //     callgentUuid: string,
   //     actionName?: string,
   //   ) {
   //     const prisma = this.txHost.tx as PrismaClient;
 
   //     // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
   //     const where = actionName
-  //       ? { AND: [{ name: actionName }, { botletUuid }] }
-  //       : { botletUuid };
+  //       ? { AND: [{ name: actionName }, { callgentUuid }] }
+  //       : { callgentUuid };
   //     const take = actionName ? 1 : undefined;
-  //     const actions = await prisma.botletFunction.findMany({ where, take });
+  //     const actions = await prisma.callgentFunction.findMany({ where, take });
   //     const action = actionName
   //       ? actions.find((a) => a.name == actionName)
   //       : await this._routing(req, actions);
   //     if (!action)
   //       throw new BadRequestException(
-  //         'Action entry not found on botlet: ' + botletUuid,
+  //         'Action entry not found on callgent: ' + callgentUuid,
   //       );
 
   //     // may reply ack to client directly, async result
@@ -167,14 +167,14 @@ export class TaskActionsService {
   //     // response to client or next cmd
   //   }
 
-  //   protected async _routing(req: RequestPack, actions: BotletFunctionDto[]) {
+  //   protected async _routing(req: RequestPack, actions: CallgentFunctionDto[]) {
   //     return this.agentsService.routeAction(actions, req);
   //   }
 
   /** call out to server */
   /** invoke with callback */
   //   @Transactional()
-  //   async callout(action: BotletFunctionDto, req: RequestPack) {
+  //   async callout(action: CallgentFunctionDto, req: RequestPack) {
   //     // get server endpoint(sep), and sAdaptor
   //     const sEndpoint = await this.findOne(action.endpointUuid);
   //     if (!sEndpoint)

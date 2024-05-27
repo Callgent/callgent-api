@@ -29,7 +29,7 @@ import { TasksService } from './tasks.service';
 @ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(RestApiResponse, TaskDto)
 @UseGuards(JwtGuard)
-@Controller(':botlet/tasks')
+@Controller(':callgent/tasks')
 export class TasksController {
   constructor(private readonly taskService: TasksService) {}
 
@@ -57,13 +57,13 @@ export class TasksController {
   @Post()
   async create(
     @Req() req,
-    @Param('botlet') botletUuid: string,
+    @Param('callgent') callgentUuid: string,
     @Body() dto: CreateTaskDto,
   ) {
     const user: JwtPayload = req.user;
     // const [task, syncResult] = await this.taskService.create({
     //   ...dto,
-    //   botletUuid,
+    //   callgentUuid,
     //   callerType: user.aud,
     //   // assignees are set when processing the task
     //   createdBy: user.sub,

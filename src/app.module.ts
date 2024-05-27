@@ -5,8 +5,8 @@ import { AgentsModule } from './agents/agents.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
-import { BotletFunctionsModule } from './botlet-functions/botlet-functions.module';
-import { BotletsModule } from './botlets/botlets.module';
+import { CallgentFunctionsModule } from './callgent-functions/callgent-functions.module';
+import { CallgentsModule } from './callgents/callgents.module';
 import { EmailsModule } from './emails/emails.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
@@ -31,11 +31,11 @@ import { UsersModule } from './users/users.module';
     ReposModule,
     AuthModule,
     UsersModule,
-    BotletsModule,
+    CallgentsModule,
     TasksModule,
     AuthTokensModule,
     EndpointsModule,
-    BotletFunctionsModule,
+    CallgentFunctionsModule,
     AgentsModule,
     TaskActionsModule,
     EventListenersModule,

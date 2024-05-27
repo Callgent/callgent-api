@@ -21,31 +21,31 @@ import {
 } from '@nestjs/swagger';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
-import { BotletsService } from './botlets.service';
-import { BotletDto } from './dto/botlet.dto';
-import { CreateBotletDto } from './dto/create-botlet.dto';
-import { UpdateBotletDto } from './dto/update-botlet.dto';
+import { CallgentsService } from './callgents.service';
+import { CallgentDto } from './dto/callgent.dto';
+import { CreateCallgentDto } from './dto/create-callgent.dto';
+import { UpdateCallgentDto } from './dto/update-callgent.dto';
 
-@ApiTags('Botlets')
+@ApiTags('Callgents')
 @ApiSecurity('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, BotletDto)
+@ApiExtraModels(RestApiResponse, CallgentDto)
 @UseGuards(JwtGuard)
-@Controller('botlets')
-export class BotletsController {
-  constructor(private readonly botletService: BotletsService) {}
+@Controller('callgents')
+export class CallgentsController {
+  constructor(private readonly callgentService: CallgentsService) {}
 
   @ApiCreatedResponse({
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],
     },
   })
   @Post()
-  async create(@Req() req, @Body() dto: CreateBotletDto) {
+  async create(@Req() req, @Body() dto: CreateCallgentDto) {
     return {
-      data: await this.botletService.create(dto, req.user.sub),
+      data: await this.callgentService.create(dto, req.user.sub),
     };
   }
 
@@ -53,13 +53,13 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],
     },
   })
   @Get('/:uuid')
   async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.botletService.findOne(uuid) };
+    return { data: await this.callgentService.findOne(uuid) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -71,7 +71,7 @@ export class BotletsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { type: 'array', items: { $ref: getSchemaPath(BotletDto) } },
+            data: { type: 'array', items: { $ref: getSchemaPath(CallgentDto) } },
           },
         },
       ],
@@ -86,7 +86,7 @@ export class BotletsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.botletService.findAll({
+    return this.callgentService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -97,14 +97,14 @@ export class BotletsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],
     },
   })
   @Put('/:uuid')
-  async update(@Param('uuid') uuid: string, @Body() dto: UpdateBotletDto) {
+  async update(@Param('uuid') uuid: string, @Body() dto: UpdateCallgentDto) {
     dto.uuid = uuid;
-    return { data: await this.botletService.update(dto) };
+    return { data: await this.callgentService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -113,7 +113,7 @@ export class BotletsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletDto) },
+            data: { $ref: getSchemaPath(CallgentDto) },
           },
         },
       ],
@@ -121,14 +121,14 @@ export class BotletsController {
   })
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
-    return { data: await this.botletService.delete(uuid) };
+    return { data: await this.callgentService.delete(uuid) };
   }
 
   @ApiCreatedResponse({
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletDto) } } },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],
     },
   })
@@ -136,10 +136,10 @@ export class BotletsController {
   async duplicateOverTenancy(
     @Param('uuid') uuid: string,
     @Req() req,
-    @Body() dto: CreateBotletDto,
+    @Body() dto: CreateCallgentDto,
   ) {
     return {
-      data: await this.botletService.duplicateOverTenancy(
+      data: await this.callgentService.duplicateOverTenancy(
         uuid,
         dto,
         req.user.sub,

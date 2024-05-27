@@ -10,7 +10,7 @@ export class EventObject {
     public readonly dataType: string,
     /** target uuid to relate several events */
     public targetId: string,
-    /** url template for response callback, `botlet:funName[@botlet]` to invoke botlet */
+    /** url template for response callback, `callgent:funName[@callgent]` to invoke callgent */
     public callback?: string,
     public readonly callbackType: EventCallbackType = 'EVENT',
   ) {

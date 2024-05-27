@@ -37,8 +37,8 @@
 
     ```shell
     pnpm i -g @nestjs/cli
-    nest new botlet-api
-    cd botlet-api
+    nest new callgent-api
+    cd callgent-api
     ```
 
 ### add dependencies
@@ -207,9 +207,9 @@ You may annotate it to your DTO property like this:
 export class CreateTaskDto {
   // ...
 
-  // automatically validation check if the botlet exists in db on controller requesting
-  @EntityIdExists('botlet', 'uuid') // @EntityIdExists('entityType', 'fieldName')
-  botletUuid: string;
+  // automatically validation check if the callgent exists in db on controller requesting
+  @EntityIdExists('callgent', 'uuid') // @EntityIdExists('entityType', 'fieldName')
+  callgentUuid: string;
 }
 ```
 
@@ -220,8 +220,8 @@ Based on `prisma-generator-nestjs-dto`, you may also annotate this decorator in 
 ```prisma
 model Task {
   // ...
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  callgentUuid String @db.VarChar(36)
 }
 ```
 
@@ -229,10 +229,10 @@ This makes the generated DTO to be annotated with `@EntityIdExists` decorator.
 
 #### Retrieves the entity instance
 
-This makes sure the `botletUuid` field is a valid UUID of a botlet in the database.  
+This makes sure the `callgentUuid` field is a valid UUID of a callgent in the database.  
 you can retrieve the entity instance directly from the dto:
 
 ```typescript
-const botlet = EntityIdExists.entity<Botlet>(dto, 'botletUuid') ||
-          (await prisma.botlet.findUnique({ where: {uuid: dto.botletUuid} }));
+const callgent = EntityIdExists.entity<Callgent>(dto, 'callgentUuid') ||
+          (await prisma.callgent.findUnique({ where: {uuid: dto.callgentUuid} }));
 ```

@@ -1,9 +1,9 @@
-/** through `botlet` to call method/assignee, with args */
+/** through `callgent` to call method/assignee, with args */
 export class Invocation {
-  /** botlet */
-  botlet: { uuid: string; name: string };
+  /** callgent */
+  callgent: { uuid: string; name: string };
   func: string;
-  /** expression referring to botlet response data */
+  /** expression referring to callgent response data */
   args?: { [key: string]: string };
 }
 
@@ -36,21 +36,21 @@ export class Command {
 // invocation refer to data by expressions,
 // list of instructions as a command
 
-// ask a botlet to do sth, on some event:
-// botlet.register event do: botlet.act(args)
-// ask a botlet to do sth, on some condition:
-// when resp.?, then botlet.act(args)
+// ask a callgent to do sth, on some event:
+// callgent.register event do: callgent.act(args)
+// ask a callgent to do sth, on some condition:
+// when resp.?, then callgent.act(args)
 
 // guys, please send a mail at 3pm to xx, ask him whether and where want to go
 // if yes, book a table at where he want to go
-// TODO botlet routing
+// TODO callgent routing
 
 // @b.observe('time event', '3pm', [
 //   b_mail_send = @b_mail.act('send', { to: 'xx', subject: 'ask whether and where want to go' }),
 //   if b_mail_send.resp.yes, then b_table_book = @b_table.act('book', { where: b_mail_send.resp.where })
 // ])
 
-// 1. botlet routing
+// 1. callgent routing
 // 2. entry routing
 // 3. args mapping/generation, progressively
 // 4. invocation

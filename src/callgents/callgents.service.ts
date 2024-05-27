@@ -3,25 +3,25 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { Botlet, Prisma, PrismaClient } from '@prisma/client';
+import { Callgent, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { CreateBotletDto } from './dto/create-botlet.dto';
-import { UpdateBotletDto } from './dto/update-botlet.dto';
-import { BotletCreatedEvent } from './events/botlet-created.event';
+import { CreateCallgentDto } from './dto/create-callgent.dto';
+import { UpdateCallgentDto } from './dto/update-callgent.dto';
+import { CallgentCreatedEvent } from './events/callgent-created.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
-export class BotletsService {
-  private readonly logger = new Logger(BotletsService.name);
+export class CallgentsService {
+  private readonly logger = new Logger(CallgentsService.name);
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly eventEmitter: EventEmitter2,
     private readonly tenancyService: PrismaTenancyService,
   ) {}
-  protected readonly defSelect: Prisma.BotletSelect = {
+  protected readonly defSelect: Prisma.CallgentSelect = {
     id: false,
     tenantId: false,
     createdBy: false,
@@ -30,22 +30,22 @@ export class BotletsService {
 
   @Transactional()
   async create(
-    dto: CreateBotletDto,
+    dto: CreateCallgentDto,
     createdBy: string,
-    select?: Prisma.BotletSelect,
+    select?: Prisma.CallgentSelect,
   ) {
-    const data = dto as Prisma.BotletUncheckedCreateInput;
+    const data = dto as Prisma.CallgentUncheckedCreateInput;
     (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
 
     const prisma = this.txHost.tx as PrismaClient;
-    const ret: Botlet = await selectHelper(
+    const ret: Callgent = await selectHelper(
       select,
-      (select) => prisma.botlet.create({ select, data }),
+      (select) => prisma.callgent.create({ select, data }),
       this.defSelect,
     );
     await this.eventEmitter.emitAsync(
-      BotletCreatedEvent.eventName,
-      new BotletCreatedEvent({ ...data, ...ret }),
+      CallgentCreatedEvent.eventName,
+      new CallgentCreatedEvent({ ...data, ...ret }),
     );
     return ret;
   }
@@ -58,9 +58,9 @@ export class BotletsService {
     page,
     perPage,
   }: {
-    select?: Prisma.BotletSelect;
-    where?: Prisma.BotletWhereInput;
-    orderBy?: Prisma.BotletOrderByWithRelationInput;
+    select?: Prisma.CallgentSelect;
+    where?: Prisma.CallgentWhereInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput;
     page?: number;
     perPage?: number;
   }) {
@@ -69,7 +69,7 @@ export class BotletsService {
       select,
       async (select) => {
         const result = paginate(
-          prisma.botlet,
+          prisma.callgent,
           {
             select,
             where,
@@ -88,42 +88,42 @@ export class BotletsService {
   }
 
   @Transactional()
-  async findMany(uuids: string[], select?: Prisma.BotletSelect) {
+  async findMany(uuids: string[], select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
 
-    const botlets = await selectHelper(
+    const callgents = await selectHelper(
       select,
       async (select) =>
-        await prisma.botlet.findMany({
+        await prisma.callgent.findMany({
           where: { uuid: { in: uuids } },
           select,
         }),
       this.defSelect,
     );
 
-    if (botlets.length != uuids.length)
+    if (callgents.length != uuids.length)
       throw new NotFoundException(
-        `Botlet not found, uuid=${uuids
-          .filter((x) => !botlets.find((y) => y.uuid == x))
+        `Callgent not found, uuid=${uuids
+          .filter((x) => !callgents.find((y) => y.uuid == x))
           .join(', ')}`,
       );
-    return botlets;
+    return callgents;
   }
 
   @Transactional()
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botlet.delete({ select, where: { uuid } }),
+      prisma.callgent.delete({ select, where: { uuid } }),
     );
   }
 
   @Transactional()
-  update(dto: UpdateBotletDto) {
+  update(dto: UpdateCallgentDto) {
     if (!dto.uuid) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botlet.update({
+      prisma.callgent.update({
         select,
         where: { uuid: dto.uuid },
         data: dto,
@@ -132,12 +132,12 @@ export class BotletsService {
   }
 
   @Transactional()
-  findOne(uuid: string, select?: Prisma.BotletSelect) {
+  findOne(uuid: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
-        prisma.botlet.findUnique({
+        prisma.callgent.findUnique({
           select,
           where: { uuid },
         }),
@@ -148,23 +148,23 @@ export class BotletsService {
   @Transactional()
   async duplicateOverTenancy(
     dupUuid: string,
-    dto: CreateBotletDto,
+    dto: CreateCallgentDto,
     createdBy: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
 
     await this.tenancyService.bypassTenancy(prisma);
-    const dup = await prisma.botlet.findUnique({ where: { uuid: dupUuid } });
+    const dup = await prisma.callgent.findUnique({ where: { uuid: dupUuid } });
     if (!dup)
-      throw new NotFoundException('botlet to duplicate not found: ' + dupUuid);
+      throw new NotFoundException('callgent to duplicate not found: ' + dupUuid);
 
     await this.tenancyService.bypassTenancy(prisma, false);
-    const botlet = await this.create(dto, createdBy, { id: null });
+    const callgent = await this.create(dto, createdBy, { id: null });
   }
 
   /**
    * Cross tenancy execution when client endpoint is provided.
-   * [endpoint://]botlet.please('act', with_args)
+   * [endpoint://]callgent.please('act', with_args)
    * @param act API action name
    * @param endpoint client endpoint to call API. unnecessary in internal calls
    */
@@ -172,38 +172,38 @@ export class BotletsService {
   async please(
     act: string,
     args: any[],
-    endpoint: { botletUuid: string; uuid?: string; adaptorKey?: string },
+    endpoint: { callgentUuid: string; uuid?: string; adaptorKey?: string },
   ) {
-    // invoke botlet action api, through endpoint
+    // invoke callgent action api, through endpoint
     const prisma = this.txHost.tx as PrismaClient;
     const withEndpoint = endpoint?.uuid || endpoint?.adaptorKey;
 
     // load targets
     if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
-    const [botlet, actions, epClient] = await Promise.all([
-      prisma.botlet.findUnique({ where: { uuid: endpoint.botletUuid } }),
-      prisma.botletFunction.findMany({
-        where: { name: act, botletUuid: endpoint.botletUuid },
+    const [callgent, actions, epClient] = await Promise.all([
+      prisma.callgent.findUnique({ where: { uuid: endpoint.callgentUuid } }),
+      prisma.callgentFunction.findMany({
+        where: { name: act, callgentUuid: endpoint.callgentUuid },
       }),
       withEndpoint &&
         prisma.endpoint.findFirst({ where: { ...endpoint, type: 'CLIENT' } }),
     ]);
 
     // check targets
-    if (!botlet)
-      throw new NotFoundException('botlet not found: ' + endpoint.botletUuid);
+    if (!callgent)
+      throw new NotFoundException('callgent not found: ' + endpoint.callgentUuid);
     if (actions.length === 0)
       throw new NotFoundException(
-        `botlet=${endpoint.botletUuid} API action not found: ${act}`,
+        `callgent=${endpoint.callgentUuid} API action not found: ${act}`,
       );
     if (withEndpoint) {
       if (!epClient)
         throw new NotFoundException(
-          `Client endpoint not found for botlet=${endpoint.botletUuid}: ${
+          `Client endpoint not found for callgent=${endpoint.callgentUuid}: ${
             endpoint.uuid || endpoint.adaptorKey
           }`,
         );
-      this.tenancyService.setTenantId(botlet.tenantId);
+      this.tenancyService.setTenantId(callgent.tenantId);
       this.tenancyService.bypassTenancy(prisma, false);
     }
 

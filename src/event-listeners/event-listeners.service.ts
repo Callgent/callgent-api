@@ -198,8 +198,8 @@ export class EventListenersService {
     event: T,
     funName?: string,
   ): Promise<{ event: T; funName?: string }> {
-    if (listener.serviceType == ServiceType.BOTLET) {
-      return this._invokeBotlet(listener, event, funName);
+    if (listener.serviceType == ServiceType.CALLGENT) {
+      return this._invokeCallgent(listener, event, funName);
     } else {
       return this._invokeService(listener, event, funName);
     }
@@ -223,7 +223,7 @@ export class EventListenersService {
     return fun.apply(service, [event]);
   }
 
-  protected async _invokeBotlet<T extends EventObject>(
+  protected async _invokeCallgent<T extends EventObject>(
     target: { uuid: string; serviceName: string; funName: string },
     event: T,
     funName?: string,

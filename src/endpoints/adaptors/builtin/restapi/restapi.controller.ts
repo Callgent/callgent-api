@@ -17,32 +17,32 @@ import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { EndpointsService } from '../../../endpoints.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RestAPIAdaptor } from './restapi.adaptor';
-import { BotletsService } from '../../../../botlets/botlets.service';
+import { CallgentsService } from '../../../../callgents/callgents.service';
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
 @UseGuards(new JwtGuard(true))
-@Controller('botlets')
+@Controller('callgents')
 export class RestApiController {
   constructor(
-    protected readonly botletsService: BotletsService,
+    protected readonly callgentsService: CallgentsService,
     @Inject('EndpointsService')
     protected readonly endpointsService: EndpointsService,
     protected readonly eventListenersService: EventListenersService,
   ) {}
 
   @ApiOperation({
-    description: 'rest-api client endpoint entry of multiple botlets',
+    description: 'rest-api client endpoint entry of multiple callgents',
   })
   @ApiParam({
     name: 'uuid',
     required: true,
-    description: "comma separated botlet uuids, eg: 'uuid1,uuid2,uuid3'. ",
+    description: "comma separated callgent uuids, eg: 'uuid1,uuid2,uuid3'. ",
   })
   @ApiParam({
     name: 'endpoint',
     required: false,
-    description: 'endpoint uuid, optional: "/botlets/the-uuid`//`invoke/api/"',
+    description: 'endpoint uuid, optional: "/callgents/the-uuid`//`invoke/api/"',
   })
   @ApiParam({
     name: 'NOTE: swagger does not support wildcard param. Just document here',
@@ -60,32 +60,32 @@ export class RestApiController {
   @All(':uuid/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
-    @Param('uuid') botletId: string,
+    @Param('uuid') callgentId: string,
     @Param('endpoint') endpoint?: string,
     @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
   ) {
-    const basePath = `${botletId}/${endpoint}/invoke/api/`;
+    const basePath = `${callgentId}/${endpoint}/invoke/api/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName)
       funName = RestAPIAdaptor.formalActionName(req.method, '/' + funName);
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
-    // TODO owner defaults to caller botlet
-    // find botlet cep, then set tenantId
+    // TODO owner defaults to caller callgent
+    // find callgent cep, then set tenantId
     const cep = await this.endpointsService.$findFirstByType(
       EndpointType.CLIENT,
-      botletId,
+      callgentId,
       'restAPI',
       endpoint,
     );
     if (!cep)
       throw new NotFoundException(
-        'restAPI endpoint not found for botlet: ' + botletId,
+        'restAPI endpoint not found for callgent: ' + callgentId,
       );
-    const botlet = await this.botletsService.findOne(botletId, { name: true });
-    if (!botlet) throw new NotFoundException('botlet not found: ' + botletId);
+    const callgent = await this.callgentsService.findOne(callgentId, { name: true });
+    if (!callgent) throw new NotFoundException('callgent not found: ' + callgentId);
 
     const { event, statusCode, message } =
       await this.eventListenersService.emit(
@@ -96,8 +96,8 @@ export class RestApiController {
           req,
           callback,
           {
-            botletId,
-            botletName: botlet.name,
+            callgentId,
+            callgentName: callgent.name,
             caller,
             progressive,
             funName,
@@ -151,8 +151,8 @@ export class RestApiController {
   //   if (!caller) throw new UnauthorizedException();
 
   //   const dto = await this.convertToTask(callerType, body, caller);
-  //   if (!dto?.botlet)
-  //     throw new BadRequestException('botlet uuid is missing');
+  //   if (!dto?.callgent)
+  //     throw new BadRequestException('callgent uuid is missing');
 
   //   const [task] = await this.tasksService.create(dto);
 
