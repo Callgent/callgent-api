@@ -132,52 +132,57 @@ export class UsersService {
           } statusCode, please try again later.`,
         );
       }
+    } else {
+      // register tenant from mail host
+      const tenant = await this.registerTenant(mailHost);
 
-      return uiInDb;
+      if (tenant.deletedAt)
+        throw new ForbiddenException(
+          mailHost,
+          'Sorry, current account has no access to our services',
+        );
+      if (!(tenant.statusCode > 0))
+        throw new ForbiddenException(
+          mailHost,
+          `Sorry, current account is in ${
+            tenant.statusCode == 0 ? 'pending' : 'inactive'
+          } statusCode, please try again later.`,
+        );
+
+      // create user
+      const user: Prisma.UserUncheckedCreateWithoutUserIdentityInput = {
+        tenantId: tenant.id,
+        uuid: Utils.uuid(),
+        name: ui.name,
+        avatar: ui.avatar,
+        deletedAt: tenant.deletedAt,
+      };
+
+      // create user and identity
+      if (ui.provider === 'local' && ui.credentials)
+        ui.credentials = await this.updateLocalPassword(ui.credentials);
+      uiInDb = await prisma.userIdentity.create({
+        include: { user: { include: { tenant: true } } },
+        data: {
+          ...ui,
+          uid: ui.uid,
+          provider: ui.provider,
+          tenantId: tenant.id,
+          userUuid: user.uuid,
+          deletedAt: tenant.deletedAt,
+          user: {
+            create: user,
+          },
+        },
+      });
     }
 
-    // register tenant from mail host
-    const tenant = await this.registerTenant(mailHost);
-
-    // create user
-    const user: Prisma.UserUncheckedCreateWithoutUserIdentityInput = {
-      tenantId: tenant.id,
-      uuid: Utils.uuid(),
-      name: ui.name,
-      avatar: ui.avatar,
-      deletedAt: tenant.deletedAt,
-    };
-
-    // create user and identity
-    if (ui.provider === 'local' && ui.credentials)
-      ui.credentials = await this.updateLocalPassword(ui.credentials);
-    uiInDb = await prisma.userIdentity.create({
-      include: { user: { include: { tenant: true } } },
-      data: {
-        ...ui,
-        uid: ui.uid,
-        provider: ui.provider,
-        tenantId: tenant.id,
-        userUuid: user.uuid,
-        deletedAt: tenant.deletedAt,
-        user: {
-          create: user,
-        },
-      },
-    });
-
-    if (tenant.deletedAt)
-      throw new ForbiddenException(
-        mailHost,
-        'Sorry, current account has no access to our services',
-      );
-    if (!(tenant.statusCode > 0))
-      throw new ForbiddenException(
-        mailHost,
-        `Sorry, current account is in ${
-          tenant.statusCode == 0 ? 'pending' : 'inactive'
-        } statusCode, please try again later.`,
-      );
+    if (uiInDb?.email_verified && !uiInDb?.user?.email)
+      // update user.email
+      await prisma.user.updateMany({
+        data: { email: uiInDb.email },
+        where: { id: uiInDb.userId, email: { not: null } },
+      });
 
     return uiInDb;
   }
