@@ -7,7 +7,7 @@ export class ProgressiveRequestEvent extends EventObject {
     fromEvent: string,
     dataType: string,
     public readonly data: {
-      /** url template for progressive requesting, `botlet:funName[@botlet]` to invoke botlet */
+      /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */
       progressive: string;
     },
   ) {

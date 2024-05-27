@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { BotletApiText } from '../../src/botlet-functions/botlet-functions.controller';
+import { CallgentApiText } from '../../src/callgent-functions/callgent-functions.controller';
 import {
   afterAllFn,
   afterEachFn,
@@ -8,19 +8,19 @@ import {
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
 
-describe('BotletFunctionsController (e2e)', () => {
+describe('CallgentFunctionsController (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it('should add botlet functions', () => {});
+  it('should add callgent functions', () => {});
 });
 
-export const addBotletFunctions = (apiTxt: BotletApiText) => {
+export const addCallgentFunctions = (apiTxt: CallgentApiText) => {
   return pactum
     .spec()
-    .post('/api/botlet-functions/import')
+    .post('/api/callgent-functions/import')
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(apiTxt)
     .expectStatus(201);

@@ -40,7 +40,7 @@ export class EndpointsController {
   //   return adaptor.getConfig();
   // }
 
-  @Post(':adaptorKey/botlets')
+  @Post(':adaptorKey/callgents')
   async createEndpoint(
     @Req() req,
     @Param('adaptorKey') adaptorKey: string,

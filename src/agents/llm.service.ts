@@ -118,8 +118,8 @@ export class LLMService {
           Authorization: `Bearer ${this.configService.get(
             'OPENROUTER_API_KEY',
           )}`,
-          'HTTP-Referer': `${this.configService.get('BOTLET_SITE_URL')}`,
-          'X-Title': `${this.configService.get('BOTLET_SITE_NAME')}`,
+          'HTTP-Referer': `${this.configService.get('CALLGENT_SITE_URL')}`,
+          'X-Title': `${this.configService.get('CALLGENT_SITE_NAME')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(req),

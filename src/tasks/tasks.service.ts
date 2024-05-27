@@ -3,7 +3,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { Botlet, Prisma, PrismaClient, Task } from '@prisma/client';
+import { Callgent, Prisma, PrismaClient, Task } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -36,7 +36,7 @@ export class TasksService {
     createdBy: string,
     select?: Prisma.TaskSelect,
   ) {
-    const data = dto as Prisma.BotletUncheckedCreateInput;
+    const data = dto as Prisma.CallgentUncheckedCreateInput;
     (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
 
     const prisma = this.txHost.tx as PrismaClient;
@@ -55,17 +55,17 @@ export class TasksService {
 
   async evalTaskReceiver(
     prisma: PrismaClient,
-    botlet: Partial<Botlet>,
+    callgent: Partial<Callgent>,
     preferredReceiverType?: string,
   ) {
     // const receiverType =
-    //   preferredReceiverType || botlet.receiverType || undefined;
+    //   preferredReceiverType || callgent.receiverType || undefined;
     // TODO: cache synced types for quick check
 
     const r = 0;
-    // await prisma.botletReceiver.findFirst({
+    // await prisma.callgentReceiver.findFirst({
     //   where: {
-    //     botletUuid: botlet.uuid,
+    //     callgentUuid: callgent.uuid,
     //     receiverType,
     //   },
     //   orderBy: {

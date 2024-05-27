@@ -5,14 +5,14 @@ import { RestApiController } from './adaptors/builtin/restapi/restapi.controller
 import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
-import { BotletCreatedListener } from './listeners/botlet-created.listener';
-import { BotletsModule } from '../botlets/botlets.module';
+import { CallgentCreatedListener } from './listeners/callgent-created.listener';
+import { CallgentsModule } from '../callgents/callgents.module';
 
 @Module({
-  imports: [BotletsModule],
+  imports: [CallgentsModule],
   providers: [
     { provide: 'EndpointsService', useClass: EndpointsService },
-    BotletCreatedListener,
+    CallgentCreatedListener,
     {
       provide: 'restAPI-EndpointAdaptor',
       useClass: RestAPIAdaptor,

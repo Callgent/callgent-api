@@ -51,7 +51,7 @@ services:
       - SMTP_USER=admin
       - SMTP_PASSWORD=adminpassword
       - SMTP_TLS=false
-      - DOMAIN=botlet.io
+      - DOMAIN=callgent.com
 
 networks:
   default:

@@ -20,14 +20,14 @@ export class ClientRequestEvent extends EventObject {
     public readonly rawReq: any,
     callback: string,
     public readonly data: {
-      botletId: string;
-      botletName: string;
+      callgentId: string;
+      callgentName: string;
       /** empty means anonymous */
       caller?: string;
       req?: JsonValue;
-      /** requested botlet function name */
+      /** requested callgent function name */
       funName?: string;
-      /** url template for progressive requesting, `botlet:funName[@botlet]` to invoke botlet */
+      /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */
       progressive?: string;
     },
   ) {

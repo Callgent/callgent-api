@@ -27,16 +27,16 @@ import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
-import { BotletFunctionsService } from './botlet-functions.service';
-import { BotletFunctionDto } from './dto/botlet-function.dto';
-import { UpdateBotletFunctionDto } from './dto/update-botlet-function.dto';
+import { CallgentFunctionsService } from './callgent-functions.service';
+import { CallgentFunctionDto } from './dto/callgent-function.dto';
+import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
 
-export class BotletApis extends ApiSpec {
+export class CallgentApis extends ApiSpec {
   @EntityIdExists('endpoint', 'uuid')
   endpoint: string;
 }
 
-export class BotletApiText {
+export class CallgentApiText {
   @EntityIdExists('endpoint', 'uuid')
   endpoint: string;
   @ApiProperty({
@@ -53,31 +53,31 @@ export class BotletApiText {
   format?: string;
 }
 
-@ApiTags('BotletFunctions')
+@ApiTags('CallgentFunctions')
 @ApiSecurity('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, BotletFunctionDto)
+@ApiExtraModels(RestApiResponse, CallgentFunctionDto)
 @UseGuards(JwtGuard)
-@Controller('botlet-functions')
-export class BotletFunctionsController {
+@Controller('callgent-functions')
+export class CallgentFunctionsController {
   constructor(
-    @Inject('BotletFunctionsService')
-    private readonly BotletFunctionService: BotletFunctionsService,
+    @Inject('CallgentFunctionsService')
+    private readonly CallgentFunctionService: CallgentFunctionsService,
   ) {}
 
   @ApiOperation({
     summary:
-      'Create batch of new BotletFunction. Exception if existing one with same name in the same botlet',
+      'Create batch of new CallgentFunction. Exception if existing one with same name in the same callgent',
     description: 'return { data: count } on success',
   })
   @Post()
   async createBatch(
     @Req() req,
     @Body()
-    apis: BotletApis,
+    apis: CallgentApis,
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
     return {
-      data: await this.BotletFunctionService.createBatch(
+      data: await this.CallgentFunctionService.createBatch(
         endpoint,
         apis,
         req.user?.sub,
@@ -93,11 +93,11 @@ export class BotletFunctionsController {
   async importBatch(
     @Req() req,
     @Body()
-    apiTxt: BotletApiText,
+    apiTxt: CallgentApiText,
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
     return {
-      data: await this.BotletFunctionService.importBatch(
+      data: await this.CallgentFunctionService.importBatch(
         endpoint,
         apiTxt,
         req.user?.sub,
@@ -111,7 +111,7 @@ export class BotletFunctionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletFunctionDto) },
+            data: { $ref: getSchemaPath(CallgentFunctionDto) },
           },
         },
       ],
@@ -119,7 +119,7 @@ export class BotletFunctionsController {
   })
   @Get('/:uuid')
   async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.BotletFunctionService.findOne(uuid) };
+    return { data: await this.CallgentFunctionService.findOne(uuid) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -133,7 +133,7 @@ export class BotletFunctionsController {
           properties: {
             data: {
               type: 'array',
-              items: { $ref: getSchemaPath(BotletFunctionDto) },
+              items: { $ref: getSchemaPath(CallgentFunctionDto) },
             },
           },
         },
@@ -149,7 +149,7 @@ export class BotletFunctionsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.BotletFunctionService.findAll({
+    return this.CallgentFunctionService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -160,17 +160,17 @@ export class BotletFunctionsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(BotletFunctionDto) } } },
+        { properties: { data: { $ref: getSchemaPath(CallgentFunctionDto) } } },
       ],
     },
   })
   @Put('/:uuid')
   async update(
     @Param('uuid') uuid: string,
-    @Body() dto: UpdateBotletFunctionDto,
+    @Body() dto: UpdateCallgentFunctionDto,
   ) {
     dto.uuid = uuid;
-    return { data: await this.BotletFunctionService.update(dto) };
+    return { data: await this.CallgentFunctionService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -179,7 +179,7 @@ export class BotletFunctionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(BotletFunctionDto) },
+            data: { $ref: getSchemaPath(CallgentFunctionDto) },
           },
         },
       ],
@@ -187,6 +187,6 @@ export class BotletFunctionsController {
   })
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
-    return { data: await this.BotletFunctionService.delete(uuid) };
+    return { data: await this.CallgentFunctionService.delete(uuid) };
   }
 }

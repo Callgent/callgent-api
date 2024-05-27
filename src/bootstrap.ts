@@ -51,8 +51,8 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   const { devDocVersion } = registerApi(
     app,
     1,
-    'Botlet APIs',
-    'The <a href="https://botlet.io/" target="_blank">Botlet</a> APIs',
+    'Callgent APIs',
+    'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs',
     logger,
   );
 

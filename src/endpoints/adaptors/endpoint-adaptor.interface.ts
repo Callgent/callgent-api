@@ -98,7 +98,7 @@ export class EndpointParam {
 class EndpointHost {
   @ApiProperty({
     description: 'host address',
-    example: 'task+sdfhjw4349fe@c.botlet.io',
+    example: 'task+sdfhjw4349fe@my.callgent.com',
   })
   address: EndpointParam;
 

@@ -2,25 +2,25 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { BotletFunction, Prisma, PrismaClient } from '@prisma/client';
+import { CallgentFunction, Prisma, PrismaClient } from '@prisma/client';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { UpdateBotletFunctionDto } from './dto/update-botlet-function.dto';
+import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
-export class BotletFunctionsService {
+export class CallgentFunctionsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
   ) {}
-  protected readonly defSelect: Prisma.BotletFunctionSelect = {
+  protected readonly defSelect: Prisma.CallgentFunctionSelect = {
     id: false,
     tenantId: false,
     createdBy: false,
@@ -31,17 +31,17 @@ export class BotletFunctionsService {
   async loadFunctions(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
-    const { funName, botletId } = reqEvent.data;
+    const { funName, callgentId } = reqEvent.data;
 
     // TODO if too many functions, use summary first
     const { data: funcs } = await this.findAll({
       select: { createdAt: false, updatedAt: false },
-      where: { botletUuid: botletId, name: funName },
+      where: { callgentUuid: callgentId, name: funName },
       perPage: Number.MAX_SAFE_INTEGER,
     });
     if (!funcs.length)
       throw new BadRequestException(
-        `No function found on botlet#${botletId}${
+        `No function found on callgent#${callgentId}${
           funName ? 'name=' + funName : ''
         }`,
       );
@@ -50,19 +50,19 @@ export class BotletFunctionsService {
 
   /**
    * a single function invocation. simple with no vars/flow controls/lambdas/parallels.
-   * system botlets are involved: collection functions, timer, etc.
+   * system callgents are involved: collection functions, timer, etc.
    */
   // protected async _invoke(
   //   taskAction: TaskActionDto,
-  //   botlet: BotletDto,
-  //   botletFunctions: BotletFunctionDto[],
+  //   callgent: CallgentDto,
+  //   callgentFunctions: CallgentFunctionDto[],
   // ) {
   //   // FIXME task ctx msgs
   //   // 生成args映射方法，
   //   const { funName, mapping, question } = await this._mapping(
   //     taskAction,
-  //     botlet.name,
-  //     botletFunctions,
+  //     callgent.name,
+  //     callgentFunctions,
   //   );
   //   if (question) {
   //     // invoke event owner for more request info
@@ -73,7 +73,7 @@ export class BotletFunctionsService {
   //     // );
   //   }
 
-  //   const fun = botletFunctions.find((f) => f.name === funName);
+  //   const fun = callgentFunctions.find((f) => f.name === funName);
   //   if (!fun) return; // FIXME
 
   //   // doInvoke
@@ -88,18 +88,18 @@ export class BotletFunctionsService {
 
     const { apis } = spec;
     // validation
-    const actMap = apis.map<Prisma.BotletFunctionUncheckedCreateInput>((e) => {
+    const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>((e) => {
       return {
         ...e,
         uuid: Utils.uuid(),
         endpointUuid: endpoint.uuid,
-        botletUuid: endpoint.botletUuid,
+        callgentUuid: endpoint.callgentUuid,
         createdBy: createdBy,
       };
     });
 
     const prisma = this.txHost.tx as PrismaClient;
-    const { count: actionsCount } = await prisma.botletFunction.createMany({
+    const { count: actionsCount } = await prisma.callgentFunction.createMany({
       data: actMap,
     });
     return actionsCount;
@@ -122,9 +122,9 @@ export class BotletFunctionsService {
     page,
     perPage,
   }: {
-    select?: Prisma.BotletFunctionSelect;
-    where?: Prisma.BotletFunctionWhereInput;
-    orderBy?: Prisma.BotletFunctionOrderByWithRelationInput;
+    select?: Prisma.CallgentFunctionSelect;
+    where?: Prisma.CallgentFunctionWhereInput;
+    orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
     page?: number;
     perPage?: number;
   }) {
@@ -133,7 +133,7 @@ export class BotletFunctionsService {
       select,
       async (select) => {
         const result = paginate(
-          prisma.botletFunction,
+          prisma.callgentFunction,
           {
             select,
             where,
@@ -152,28 +152,28 @@ export class BotletFunctionsService {
   }
 
   findMany(args: {
-    select?: Prisma.BotletFunctionSelect;
-    where?: Prisma.BotletFunctionWhereInput;
-    orderBy?: Prisma.BotletFunctionOrderByWithRelationInput;
+    select?: Prisma.CallgentFunctionSelect;
+    where?: Prisma.CallgentFunctionWhereInput;
+    orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.botletFunction.findMany({ ...args });
+    return prisma.callgentFunction.findMany({ ...args });
   }
 
   @Transactional()
   delete(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletFunction.delete({ select, where: { uuid } }),
+      prisma.callgentFunction.delete({ select, where: { uuid } }),
     );
   }
 
   @Transactional()
-  update(dto: UpdateBotletFunctionDto) {
+  update(dto: UpdateCallgentFunctionDto) {
     if (!dto.uuid) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletFunction.update({
+      prisma.callgentFunction.update({
         select,
         where: { uuid: dto.uuid },
         data: dto,
@@ -184,7 +184,7 @@ export class BotletFunctionsService {
   findOne(uuid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.botletFunction.findUnique({
+      prisma.callgentFunction.findUnique({
         select,
         where: { uuid },
       }),

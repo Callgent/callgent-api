@@ -139,9 +139,9 @@ model PublicMailHost {
   createdAt DateTime @default(now())
 }
 
-//////////////////// Botlet ////////////////////////////
+//////////////////// Callgent ////////////////////////////
 
-model Botlet {
+model Callgent {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -173,7 +173,7 @@ model Botlet {
   @@index([tenantId])
 }
 
-model BotletFunction {
+model CallgentFunction {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -186,19 +186,19 @@ model BotletFunction {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   name      String   @db.VarChar(255)
-  /// @description js function name to invoke this botlet function
+  /// @description js function name to invoke this callgent function
   funName   String   @db.VarChar(255)
   params    String[] @db.VarChar(31)
   /// @description js function api docs
   documents String   @db.VarChar(4095)
-  /// @description js actual code to invoke this botlet function
+  /// @description js actual code to invoke this callgent function
   fullCode  String   @db.VarChar(1023)
   /// @description endpoint uuid or command or code
   content   Json     @db.Json
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid   String  @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  callgentUuid   String  @db.VarChar(36)
   /// @description actual server endpoint, when action type is `ENDPOINT`
   /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   endpointUuid String? @db.VarChar(36)
@@ -213,9 +213,9 @@ model BotletFunction {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@unique([botletUuid, name])
+  @@unique([callgentUuid, name])
   @@index([tenantId])
-  @@index([botletUuid])
+  @@index([callgentUuid])
 }
 
 model Task {
@@ -261,12 +261,12 @@ model TaskAction {
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
   // client side information
-  /// @description action owner botlet uuid, responsible for progressive response
+  /// @description action owner callgent uuid, responsible for progressive response
   cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
-  funName     String? @db.VarChar(255) /// @description optional botlet function name
+  funName     String? @db.VarChar(255) /// @description optional callgent function name
   cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
-  callback    Json?   @db.Json /// @description callback url template or botlet function
-  progressive String? @db.VarChar(36) /// @description progressive requesting url template or botlet function
+  callback    Json?   @db.Json /// @description callback url template or callgent function
+  progressive String? @db.VarChar(36) /// @description progressive requesting url template or callgent function
 
   // processing
   returns    Boolean @default(false) /// @description whether action has response object
@@ -277,7 +277,7 @@ model TaskAction {
   message    String? @db.VarChar(255) /// @description error message
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   taskUuid String @db.VarChar(36)
 
   /// @DtoReadOnly
@@ -316,7 +316,7 @@ enum EndpointType {
   EVENT
 }
 
-/// @description a botlet may have multiple endpoints, including receiver & sender
+/// @description a callgent may have multiple endpoints, including receiver & sender
 model Endpoint {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
@@ -336,7 +336,7 @@ model Endpoint {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
-  priority   Int          @default(0) /// @description priority in the botlet
+  priority   Int          @default(0) /// @description priority in the callgent
 
   host       Json  @db.Json /// @description host address & configs
   initParams Json? @db.Json /// @description initializing parameters
@@ -344,8 +344,8 @@ model Endpoint {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36) /// @description botlet owning the endpoint
+  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
+  callgentUuid String @db.VarChar(36) /// @description callgent owning the endpoint
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -358,7 +358,7 @@ model Endpoint {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([tenantId])
-  @@index([botletUuid])
+  @@index([callgentUuid])
 }
 
 enum EndpointAuthType {
@@ -439,7 +439,7 @@ model PersistedAsync {
 
 enum ServiceType {
   SERVICE
-  BOTLET
+  CALLGENT
 }
 
 model EventListener {
@@ -460,7 +460,7 @@ model EventListener {
   dataType  String @db.VarChar(36)
   priority  Int?   @default(0)
 
-  serviceType ServiceType // botlet, service
+  serviceType ServiceType // callgent, service
   serviceName String      @db.VarChar(255)
   funName     String      @db.VarChar(255)
   // TODO add the listener's input/output props in event.context, for automatic checking

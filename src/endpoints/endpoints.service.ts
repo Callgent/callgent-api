@@ -12,7 +12,7 @@ import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { IS_BOTLET_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
+import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
 import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
@@ -43,7 +43,7 @@ export class EndpointsService {
       for (const [serviceKey, provider] of nestModule.providers) {
         if (!provider.metatype) continue;
         const name = Reflect.getMetadata(
-          IS_BOTLET_ENDPOINT_ADAPTOR,
+          IS_CALLGENT_ENDPOINT_ADAPTOR,
           provider.metatype,
         );
         if (name?.indexOf(':') > 0) {
@@ -85,14 +85,14 @@ export class EndpointsService {
   @Transactional()
   findFirstByType(
     type: EndpointType,
-    botletUuid: string,
+    callgentUuid: string,
     adaptorKey: string,
     uuid?: string,
   ) {
     uuid || (uuid = undefined);
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpoint.findFirst({
-      where: { botletUuid, adaptorKey, type, uuid },
+      where: { callgentUuid, adaptorKey, type, uuid },
       orderBy: { priority: 'desc' },
     });
   }
@@ -101,13 +101,13 @@ export class EndpointsService {
   @Transactional()
   async $findFirstByType(
     type: EndpointType,
-    botletUuid: string,
+    callgentUuid: string,
     adaptorKey: string,
     endpoint?: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, botletUuid, adaptorKey, endpoint).then(
+      this.findFirstByType(type, callgentUuid, adaptorKey, endpoint).then(
         async (v) => {
           v && this.tenancyService.setTenantId(v.tenantId);
           await this.tenancyService.bypassTenancy(prisma, false);

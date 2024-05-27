@@ -85,7 +85,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
             name: 'Download Chrome Plugin',
             position: 'bottom',
             value:
-              'Before continue, please confirm this automation does NOT violate any ToS or regulations of the target website!  \nYour need to install the [Botlet Web Page](https://chrome.google.com/webstore/detail/botlet-web-page/pefjgjgjgjgjgjgjgjgjgjgjgjgjgjgj) Chrome plugin, as the operation client.  \n> Note: You need to keep the Chrome open to perform tasks.',
+              'Before continue, please confirm this automation does NOT violate any ToS or regulations of the target website!  \nYour need to install the [Callgent Web Page](https://chrome.google.com/webstore/detail/callgent-web-page/pefjgjgjgjgjgjgjgjgjgjgjgjgjgjgj) Chrome plugin, as the operation client.  \n> Note: You need to keep the Chrome open to perform tasks.',
           },
         ],
       },
@@ -94,7 +94,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
           address: {
             type: 'domain',
             name: 'Custom Domain',
-            value: 'page.botlet.io',
+            value: 'page.callgent.com',
             placeholder: 'Not applicable in Free plan.',
           },
         },
@@ -218,7 +218,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     const { method, headers: rawHeaders, query, body, raw } = request;
     if (request.url.indexOf('/invoke/api/') < 0)
       throw new Error(
-        'Unsupported URL, should be /botlets/:uuids/:endpoint/invoke/api/*',
+        'Unsupported URL, should be /callgents/:uuids/:endpoint/invoke/api/*',
       );
     const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
 
@@ -243,7 +243,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     return {
       url,
       method,
-      headers: { ...headers }, // filter botlet authorization
+      headers: { ...headers }, // filter callgent authorization
       query,
       files,
       [type]: body,

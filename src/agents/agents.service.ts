@@ -1,5 +1,5 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
-import { BotletFunctionDto } from '../botlet-functions/dto/botlet-function.dto';
+import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
 import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { TaskActionDto } from '../task-actions/dto/task-action.dto';
 import { LLMService } from './llm.service';
@@ -38,12 +38,12 @@ export class AgentsService {
       uuid,
       srcId,
       dataType: cepAdaptor,
-      data: { botletName, req, funName, progressive },
+      data: { callgentName, req, funName, progressive },
       context: { tgtEvents },
     } = reqEvent;
-    const botletFunctions = reqEvent.context
-      .functions as unknown as BotletFunctionDto[];
-    if (!botletFunctions?.length)
+    const callgentFunctions = reqEvent.context
+      .functions as unknown as CallgentFunctionDto[];
+    if (!callgentFunctions?.length)
       throw new BadRequestException(
         'No functions for mapping, ClientRequestEvent#' + uuid,
       );
@@ -55,12 +55,12 @@ export class AgentsService {
       {
         req,
         funName,
-        botletName,
+        callgentName,
         cepAdaptor,
-        botletFunctions,
+        callgentFunctions,
       },
       { funName: '', mapping: '', question: '' },
-    ); // TODO check `funName` exists in botletFunctions, validating `mapping`
+    ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
     reqEvent.context.function = mapped;
 
     if (mapped.question) {
@@ -90,10 +90,10 @@ export class AgentsService {
   }
 
   async genScript(
-    BotletFunctions: { [botletName: string]: BotletFunctionDto[] },
+    CallgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
     taskAction: TaskActionDto,
   ) {
-    const ms = Object.values(BotletFunctions)?.flat();
+    const ms = Object.values(CallgentFunctions)?.flat();
 
     if (ms.length > 1) {
       // routing
@@ -111,11 +111,11 @@ export class AgentsService {
   }
 
   async genPseudoCmd(
-    botlets: { uuid: string; name: string; summary: string }[],
+    callgents: { uuid: string; name: string; summary: string }[],
     taskaAction: TaskActionDto,
   ) {}
 
-  async routeAction(actions: BotletFunctionDto[], req: AdaptedDataSource) {
+  async routeAction(actions: CallgentFunctionDto[], req: AdaptedDataSource) {
     if (!actions?.length) return;
     // FIXME：是否需要task上下文来决定路由，
     return actions[0];
