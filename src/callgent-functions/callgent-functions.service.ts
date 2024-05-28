@@ -2,7 +2,7 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { CallgentFunction, Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -88,15 +88,17 @@ export class CallgentFunctionsService {
 
     const { apis } = spec;
     // validation
-    const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>((e) => {
-      return {
-        ...e,
-        uuid: Utils.uuid(),
-        endpointUuid: endpoint.uuid,
-        callgentUuid: endpoint.callgentUuid,
-        createdBy: createdBy,
-      };
-    });
+    const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>(
+      (e) => {
+        return {
+          ...e,
+          uuid: Utils.uuid(),
+          endpointUuid: endpoint.uuid,
+          callgentUuid: endpoint.callgentUuid,
+          createdBy: createdBy,
+        };
+      },
+    );
 
     const prisma = this.txHost.tx as PrismaClient;
     const { count: actionsCount } = await prisma.callgentFunction.createMany({

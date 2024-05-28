@@ -37,14 +37,21 @@ export class CallgentApis extends ApiSpec {
 }
 
 export class CallgentApiText {
+  @ApiProperty({
+    required: true,
+    description: 'The callgent server-endpoint uuid',
+  })
+  @IsNotEmpty()
   @EntityIdExists('endpoint', 'uuid')
   endpoint: string;
+
   @ApiProperty({
     required: true,
     description: 'The api content text to parse',
   })
   @IsNotEmpty()
   text: string;
+
   @ApiProperty({
     required: false,
     description: 'The format of the api content text',
