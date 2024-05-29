@@ -32,7 +32,7 @@ export class CallgentCreatedListener {
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
-          // no await init, it may be slow
+          // no await init, it may be slow, TODO: tx invalid
           this.endpointsService.init(endpoint.uuid, []);
           return endpoint;
         }),

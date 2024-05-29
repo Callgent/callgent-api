@@ -37,14 +37,21 @@ export class CallgentApis extends ApiSpec {
 }
 
 export class CallgentApiText {
+  @ApiProperty({
+    required: true,
+    description: 'The callgent server-endpoint uuid',
+  })
+  @IsNotEmpty()
   @EntityIdExists('endpoint', 'uuid')
   endpoint: string;
+
   @ApiProperty({
     required: true,
     description: 'The api content text to parse',
   })
   @IsNotEmpty()
   text: string;
+
   @ApiProperty({
     required: false,
     description: 'The format of the api content text',
@@ -67,7 +74,7 @@ export class CallgentFunctionsController {
   @ApiOperation({
     summary:
       'Create batch of new CallgentFunction. Exception if existing one with same name in the same callgent',
-    description: 'return { data: count } on success',
+    description: 'return { data: imported_functions_count } on success',
   })
   @Post()
   async createBatch(
@@ -87,7 +94,7 @@ export class CallgentFunctionsController {
 
   @ApiOperation({
     summary: 'Parse import text and create batch.',
-    description: 'return { data: count } on success',
+    description: 'return { data: imported_functions_count } on success',
   })
   @Post('import')
   async importBatch(
