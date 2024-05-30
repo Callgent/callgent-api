@@ -1,84 +1,90 @@
 # Developer Guide
+Before you start to get prepared for the develop environment, you need to make sure your basic tools are installed correctly.
+
+* Nodejs (Notice: To build the project, the right version is needed, otherwise installation can not be corrected, see .node-version)
+* pnpm 
+* docker
 
 ## Development Setup
-
 - copy `.env.dev` to `.env`
-- install postgres with vector plugin
 
-    ```shell
-    docker pull ankane/pgvector
-    ```
+- install dependencies
+```shell
+pnpm i
+```
+
+- install dababase postgres with vector plugin
+```shell
+docker pull ankane/pgvector
+```
+
+- start postgres db in docker
+```shell
+docker run --name callgent-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e PG_VECTOR_EXTENSION=true -d ankane/pgvector
+```
 
 - init db
+```shell
+npx prisma generate # generate PrismaClient
+npx prisma migrate dev # init db schema
+npx prisma db seed # init db data
+```
 
-    ```shell
-    npx prisma generate # generate PrismaClient
-    npx prisma migrate dev # init db schema
-    npx prisma db seed # init db data
-    ```
-
-  - init db test data
-
-    ```shell
-    SEED_TEST_DATA=1 npx prisma db seed
-    ```
+- init db test data
+```shell
+pnpm run prisma:seed:test # init db test data
+```
 
 - start server
+```shell
+pnpm run start:dev
+```
 
-  ```shell
-  pnpm run start:dev
-  ```
+If all the above steps are done, and nothing failed, you can access the API at `http://localhost:3000/api`
 
 ## Development Logs
 
 ### init project
-
 - init project
-
-    ```shell
-    pnpm i -g @nestjs/cli
-    nest new callgent-api
-    cd callgent-api
-    ```
+```shell
+pnpm i -g @nestjs/cli
+nest new callgent-api
+cd callgent-api
+```
 
 ### add dependencies
 
 ### integrate prisma
-
 - automatically setup the library, scripts and Docker files
-
-    ```shell
-    nest add nestjs-prisma
-    ```
+```shell
+nest add nestjs-prisma
+```
 
 - integrate prisma plugins
-- ReposModule
-- init db
 
-    ```shell
-    npx prisma init
-    ```
+- ReposModule
+
+- init db
+```shell
+npx prisma init
+```
 
 - create prisma schema, then init db
-
-    ```shell
-    npx prisma migrate dev --name init
-    ```
+```shell
+npx prisma migrate dev --name init
+```
 
 ### multi-tenancy
-
 1. write default value for `tenancy.tenantId` in db
-
-   ```text
-   tenantId Int  @default(dbgenerated("(current_setting('tenancy.tenantId'))::int"))
-   ```
+  ```text
+  tenantId Int  @default(dbgenerated("(current_setting('tenancy.tenantId'))::int"))
+  ```
 
 2. enable postgres row level security(RLS), so that we can filter data by `tenantId` automatically:
    config in prisma/migrations/01_row_level_security/migration.sql,
    @see <https://github.com/prisma/prisma-client-extensions/tree/main/row-level-security>
 
 3. set `tenantId` into `cls` context:
-
    ```ts
    cls.set('TENANT_ID', ..
    ```

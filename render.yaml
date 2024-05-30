@@ -1,0 +1,53 @@
+# Exported from Render on 2024-05-30T08:21:36Z
+services:
+- type: web
+  name: callgent-api-docker
+  runtime: docker
+  repo: https://github.com/Callgent/callgent-api
+  plan: free
+  envVars:
+  - key: GOOGLE_OAUTH_CLIENT_SECRET
+    sync: false
+  - key: GOOGLE_OAUTH_CLIENT_ID
+    sync: false
+  - key: GITHUB_OAUTH_CLIENT_SECRET
+    sync: false
+  - key: GITHUB_OAUTH_CLIENT_ID
+    sync: false
+  - key: EMAIL_DEFAULT_SENDER
+    sync: false
+  - key: EMAIL_BREVO_API_KEY
+    sync: false
+  - key: EMAIL_SPARKPOST_API_KEY
+    sync: false
+  - key: NOT_HTTP_ONLY
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  - key: POSTGRES_DB
+    sync: false
+  - key: POSTGRES_USER
+    sync: false
+  - key: POSTGRES_PASSWORD
+    sync: false
+  - key: POSTGRES_PORT
+    sync: false
+  - key: POSTGRES_HOST
+    sync: false
+  - key: FRONTEND_SITE_URL
+    sync: false
+  - key: SITE_API_URL
+    sync: false
+  - key: SITE_ROOT_URL
+    sync: false
+  - key: SITE_ROOT_DOMAIN
+    sync: false
+  - key: JWT_COOKIE_NAME
+    sync: false
+  region: oregon
+  dockerContext: .
+  dockerfilePath: ./Dockerfile
+  domains:
+  - api.callgent.com
+  pullRequestPreviewsEnabled: true
+version: "1"
