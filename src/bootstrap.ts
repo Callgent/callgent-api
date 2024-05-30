@@ -78,7 +78,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   const configService = app.get(ConfigService);
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
-      origin: '*', // allow all
+      origin: [process.env.FRONTEND_SITE_URL, process.env.FRONTEND_DOCS_URL],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true, // allow cookie
