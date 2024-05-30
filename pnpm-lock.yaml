@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   '@apidevtools/json-schema-ref-parser':
     specifier: ^11.5.4
@@ -1309,7 +1313,7 @@ packages:
       npmlog: 5.0.1
       rimraf: 3.0.2
       semver: 7.6.0
-      tar: 6.2.0
+      tar: 6.2.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -1769,7 +1773,7 @@ packages:
       pluralize-esm: 9.0.5
       prettier: 2.8.8
       slash: 3.0.0
-      tar: 6.2.0
+      tar: 6.2.1
       ts-toolbelt: 9.6.0
     transitivePeerDependencies:
       - supports-color
@@ -2886,7 +2890,7 @@ packages:
       promise-inflight: 1.0.1
       rimraf: 3.0.2
       ssri: 9.0.1
-      tar: 6.2.0
+      tar: 6.2.1
       unique-filename: 2.0.1
     transitivePeerDependencies:
       - bluebird
@@ -4981,6 +4985,7 @@ packages:
   /iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
+    requiresBuild: true
     dependencies:
       safer-buffer: 2.1.2
     dev: false
@@ -6688,7 +6693,7 @@ packages:
       npmlog: 6.0.2
       rimraf: 3.0.2
       semver: 7.6.0
-      tar: 6.2.0
+      tar: 6.2.1
       which: 2.0.2
     transitivePeerDependencies:
       - bluebird
@@ -8236,8 +8241,8 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /tar@6.2.0:
-    resolution: {integrity: sha512-/Wo7DcT0u5HUV486xg675HtjNd3BXZ6xDbzsCUZPt5iw8bTQ63bP0Raut3mvro9u+CUyq7YQd8Cx55fsZXxqLQ==}
+  /tar@6.2.1:
+    resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
     dependencies:
       chownr: 2.0.0
