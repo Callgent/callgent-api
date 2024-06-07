@@ -1,5 +1,5 @@
 # Developer Guide
-Before you start to get prepared for the develop environment, you need to make sure your basic tools are installed correctly.
+This is guide for developers to setup the development environment. Before you start to get prepared for the develop environment, you need to make sure your basic tools are installed correctly.
 
 * Nodejs (Notice: To build the project, the right version is needed, otherwise installation can not be corrected, see .node-version)
 * pnpm 
