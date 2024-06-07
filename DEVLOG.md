@@ -42,6 +42,11 @@ pnpm run start:dev
 
 If all the above steps are done, and nothing failed, you can access the API at `http://localhost:3000/api`
 
+- run tests
+```shell
+pnpm run test:e2e
+```
+
 ## Development Logs
 
 ### init project
