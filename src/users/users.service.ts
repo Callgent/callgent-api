@@ -133,7 +133,7 @@ export class UsersService {
         );
       }
     } else {
-      // register tenant from mail host
+      // register tenant from email host
       const tenant = await this.registerTenant(mailHost);
 
       if (tenant.deletedAt)
@@ -266,7 +266,7 @@ export class UsersService {
       { sub: email, exp: 60 * 60 * 24, resetPwd, create, userId },
       'API_KEY',
     );
-    // send mail
+    // send email
     return this.emailsService.sendTemplateMail(
       [{ email, name: ui?.name || email }],
       'validation-email',
