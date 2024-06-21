@@ -316,7 +316,7 @@ enum EndpointType {
   EVENT
 }
 
-/// @description a callgent may have multiple endpoints, including receiver & sender
+/// @description a callgent may have multiple endpoints, including cep & sep
 model Endpoint {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())

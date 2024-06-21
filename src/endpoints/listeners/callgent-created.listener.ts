@@ -12,7 +12,7 @@ export class CallgentCreatedListener {
     private readonly endpointsService: EndpointsService,
   ) {}
 
-  /** create a callgent with default api receiver endpoint, and mail receiver/sender endpoint */
+  /** create a callgent with default api client endpoint, and mail client/server endpoint */
   @Transactional()
   @OnEvent(CallgentCreatedEvent.eventName, { async: false })
   async handleEvent(event: CallgentCreatedEvent) {

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { MailAdaptor } from './adaptors/builtin/mail/mail.adaptor';
+import { EmailAdaptor } from './adaptors/builtin/email/email.adaptor';
 import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
 import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
 import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
@@ -23,7 +23,7 @@ import { CallgentsModule } from '../callgents/callgents.module';
     },
     {
       provide: 'webpage-EndpointAdaptor',
-      useClass: MailAdaptor,
+      useClass: EmailAdaptor,
     },
   ],
   controllers: [EndpointsController, RestApiController],

@@ -26,7 +26,7 @@ export class EndpointsController {
     private readonly endpointsService: EndpointsService,
   ) {}
 
-  @Get()
+  @Get('adaptors')
   list(@Query('client') client?: boolean) {
     return this.endpointsService.list(client);
   }
