@@ -67,7 +67,9 @@ export class EndpointsService {
     const list = client ? this.clientAdaptorsList : this.serverAdaptorsList;
     if (key in list)
       throw new Error(
-        `Conflict endpoint adaptor key ${key}:[${String(adaptorKey)}, ${list[key]}]`,
+        `Conflict endpoint adaptor key ${key}:[${String(adaptorKey)}, ${
+          list[key]
+        }]`,
       );
     list[key] = adaptorKey;
   }
@@ -170,6 +172,14 @@ export class EndpointsService {
   @Transactional()
   update(uuid: string, dto: UpdateEndpointDto) {
     throw new Error('Method not implemented.');
+  }
+
+  @Transactional()
+  delete(uuid: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(this.defSelect, (select) =>
+      prisma.endpoint.delete({ select, where: { uuid } }),
+    );
   }
 
   // @Transactional()
