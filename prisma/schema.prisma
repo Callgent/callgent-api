@@ -36,7 +36,7 @@ model Tenant {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   uuid       String  @unique @db.VarChar(36)
-  mailHost   String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  emailHost   String? @unique @db.VarChar(36) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
@@ -316,7 +316,7 @@ enum EndpointType {
   EVENT
 }
 
-/// @description a callgent may have multiple endpoints, including receiver & sender
+/// @description a callgent may have multiple endpoints, including cep & sep
 model Endpoint {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())

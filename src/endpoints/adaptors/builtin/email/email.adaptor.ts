@@ -4,11 +4,11 @@ import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
   ApiSpec,
   EndpointAdaptor,
-  EndpointConfig
+  EndpointConfig,
 } from '../../endpoint-adaptor.interface';
 
-@EndpointAdaptorName('mail', 'both')
-export class MailAdaptor implements EndpointAdaptor {
+@EndpointAdaptorName('email', 'both')
+export class EmailAdaptor implements EndpointAdaptor {
   getCallback(
     callback: string,
     rawReq: object,

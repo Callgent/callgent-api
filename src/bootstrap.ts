@@ -78,7 +78,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   const configService = app.get(ConfigService);
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
-      origin: [process.env.FRONTEND_SITE_URL, process.env.FRONTEND_DOCS_URL],
+      origin: [process.env.FRONTEND_SITE_URL, process.env.FRONTEND_DOCS_URL, process.env.FRONTEND_APP_URL],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true, // allow cookie
@@ -201,8 +201,7 @@ function registerApi(
     });
 
     logger.log(
-      `API Documentation: http://localhost:${
-        process.env.PORT || 3000
+      `API Documentation: http://localhost:${process.env.PORT || 3000
       }/docs/api`,
     );
   }

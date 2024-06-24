@@ -1,18 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
-  Patch,
   Post,
+  Put,
   Query,
   Req,
-  UseGuards,
+  UseGuards
 } from '@nestjs/common';
-import { ApiSecurity, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiSecurity,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { RestApiResponse } from '../restapi/response.interface';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
+import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointsService } from './endpoints.service';
 
@@ -26,7 +34,7 @@ export class EndpointsController {
     private readonly endpointsService: EndpointsService,
   ) {}
 
-  @Get()
+  @Get('adaptors')
   list(@Query('client') client?: boolean) {
     return this.endpointsService.list(client);
   }
@@ -40,7 +48,7 @@ export class EndpointsController {
   //   return adaptor.getConfig();
   // }
 
-  @Post(':adaptorKey/callgents')
+  @Post(':adaptorKey/create')
   async createEndpoint(
     @Req() req,
     @Param('adaptorKey') adaptorKey: string,
@@ -55,7 +63,7 @@ export class EndpointsController {
     };
   }
 
-  @Patch(':uuid')
+  @Put(':uuid')
   async updateEndpoint(
     @Param('uuid') uuid: string,
     @Body() dto: UpdateEndpointDto,
@@ -63,6 +71,23 @@ export class EndpointsController {
     return {
       data: await this.endpointsService.update(uuid, dto),
     };
+  }
+
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: { $ref: getSchemaPath(EndpointDto) },
+          },
+        },
+      ],
+    },
+  })
+  @Delete('/:uuid')
+  async delete(@Param('uuid') uuid: string) {
+    return { data: await this.endpointsService.delete(uuid) };
   }
 
   /** for auth type `APP`, userKey is ignored */

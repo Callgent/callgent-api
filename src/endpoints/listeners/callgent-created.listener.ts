@@ -12,7 +12,7 @@ export class CallgentCreatedListener {
     private readonly endpointsService: EndpointsService,
   ) {}
 
-  /** create a callgent with default api receiver endpoint, and mail receiver/sender endpoint */
+  /** create a callgent with default api client endpoint, and email client/server endpoint */
   @Transactional()
   @OnEvent(CallgentCreatedEvent.eventName, { async: false })
   async handleEvent(event: CallgentCreatedEvent) {
@@ -39,13 +39,13 @@ export class CallgentCreatedListener {
 
       // TODO API event endpoint
 
-      // mail client endpoint
+      // email client endpoint
       this.endpointsService
         .create({
           callgentUuid: callgent.uuid,
           type: 'CLIENT',
-          adaptorKey: 'mail',
-          host: { mail: `callgent+${callgent.uuid}@my.callgent.com` },
+          adaptorKey: 'email',
+          host: { email: `callgent+${callgent.uuid}@my.callgent.com` },
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
