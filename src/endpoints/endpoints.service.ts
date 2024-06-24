@@ -131,6 +131,29 @@ export class EndpointsService {
     });
   }
 
+  @Transactional()
+  findAll({
+    select,
+    where,
+    orderBy = { id: 'desc' },
+  }: {
+    select?: Prisma.EndpointSelect;
+    where?: Prisma.EndpointWhereInput;
+    orderBy?: Prisma.EndpointOrderByWithRelationInput;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      async (select) =>
+        await prisma.endpoint.findMany({
+          where,
+          select,
+          orderBy,
+        }),
+      this.defSelect,
+    );
+  }
+
   getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
     const list =
       endpointType == 'SERVER'

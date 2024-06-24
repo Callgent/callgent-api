@@ -17,6 +17,7 @@ import { ReposModule } from './infra/repo/repos.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
+import { CallgentTreeModule } from './bff-callgent-tree/callgent-tree.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { UsersModule } from './users/users.module';
     EventListenersModule,
     EventStoresModule,
     EmailsModule,
+    CallgentTreeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
