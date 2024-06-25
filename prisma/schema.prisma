@@ -36,7 +36,7 @@ model Tenant {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   uuid       String  @unique @db.VarChar(36)
-  emailHost   String? @unique @db.VarChar(36) /// @description unique tenant email host
+  emailHost  String? @unique @db.VarChar(36) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
@@ -198,7 +198,7 @@ model CallgentFunction {
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  callgentUuid   String  @db.VarChar(36)
+  callgentUuid String  @db.VarChar(36)
   /// @description actual server endpoint, when action type is `ENDPOINT`
   /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   endpointUuid String? @db.VarChar(36)
@@ -329,6 +329,9 @@ model Endpoint {
   // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  name       String       @default("") @db.VarChar(2047)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT

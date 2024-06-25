@@ -180,6 +180,8 @@ export class EndpointsService {
         'Invalid endpoint adaptor key=' + dto.adaptorKey,
       );
 
+    // FIXME init ep name
+
     const uuid = Utils.uuid();
     return selectHelper(
       select,
