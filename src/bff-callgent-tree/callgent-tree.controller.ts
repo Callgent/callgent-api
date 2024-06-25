@@ -56,7 +56,8 @@ export class CallgentTreeController {
     });
 
     const [CEP, SEP, EEP] = [[], [], []];
-    endpoints.forEach((ep) => {
+    endpoints.forEach((ep: any) => {
+      ep = { ...ep, id: ep.uuid, uuid: undefined };
       if (ep.type == 'CLIENT') {
         CEP.push(ep);
       } else if (ep.type == 'SERVER') {
@@ -69,7 +70,7 @@ export class CallgentTreeController {
     });
 
     const data = {
-      uuid: callgent.uuid,
+      id: callgent.uuid,
       name: callgent.name,
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,
