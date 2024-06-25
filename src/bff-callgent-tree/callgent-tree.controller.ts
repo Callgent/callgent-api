@@ -69,7 +69,7 @@ export class CallgentTreeController {
     });
 
     const data = {
-      id: callgent.uuid,
+      uuid: callgent.uuid,
       name: callgent.name,
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,
