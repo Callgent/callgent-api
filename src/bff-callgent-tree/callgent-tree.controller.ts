@@ -75,9 +75,9 @@ export class CallgentTreeController {
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,
       children: [
-        { id: 'CEP', name: 'CEP', children: CEP },
-        { id: 'SEP', name: 'SEP', children: SEP },
-        { id: 'EEP', name: 'EEP', children: EEP },
+        { id: 'CLIENT', name: 'CEP', children: CEP },
+        { id: 'SERVER', name: 'SEP', children: SEP },
+        { id: 'EVENT', name: 'EEP', children: EEP },
       ],
     };
     return data;
