@@ -80,7 +80,7 @@ export const createEndpoint = (
 ) => {
   return pactum
     .spec()
-    .post(`/api/endpoints/${adaptorKey}/callgents`)
+    .post(`/api/endpoints/${adaptorKey}/create`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(endpointDto)
     .expectStatus(201);

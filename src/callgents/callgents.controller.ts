@@ -71,7 +71,10 @@ export class CallgentsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { type: 'array', items: { $ref: getSchemaPath(CallgentDto) } },
+            data: {
+              type: 'array',
+              items: { $ref: getSchemaPath(CallgentDto) },
+            },
           },
         },
       ],
@@ -86,11 +89,13 @@ export class CallgentsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.callgentService.findAll({
+    const list = await this.callgentService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
     });
+    list.data?.forEach((item: any) => (item.children = []));
+    return list;
   }
 
   @ApiOkResponse({

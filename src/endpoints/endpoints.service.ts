@@ -1,4 +1,8 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
+import {
+  Propagation,
+  TransactionHost,
+  Transactional,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
@@ -33,8 +37,8 @@ export class EndpointsService {
     createdBy: false,
     deletedAt: false,
   };
-  private serversList = {};
-  private clientsList = {};
+  private serverAdaptorsList = {};
+  private clientAdaptorsList = {};
 
   onModuleInit() {
     const modules = [...this.modulesContainer.values()];
@@ -48,32 +52,36 @@ export class EndpointsService {
         );
         if (name?.indexOf(':') > 0) {
           const [key, type] = name.split(/:(?=[^:]*$)/);
-          if (type == 'sender' || type == 'both') {
-            this._add2ServiceList(key, serviceKey, false);
+          if (type == 'server' || type == 'both') {
+            this._add2AdaptorsList(key, serviceKey, false);
           }
-          if (type == 'receiver' || type == 'both') {
-            this._add2ServiceList(key, serviceKey, true);
+          if (type == 'client' || type == 'both') {
+            this._add2AdaptorsList(key, serviceKey, true);
           }
         }
       }
     }
   }
 
-  private _add2ServiceList(
+  private _add2AdaptorsList(
     key: string,
-    serviceKey: InjectionToken,
+    adaptorKey: InjectionToken,
     client: boolean,
   ) {
-    const list = client ? this.clientsList : this.serversList;
+    const list = client ? this.clientAdaptorsList : this.serverAdaptorsList;
     if (key in list)
       throw new Error(
-        `Conflict endpoint key ${key}:[${String(serviceKey)}, ${list[key]}]`,
+        `Conflict endpoint adaptor key ${key}:[${String(adaptorKey)}, ${
+          list[key]
+        }]`,
       );
-    list[key] = serviceKey;
+    list[key] = adaptorKey;
   }
 
   list(client: boolean) {
-    return Object.keys(client ? this.clientsList : this.serversList);
+    return Object.keys(
+      client ? this.clientAdaptorsList : this.serverAdaptorsList,
+    );
   }
 
   @Transactional()
@@ -127,13 +135,39 @@ export class EndpointsService {
     });
   }
 
+  @Transactional()
+  findAll({
+    select,
+    where,
+    orderBy = { id: 'desc' },
+  }: {
+    select?: Prisma.EndpointSelect;
+    where?: Prisma.EndpointWhereInput;
+    orderBy?: Prisma.EndpointOrderByWithRelationInput;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      async (select) =>
+        await prisma.endpoint.findMany({
+          where,
+          select,
+          orderBy,
+        }),
+      this.defSelect,
+    );
+  }
+
   getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
-    const list = endpointType == 'SERVER' ? this.serversList : this.clientsList;
+    const list =
+      endpointType == 'SERVER'
+        ? this.serverAdaptorsList
+        : this.clientAdaptorsList;
     if (adaptorKey in list)
       return this.moduleRef.get(list[adaptorKey], { strict: false });
 
-    if (endpointType === undefined && adaptorKey in this.serversList)
-      return this.moduleRef.get(this.serversList[adaptorKey], {
+    if (endpointType === undefined && adaptorKey in this.serverAdaptorsList)
+      return this.moduleRef.get(this.serverAdaptorsList[adaptorKey], {
         strict: false,
       });
   }
@@ -151,6 +185,10 @@ export class EndpointsService {
       );
 
     const uuid = Utils.uuid();
+    // init ep name
+    dto.host = dto.host.replace('{uuid}', uuid);
+    dto.name || (dto.name = dto.host);
+
     return selectHelper(
       select,
       (select) =>
@@ -165,6 +203,14 @@ export class EndpointsService {
   @Transactional()
   update(uuid: string, dto: UpdateEndpointDto) {
     throw new Error('Method not implemented.');
+  }
+
+  @Transactional()
+  delete(uuid: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(this.defSelect, (select) =>
+      prisma.endpoint.delete({ select, where: { uuid } }),
+    );
   }
 
   // @Transactional()
@@ -201,7 +247,7 @@ export class EndpointsService {
   //   );
   // }
 
-  @Transactional()
+  @Transactional(Propagation.RequiresNew)
   async init(uuid: string, initParams: object) {
     return;
     const prisma = this.txHost.tx as PrismaClient;
@@ -210,8 +256,8 @@ export class EndpointsService {
     if (endpoint) {
       const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
       if (adaptor) {
-        // FIXME issue receiver token
-        // const content = await (endpoint.type == 'SENDER'
+        // FIXME issue client token
+        // const content = await (endpoint.type == 'SERVER'
         //   ? adaptor.initSender
         //   : adaptor.initReceiver)(initParams, endpoint as any);
         // if (content)

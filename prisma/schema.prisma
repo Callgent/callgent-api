@@ -36,7 +36,7 @@ model Tenant {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   uuid       String  @unique @db.VarChar(36)
-  mailHost   String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  emailHost  String? @unique @db.VarChar(36) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
@@ -198,7 +198,7 @@ model CallgentFunction {
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  callgentUuid   String  @db.VarChar(36)
+  callgentUuid String  @db.VarChar(36)
   /// @description actual server endpoint, when action type is `ENDPOINT`
   /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
   endpointUuid String? @db.VarChar(36)
@@ -316,7 +316,7 @@ enum EndpointType {
   EVENT
 }
 
-/// @description a callgent may have multiple endpoints, including receiver & sender
+/// @description a callgent may have multiple endpoints, including cep & sep
 model Endpoint {
   /// @DtoEntityHidden
   id       Int    @id @default(autoincrement())
@@ -329,6 +329,7 @@ model Endpoint {
   // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
+  name       String       @default("") @db.VarChar(2047)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT
@@ -338,9 +339,9 @@ model Endpoint {
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
   priority   Int          @default(0) /// @description priority in the callgent
 
-  host       Json  @db.Json /// @description host address & configs
-  initParams Json? @db.Json /// @description initializing parameters
-  content    Json? @db.Json /// @description generated content/code by init method
+  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{uuid}/invoke/api/', where `{uuid}` will be replaced with current endpoint uuid
+  initParams Json?  @db.Json /// @description initializing parameters
+  content    Json?  @db.Json /// @description generated content/code by init method
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse

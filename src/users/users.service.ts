@@ -103,7 +103,7 @@ export class UsersService {
   async registerUserFromIdentity(
     ui: CreateUserIdentityDto & { email_verified?: boolean },
   ) {
-    const [mailName, mailHost] = ui.email?.split('@') || [];
+    const [mailName, emailHost] = ui.email?.split('@') || [];
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
 
     const prisma = this.txHost.tx as PrismaClient;
@@ -133,17 +133,17 @@ export class UsersService {
         );
       }
     } else {
-      // register tenant from mail host
-      const tenant = await this.registerTenant(mailHost);
+      // register tenant from email host
+      const tenant = await this.registerTenant(emailHost);
 
       if (tenant.deletedAt)
         throw new ForbiddenException(
-          mailHost,
+          emailHost,
           'Sorry, current account has no access to our services',
         );
       if (!(tenant.statusCode > 0))
         throw new ForbiddenException(
-          mailHost,
+          emailHost,
           `Sorry, current account is in ${
             tenant.statusCode == 0 ? 'pending' : 'inactive'
           } statusCode, please try again later.`,
@@ -191,16 +191,16 @@ export class UsersService {
    * @returns new or existing tenant, even invalid
    */
   @Transactional()
-  async registerTenant(mailHost: string) {
-    mailHost || (mailHost = undefined);
+  async registerTenant(emailHost: string) {
+    emailHost || (emailHost = undefined);
     const prisma = this.txHost.tx as PrismaClient;
 
     let tenant =
-      mailHost &&
+      emailHost &&
       (await prisma.tenant.findFirst({
         where: {
           AND: {
-            mailHost,
+            emailHost,
             OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
           },
         },
@@ -211,8 +211,8 @@ export class UsersService {
       tenant = await prisma.tenant.create({
         data: {
           uuid: Utils.uuid(),
-          mailHost,
-          name: mailHost,
+          emailHost,
+          name: emailHost,
           type: 1,
           statusCode: 1, // active by default
         },
@@ -266,7 +266,7 @@ export class UsersService {
       { sub: email, exp: 60 * 60 * 24, resetPwd, create, userId },
       'API_KEY',
     );
-    // send mail
+    // send email
     return this.emailsService.sendTemplateMail(
       [{ email, name: ui?.name || email }],
       'validation-email',

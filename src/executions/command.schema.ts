@@ -41,7 +41,7 @@ export class Command {
 // ask a callgent to do sth, on some condition:
 // when resp.?, then callgent.act(args)
 
-// guys, please send a mail at 3pm to xx, ask him whether and where want to go
+// guys, please send an email at 3pm to xx, ask him whether and where want to go
 // if yes, book a table at where he want to go
 // TODO callgent routing
 
