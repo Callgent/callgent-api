@@ -75,9 +75,24 @@ export class CallgentTreeController {
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,
       children: [
-        { id: 'CLIENT', name: 'CEP', children: CEP },
-        { id: 'SERVER', name: 'SEP', children: SEP },
-        { id: 'EVENT', name: 'EEP', children: EEP },
+        {
+          id: 'CLIENT',
+          name: 'Client Endpoints (CEP)',
+          hint: 'Adaptor to accept request to the callgent',
+          children: CEP,
+        },
+        {
+          id: 'SERVER',
+          name: 'Server Endpoints (SEP)',
+          hint: 'Adaptor to forward the request to actual service',
+          children: SEP,
+        },
+        {
+          id: 'EVENT',
+          name: 'Event Endpoints (EEP)',
+          hint: 'To accept service events and trigger your registered listener',
+          children: EEP,
+        },
       ],
     };
     return data;

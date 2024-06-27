@@ -18,11 +18,11 @@ import { CallgentsModule } from '../callgents/callgents.module';
       useClass: RestAPIAdaptor,
     },
     {
-      provide: 'webpage-EndpointAdaptor',
+      provide: 'Webpage-EndpointAdaptor',
       useClass: WebpageAdaptor,
     },
     {
-      provide: 'webpage-EndpointAdaptor',
+      provide: 'Email-EndpointAdaptor',
       useClass: EmailAdaptor,
     },
   ],

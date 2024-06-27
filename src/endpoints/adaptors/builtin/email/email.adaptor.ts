@@ -7,7 +7,7 @@ import {
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
 
-@EndpointAdaptorName('email', 'both')
+@EndpointAdaptorName('Email', 'both')
 export class EmailAdaptor implements EndpointAdaptor {
   getCallback(
     callback: string,
