@@ -93,6 +93,9 @@ export class CallgentFunctionsService {
         return {
           ...e,
           uuid: Utils.uuid(),
+          funName: e.name,
+          documents: e.content.summary,
+          fullCode: '',
           endpointUuid: endpoint.uuid,
           callgentUuid: endpoint.callgentUuid,
           createdBy: createdBy,

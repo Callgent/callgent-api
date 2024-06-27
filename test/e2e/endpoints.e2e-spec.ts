@@ -59,6 +59,7 @@ export const prepareCannyCallgent = async () => {
     host: { url: 'https://canny.io/api/v1' },
   });
 
+  // import api definitions
   const jsonData = await fs.readFile('./test/e2e/data/canny-apis.json', 'utf8');
   const {
     json: { data: functionCount },
@@ -67,6 +68,7 @@ export const prepareCannyCallgent = async () => {
     text: jsonData,
     format: 'openAPI',
   });
+  
   console.log({ serverEndpoint, functionCount });
 
   return callgent;
