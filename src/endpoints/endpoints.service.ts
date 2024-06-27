@@ -1,4 +1,8 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
+import {
+  Propagation,
+  TransactionHost,
+  Transactional,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
@@ -180,9 +184,11 @@ export class EndpointsService {
         'Invalid endpoint adaptor key=' + dto.adaptorKey,
       );
 
-    // FIXME init ep name
-
     const uuid = Utils.uuid();
+    // init ep name
+    dto.host = dto.host.replace('{uuid}', uuid);
+    dto.name || (dto.name = dto.host);
+
     return selectHelper(
       select,
       (select) =>
@@ -241,7 +247,7 @@ export class EndpointsService {
   //   );
   // }
 
-  @Transactional()
+  @Transactional(Propagation.RequiresNew)
   async init(uuid: string, initParams: object) {
     return;
     const prisma = this.txHost.tx as PrismaClient;

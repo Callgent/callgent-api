@@ -28,11 +28,11 @@ export class CallgentCreatedListener {
           callgentUuid: callgent.uuid,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: {},
+          host: `/api/callgents/${callgent.uuid}/{uuid}/invoke/api/`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
-          // no await init, it may be slow, TODO: tx invalid
+          // no await init, it may be slow, init must restart a new tx
           this.endpointsService.init(endpoint.uuid, []);
           return endpoint;
         }),

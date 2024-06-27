@@ -329,8 +329,6 @@ model Endpoint {
   // add to migration.sql
   tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
 
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
   name       String       @default("") @db.VarChar(2047)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -341,9 +339,9 @@ model Endpoint {
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
   priority   Int          @default(0) /// @description priority in the callgent
 
-  host       Json  @db.Json /// @description host address & configs
-  initParams Json? @db.Json /// @description initializing parameters
-  content    Json? @db.Json /// @description generated content/code by init method
+  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{uuid}/invoke/api/', where `{uuid}` will be replaced with current endpoint uuid
+  initParams Json?  @db.Json /// @description initializing parameters
+  content    Json?  @db.Json /// @description generated content/code by init method
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
