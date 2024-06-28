@@ -42,6 +42,7 @@ export class UsersService {
   /**
    * validate pwd
    * @returns valid user object or undefined
+   * @throws UnauthorizedException
    */
   async login(email: string, password: string) {
     const ui = await this.findUserIdentity(email, 'local', {
@@ -114,6 +115,9 @@ export class UsersService {
 
     // if exists, no creation
     if (uiInDb) {
+      if (uiInDb.provider == 'local')
+        await this.login(uiInDb.uid, ui.credentials);
+
       if (
         uiInDb.deletedAt ||
         uiInDb.user?.deletedAt ||
