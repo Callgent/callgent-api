@@ -10,11 +10,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Callgent } from '@prisma/client';
+import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
 import { CallgentsService } from '../callgents/callgents.service';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { Callgent } from '@prisma/client';
 
 @UseGuards(JwtGuard)
 @Controller('bff')
@@ -23,6 +24,8 @@ export class CallgentTreeController {
     private readonly callgentsService: CallgentsService,
     @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
+    @Inject('CallgentFunctionsService')
+    private readonly callgentFunctionsService: CallgentFunctionsService,
   ) {}
   private readonly logger = new Logger(CallgentTreeController.name);
 
@@ -56,14 +59,25 @@ export class CallgentTreeController {
     });
 
     const [CEP, SEP, EEP] = [[], [], []];
-    endpoints.forEach((ep: any) => {
+    endpoints.forEach(async (ep: any) => {
       ep = { ...ep, id: ep.uuid, uuid: undefined };
       if (ep.type == 'CLIENT') {
         CEP.push(ep);
       } else if (ep.type == 'SERVER') {
         SEP.push(ep);
-      } else if (ep.type == 'EVENT') EEP.push(ep);
-      else
+        const funcs = await this.callgentFunctionsService.findMany({
+          select: { fullCode: false, callgentUuid: false, content: false },
+          where: { endpointUuid: ep.uuid },
+        });
+        ep.children = funcs.map((f) => ({
+          ...f,
+          id: f.uuid,
+          uuid: undefined,
+        }));
+      } else if (ep.type == 'EVENT') {
+        EEP.push(ep);
+        // TODO listeners as children
+      } else
         this.logger.error(
           `Unknown endpoint type: ${ep.type}, ep.uuid=${ep.uuid}`,
         );

@@ -162,7 +162,10 @@ export class CallgentFunctionsService {
     orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.callgentFunction.findMany({ ...args });
+    return prisma.callgentFunction.findMany({
+      ...args,
+      select: { ...this.defSelect, ...args.select },
+    });
   }
 
   @Transactional()
