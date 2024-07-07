@@ -146,6 +146,25 @@ export class CallgentsService {
   }
 
   @Transactional()
+  getByName(name: string, select?: Prisma.CallgentSelect) {
+    const tenantId = this.tenancyService.getTenantId();
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      { ...select, deletedAt: null },
+      (select) =>
+        prisma.callgent.findUnique({
+          select,
+          where: { tenantId_name: { tenantId, name } },
+        }),
+      this.defSelect,
+    ).then((c) => {
+      if (c.deletedAt) return null;
+      delete c.deletedAt;
+      return c;
+    });
+  }
+
+  @Transactional()
   async duplicateOverTenancy(
     dupUuid: string,
     dto: CreateCallgentDto,
@@ -156,7 +175,9 @@ export class CallgentsService {
     await this.tenancyService.bypassTenancy(prisma);
     const dup = await prisma.callgent.findUnique({ where: { uuid: dupUuid } });
     if (!dup)
-      throw new NotFoundException('callgent to duplicate not found: ' + dupUuid);
+      throw new NotFoundException(
+        'callgent to duplicate not found: ' + dupUuid,
+      );
 
     await this.tenancyService.bypassTenancy(prisma, false);
     const callgent = await this.create(dto, createdBy, { id: null });
@@ -191,7 +212,9 @@ export class CallgentsService {
 
     // check targets
     if (!callgent)
-      throw new NotFoundException('callgent not found: ' + endpoint.callgentUuid);
+      throw new NotFoundException(
+        'callgent not found: ' + endpoint.callgentUuid,
+      );
     if (actions.length === 0)
       throw new NotFoundException(
         `callgent=${endpoint.callgentUuid} API action not found: ${act}`,

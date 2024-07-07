@@ -43,11 +43,13 @@ export class CallgentTreeController {
   }
 
   /**
-   * @returns callgent with endpoints tree
+   * @returns new or existing callgent with endpoints tree
    */
   @Post('callgent-endpoints')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
-    const callgent = await this.callgentsService.create(dto, req.user.sub);
+    let callgent = await this.callgentsService.getByName(dto.name);
+    if (!callgent)
+      callgent = await this.callgentsService.create(dto, req.user.sub);
     const data = await this._callgentTree(callgent);
     return { data };
   }
