@@ -56,7 +56,7 @@ export const prepareCannyCallgent = async () => {
   } = await createEndpoint('restAPI', {
     callgentUuid: callgent.uuid,
     type: 'SERVER',
-    host: { url: 'https://canny.io/api/v1' },
+    host: 'https://canny.io/api/v1',
   });
 
   // import api definitions
@@ -68,7 +68,7 @@ export const prepareCannyCallgent = async () => {
     text: jsonData,
     format: 'openAPI',
   });
-  
+
   console.log({ serverEndpoint, functionCount });
 
   return callgent;

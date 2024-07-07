@@ -158,7 +158,7 @@ export class CallgentsService {
         }),
       this.defSelect,
     ).then((c) => {
-      if (c.deletedAt) return null;
+      if (!c || c.deletedAt) return null;
       delete c.deletedAt;
       return c;
     });
