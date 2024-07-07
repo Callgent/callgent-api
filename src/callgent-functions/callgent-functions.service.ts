@@ -156,16 +156,21 @@ export class CallgentFunctionsService {
     );
   }
 
-  findMany(args: {
+  findMany({
+    select,
+    where,
+    orderBy,
+  }: {
     select?: Prisma.CallgentFunctionSelect;
     where?: Prisma.CallgentFunctionWhereInput;
     orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.callgentFunction.findMany({
-      ...args,
-      select: { ...this.defSelect, ...args.select },
-    });
+    return selectHelper(
+      select,
+      (select) => prisma.callgentFunction.findMany({ where, select, orderBy }),
+      this.defSelect,
+    );
   }
 
   @Transactional()
