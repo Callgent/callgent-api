@@ -61,29 +61,31 @@ export class CallgentTreeController {
     });
 
     const [CEP, SEP, EEP] = [[], [], []];
-    endpoints.forEach(async (ep: any) => {
-      ep = { ...ep, id: ep.uuid, uuid: undefined };
-      if (ep.type == 'CLIENT') {
-        CEP.push(ep);
-      } else if (ep.type == 'SERVER') {
-        SEP.push(ep);
-        const funcs = await this.callgentFunctionsService.findMany({
-          select: { fullCode: false, callgentUuid: false, content: false },
-          where: { endpointUuid: ep.uuid },
-        });
-        ep.children = funcs.map((f) => ({
-          ...f,
-          id: f.uuid,
-          uuid: undefined,
-        }));
-      } else if (ep.type == 'EVENT') {
-        EEP.push(ep);
-        // TODO listeners as children
-      } else
-        this.logger.error(
-          `Unknown endpoint type: ${ep.type}, ep.uuid=${ep.uuid}`,
-        );
-    });
+    await Promise.all(
+      endpoints.map(async (ep: any) => {
+        ep = { ...ep, id: ep.uuid, uuid: undefined };
+        if (ep.type == 'CLIENT') {
+          CEP.push(ep);
+        } else if (ep.type == 'SERVER') {
+          const funcs = await this.callgentFunctionsService.findMany({
+            select: { fullCode: false, callgentUuid: false, content: false },
+            where: { endpointUuid: ep.id },
+          });
+          ep.children = funcs.map((f) => ({
+            ...f,
+            id: f.uuid,
+            uuid: undefined,
+          }));
+          SEP.push(ep);
+        } else if (ep.type == 'EVENT') {
+          EEP.push(ep);
+          // TODO listeners as children
+        } else
+          this.logger.error(
+            `Unknown endpoint type: ${ep.type}, ep.uuid=${ep.uuid}`,
+          );
+      }),
+    );
 
     const data = {
       id: callgent.uuid,

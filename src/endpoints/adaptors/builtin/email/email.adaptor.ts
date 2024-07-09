@@ -1,3 +1,5 @@
+import { Inject } from '@nestjs/common';
+import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
@@ -8,7 +10,11 @@ import {
 } from '../../endpoint-adaptor.interface';
 
 @EndpointAdaptorName('Email', 'both')
-export class EmailAdaptor implements EndpointAdaptor {
+export class EmailAdaptor extends EndpointAdaptor {
+  constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
+    super(agentsService);
+  }
+
   getCallback(
     callback: string,
     rawReq: object,
@@ -37,7 +43,7 @@ export class EmailAdaptor implements EndpointAdaptor {
   }
 
   parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {
-    throw new Error('Method not implemented.');
+    return super.parseApis(apiTxt);
   }
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
     throw new Error('Method not implemented.');
