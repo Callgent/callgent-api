@@ -23,6 +23,9 @@ export class CallgentFunctionsService {
   protected readonly defSelect: Prisma.CallgentFunctionSelect = {
     id: false,
     tenantId: false,
+    fullCode: false,
+    content: false,
+    callgentUuid: false,
     createdBy: false,
     deletedAt: false,
   };

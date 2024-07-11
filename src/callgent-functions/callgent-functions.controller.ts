@@ -68,7 +68,7 @@ export class CallgentApiText {
 export class CallgentFunctionsController {
   constructor(
     @Inject('CallgentFunctionsService')
-    private readonly CallgentFunctionService: CallgentFunctionsService,
+    private readonly callgentFunctionService: CallgentFunctionsService,
   ) {}
 
   @ApiOperation({
@@ -84,7 +84,7 @@ export class CallgentFunctionsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
     return {
-      data: await this.CallgentFunctionService.createBatch(
+      data: await this.callgentFunctionService.createBatch(
         endpoint,
         apis,
         req.user?.sub,
@@ -104,7 +104,7 @@ export class CallgentFunctionsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
     return {
-      data: await this.CallgentFunctionService.importBatch(
+      data: await this.callgentFunctionService.importBatch(
         endpoint,
         apiTxt,
         req.user?.sub,
@@ -126,7 +126,7 @@ export class CallgentFunctionsController {
   })
   @Get('/:uuid')
   async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.CallgentFunctionService.findOne(uuid) };
+    return { data: await this.callgentFunctionService.findOne(uuid) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -156,7 +156,7 @@ export class CallgentFunctionsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    return this.CallgentFunctionService.findAll({
+    return this.callgentFunctionService.findAll({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -177,7 +177,7 @@ export class CallgentFunctionsController {
     @Body() dto: UpdateCallgentFunctionDto,
   ) {
     dto.uuid = uuid;
-    return { data: await this.CallgentFunctionService.update(dto) };
+    return { data: await this.callgentFunctionService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -194,6 +194,6 @@ export class CallgentFunctionsController {
   })
   @Delete('/:uuid')
   async delete(@Param('uuid') uuid: string) {
-    return { data: await this.CallgentFunctionService.delete(uuid) };
+    return { data: await this.callgentFunctionService.delete(uuid) };
   }
 }
