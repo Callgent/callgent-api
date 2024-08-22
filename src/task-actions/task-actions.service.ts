@@ -28,17 +28,17 @@ export class TaskActionsService {
 
   //   // new task
   //   const task = taskId
-  //     ? await this.tasksService.findOne(taskId, { uuid: true })
-  //     : await this.tasksService.create({}, caller, { uuid: true });
-  //   if (!task) throw new NotFoundException('Task not found, uuid=' + taskId);
+  //     ? await this.tasksService.findOne(taskId, { id: true })
+  //     : await this.tasksService.create({}, caller, { id: true });
+  //   if (!task) throw new NotFoundException('Task not found, id=' + taskId);
 
   //   const data = {
-  //     uuid: Utils.uuid(),
+  //     id: Utils.id(),
   //     req,
-  //     taskUuid: task.uuid,
+  //     taskId: task.id,
   //     progressive,
   //     cAdaptor: reqEvent.dataType,
-  //     cepUuid: reqEvent.srcId,
+  //     cepId: reqEvent.srcId,
   //     callback,
   //     createdBy: caller,
   //     funName,
@@ -47,8 +47,8 @@ export class TaskActionsService {
   //   // TODO: some action needn't persist, e.g. (action && !taskId)
   //   const prisma = this.txHost.tx as PrismaClient;
   //   await prisma.taskAction.create({ data });
-  //   reqEvent.data.taskId = task.uuid;
-  //   reqEvent.processed.taskActionId = data.uuid;
+  //   reqEvent.data.taskId = task.id;
+  //   reqEvent.processed.taskActionId = data.id;
   // }
 
   async __createTaskAction(e: ClientRequestEvent) {
@@ -84,7 +84,10 @@ export class TaskActionsService {
     // ]);
   }
 
-  protected async _execute(callgents: CallgentDto[], taskAction: TaskActionDto) {
+  protected async _execute(
+    callgents: CallgentDto[],
+    taskAction: TaskActionDto,
+  ) {
     // FIXME merge system callgents, e.g., system event register, timer, cmd entry creation
 
     // load task context vars
@@ -141,15 +144,15 @@ export class TaskActionsService {
   /** invocation flow, and lifecycle events */
   //   protected async _invocationFlow(
   //     req: RequestPack,
-  //     callgentUuid: string,
+  //     callgentId: string,
   //     actionName?: string,
   //   ) {
   //     const prisma = this.txHost.tx as PrismaClient;
 
   //     // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
   //     const where = actionName
-  //       ? { AND: [{ name: actionName }, { callgentUuid }] }
-  //       : { callgentUuid };
+  //       ? { AND: [{ name: actionName }, { callgentId }] }
+  //       : { callgentId };
   //     const take = actionName ? 1 : undefined;
   //     const actions = await prisma.callgentFunction.findMany({ where, take });
   //     const action = actionName
@@ -157,7 +160,7 @@ export class TaskActionsService {
   //       : await this._routing(req, actions);
   //     if (!action)
   //       throw new BadRequestException(
-  //         'Action entry not found on callgent: ' + callgentUuid,
+  //         'Action entry not found on callgent: ' + callgentId,
   //       );
 
   //     // may reply ack to client directly, async result
@@ -176,15 +179,15 @@ export class TaskActionsService {
   //   @Transactional()
   //   async callout(action: CallgentFunctionDto, req: RequestPack) {
   //     // get server endpoint(sep), and sAdaptor
-  //     const sEndpoint = await this.findOne(action.endpointUuid);
+  //     const sEndpoint = await this.findOne(action.endpointId);
   //     if (!sEndpoint)
   //       throw new NotFoundException(
-  //         `Endpoint not found, uuid=${action.endpointUuid}`,
+  //         `Endpoint not found, id=${action.endpointId}`,
   //       );
   //     const sAdaptor = this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
   //     if (!sAdaptor)
   //       throw new NotFoundException(
-  //         `Endpoint#${action.endpointUuid} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
+  //         `Endpoint#${action.endpointId} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
   //       );
 
   //     //// async/sync execute action command, given action params/code/req/[specific mapping], with cb

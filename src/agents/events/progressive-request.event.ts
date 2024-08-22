@@ -3,7 +3,7 @@ import { EventObject } from '../../event-listeners/event-object';
 export class ProgressiveRequestEvent extends EventObject {
   constructor(
     srcId: string,
-    /** parent event uuid in event chain */
+    /** parent event id in event chain */
     fromEvent: string,
     dataType: string,
     public readonly data: {

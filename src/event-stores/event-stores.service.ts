@@ -13,12 +13,12 @@ export class EventStoresService {
 
   /** create random targetId if not set, else load all events of targetId */
   async loadTargetEvents(event: EventObject) {
-    const { uuid, targetId } = event;
+    const { id, targetId } = event;
     if (targetId) {
       const prisma = this.txHost.tx as PrismaClient;
       const es = await prisma.eventStore.findMany({
-        select: { uuid: true, eventType: true, dataType: true, data: true }, // TODO, what to select
-        where: { AND: [{ uuid: { not: uuid } }, { targetId }] },
+        select: { id: true, eventType: true, dataType: true, data: true }, // TODO, what to select
+        where: { AND: [{ NOT: { id } }, { targetId }] },
         orderBy: { id: 'asc' },
       });
       if (!es?.length)

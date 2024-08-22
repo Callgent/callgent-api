@@ -78,7 +78,11 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   const configService = app.get(ConfigService);
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
-      origin: [process.env.FRONTEND_SITE_URL, process.env.FRONTEND_DOCS_URL, process.env.FRONTEND_APP_URL],
+      origin: [
+        process.env.FRONTEND_SITE_URL,
+        process.env.FRONTEND_DOCS_URL,
+        process.env.FRONTEND_APP_URL,
+      ],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true, // allow cookie
@@ -168,11 +172,11 @@ function registerApi(
   const devDocVersion = configService.get<string>('DOCUMENTATION_VERSION');
   if (devDocVersion) {
     const devJwtToken = app.get(JwtAuthService).sign({
-      tenantId: 1,
+      tenantPk: 1,
       id: testUserId,
       iss: 'test.only',
-      sub: 'TEST_USER_UUID',
-      aud: 'test.client.uuid',
+      sub: 'TEST_USER_ID',
+      aud: 'test.client.id',
       username: 'user@example.com',
     });
     // console.debug('devJwtToken:', devJwtToken);
@@ -201,7 +205,8 @@ function registerApi(
     });
 
     logger.log(
-      `API Documentation: http://localhost:${process.env.PORT || 3000
+      `API Documentation: http://localhost:${
+        process.env.PORT || 3000
       }/docs/api`,
     );
   }

@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { AuthLoginedEvent } from '../../infra/auth/events/auth-logined.event';
 import { PrismaTenancyService } from '../../infra/repo/tenancy/prisma-tenancy.service';
 
-/** set tenantId into cls context */
+/** set tenantPk into cls context */
 @Injectable()
 export class AuthLoginedListener {
   constructor(private readonly tenancyService: PrismaTenancyService) {}
@@ -12,7 +12,7 @@ export class AuthLoginedListener {
 
   @OnEvent(AuthLoginedEvent.eventName, { async: false })
   async handleEvent(event: AuthLoginedEvent) {
-    event.user?.tenantId &&
-      this.tenancyService.setTenantId(event.user.tenantId);
+    event.user?.tenantPk &&
+      this.tenancyService.setTenantId(event.user.tenantPk);
   }
 }

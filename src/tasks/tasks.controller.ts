@@ -57,13 +57,13 @@ export class TasksController {
   @Post()
   async create(
     @Req() req,
-    @Param('callgent') callgentUuid: string,
+    @Param('callgent') callgentId: string,
     @Body() dto: CreateTaskDto,
   ) {
     const user: JwtPayload = req.user;
     // const [task, syncResult] = await this.taskService.create({
     //   ...dto,
-    //   callgentUuid,
+    //   callgentId,
     //   callerType: user.aud,
     //   // assignees are set when processing the task
     //   createdBy: user.sub,
@@ -86,9 +86,9 @@ export class TasksController {
       ],
     },
   })
-  @Get('/:uuid')
-  async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.taskService.findOne(uuid) };
+  @Get('/:id')
+  async findOne(@Param('id') id: string) {
+    return { data: await this.taskService.findOne(id) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -130,9 +130,9 @@ export class TasksController {
   //     ],
   //   },
   // })
-  // @Put('/:uuid')
-  // async update(@Param('uuid') uuid: string, @Body() dto: UpdateTaskDto) {
-  //   dto.uuid = uuid;
+  // @Put('/:id')
+  // async update(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
+  //   dto.id = id;
   //   return { data: await this.taskService.update(dto) };
   // }
 
@@ -148,8 +148,8 @@ export class TasksController {
       ],
     },
   })
-  @Delete('/:uuid')
-  async delete(@Param('uuid') uuid: string) {
-    return { data: await this.taskService.delete(uuid) };
+  @Delete('/:id')
+  async delete(@Param('id') id: string) {
+    return { data: await this.taskService.delete(id) };
   }
 }

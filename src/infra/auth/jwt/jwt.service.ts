@@ -13,7 +13,7 @@ export class JwtPayload {
   /** audience id or type, e.g. email,appKey */
   aud?: string;
   id?: number;
-  tenantId?: number;
+  tenantPk?: number;
   scope?: string | string[];
   username?: string;
   nickname?: string;

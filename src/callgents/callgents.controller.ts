@@ -57,9 +57,9 @@ export class CallgentsController {
       ],
     },
   })
-  @Get('/:uuid')
-  async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.callgentService.findOne(uuid) };
+  @Get('/:id')
+  async findOne(@Param('id') id: string) {
+    return { data: await this.callgentService.findOne(id) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -67,7 +67,7 @@ export class CallgentsController {
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
@@ -106,10 +106,33 @@ export class CallgentsController {
       ],
     },
   })
-  @Put('/:uuid')
-  async update(@Param('uuid') uuid: string, @Body() dto: UpdateCallgentDto) {
-    dto.uuid = uuid;
+  @Put('/:id')
+  async update(@Param('id') id: string, @Body() dto: UpdateCallgentDto) {
+    dto.id = id;
     return { data: await this.callgentService.update(dto) };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
+      ],
+    },
+  })
+  @Post(':id/duplicate')
+  async duplicateOverTenancy(
+    @Param('id') id: string,
+    @Req() req,
+    @Body() dto: CreateCallgentDto,
+  ) {
+    return {
+      data: await this.callgentService.duplicateOverTenancy(
+        id,
+        dto,
+        req.user.sub,
+      ),
+    };
   }
 
   @ApiOkResponse({
@@ -124,31 +147,8 @@ export class CallgentsController {
       ],
     },
   })
-  @Delete('/:uuid')
-  async delete(@Param('uuid') uuid: string) {
-    return { data: await this.callgentService.delete(uuid) };
-  }
-
-  @ApiCreatedResponse({
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
-      ],
-    },
-  })
-  @Post(':uuid/duplicate')
-  async duplicateOverTenancy(
-    @Param('uuid') uuid: string,
-    @Req() req,
-    @Body() dto: CreateCallgentDto,
-  ) {
-    return {
-      data: await this.callgentService.duplicateOverTenancy(
-        uuid,
-        dto,
-        req.user.sub,
-      ),
-    };
+  @Delete('/:id')
+  async remove(@Param('id') id: string) {
+    return { data: await this.callgentService.delete(id) };
   }
 }

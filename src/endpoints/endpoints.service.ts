@@ -32,8 +32,8 @@ export class EndpointsService {
     private readonly tenancyService: PrismaTenancyService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
-    id: false,
-    tenantId: false,
+    pk: false,
+    tenantPk: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -85,22 +85,22 @@ export class EndpointsService {
   }
 
   @Transactional()
-  findOne(uuid: string) {
+  findOne(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpoint.findUnique({ where: { uuid } });
+    return prisma.endpoint.findUnique({ where: { id } });
   }
 
   @Transactional()
   findFirstByType(
     type: EndpointType,
-    callgentUuid: string,
+    callgentId: string,
     adaptorKey: string,
-    uuid?: string,
+    id?: string,
   ) {
-    uuid || (uuid = undefined);
+    id || (id = undefined);
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpoint.findFirst({
-      where: { callgentUuid, adaptorKey, type, uuid },
+      where: { callgentId, adaptorKey, type, id },
       orderBy: { priority: 'desc' },
     });
   }
@@ -109,15 +109,15 @@ export class EndpointsService {
   @Transactional()
   async $findFirstByType(
     type: EndpointType,
-    callgentUuid: string,
+    callgentId: string,
     adaptorKey: string,
     endpoint?: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, callgentUuid, adaptorKey, endpoint).then(
+      this.findFirstByType(type, callgentId, adaptorKey, endpoint).then(
         async (v) => {
-          v && this.tenancyService.setTenantId(v.tenantId);
+          v && this.tenancyService.setTenantId(v.tenantPk);
           await this.tenancyService.bypassTenancy(prisma, false);
           return v;
         },
@@ -126,11 +126,11 @@ export class EndpointsService {
   }
 
   @Transactional()
-  findOneAuth(uuid: string, userKey: string) {
+  findOneAuth(id: string, userKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.endpointAuth.findUnique({
       where: {
-        endpointUuid_userKey: { endpointUuid: uuid, userKey: userKey },
+        endpointId_userKey: { endpointId: id, userKey: userKey },
       },
     });
   }
@@ -174,7 +174,7 @@ export class EndpointsService {
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'uuid'>,
+    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'id'>,
     select?: Prisma.EndpointSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
@@ -184,9 +184,9 @@ export class EndpointsService {
         'Invalid endpoint adaptor key=' + dto.adaptorKey,
       );
 
-    const uuid = Utils.uuid();
+    const id = Utils.uuid();
     // init ep name
-    dto.host = dto.host.replace('{uuid}', uuid);
+    dto.host = dto.host.replace('{id}', id);
     dto.name || (dto.name = dto.host);
 
     return selectHelper(
@@ -194,22 +194,22 @@ export class EndpointsService {
       (select) =>
         prisma.endpoint.create({
           select,
-          data: { ...dto, uuid },
+          data: { ...dto, id },
         }),
       this.defSelect,
     );
   }
 
   @Transactional()
-  update(uuid: string, dto: UpdateEndpointDto) {
+  update(id: string, dto: UpdateEndpointDto) {
     throw new Error('Method not implemented.');
   }
 
   @Transactional()
-  delete(uuid: string) {
+  delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.endpoint.delete({ select, where: { uuid } }),
+      prisma.endpoint.delete({ select, where: { id } }),
     );
   }
 
@@ -229,15 +229,15 @@ export class EndpointsService {
   //   } else if (endpoint.authType == 'APP') dto.userKey = '';
   //   // else
   //   //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
-  //   dto.endpointUuid = endpoint.uuid;
+  //   dto.endpointId = endpoint.id;
 
   //   const prisma = this.txHost.tx as PrismaClient;
   //   return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
   //     prisma.endpointAuth.upsert({
   //       select,
   //       where: {
-  //         endpointUuid_userKey: {
-  //           endpointUuid: dto.endpointUuid,
+  //         endpointId_userKey: {
+  //           endpointId: dto.endpointId,
   //           userKey: dto.userKey,
   //         },
   //       },
@@ -248,11 +248,11 @@ export class EndpointsService {
   // }
 
   @Transactional(Propagation.RequiresNew)
-  async init(uuid: string, initParams: object) {
+  async init(id: string, initParams: object) {
     return;
     const prisma = this.txHost.tx as PrismaClient;
 
-    const endpoint = await this.findOne(uuid);
+    const endpoint = await this.findOne(id);
     if (endpoint) {
       const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
       if (adaptor) {
@@ -262,7 +262,7 @@ export class EndpointsService {
         //   : adaptor.initReceiver)(initParams, endpoint as any);
         // if (content)
         //   prisma.endpoint.update({
-        //     where: { uuid },
+        //     where: { id },
         //     data: { content },
         //   });
         // return content;
@@ -272,7 +272,7 @@ export class EndpointsService {
         `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
       );
     }
-    throw new NotFoundException(`Endpoint not found, uuid=${uuid}`);
+    throw new NotFoundException(`Endpoint not found, id=${id}`);
   }
 
   async parseApis(

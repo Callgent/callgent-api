@@ -33,8 +33,8 @@ export class UsersService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.CallgentSelect = {
-    id: false,
-    tenantId: false,
+    pk: false,
+    tenantPk: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -155,8 +155,8 @@ export class UsersService {
 
       // create user
       const user: Prisma.UserUncheckedCreateWithoutUserIdentityInput = {
-        tenantId: tenant.id,
-        uuid: Utils.uuid(),
+        tenantPk: tenant.pk,
+        id: Utils.uuid(),
         name: ui.name,
         avatar: ui.avatar,
         deletedAt: tenant.deletedAt,
@@ -171,8 +171,8 @@ export class UsersService {
           ...ui,
           uid: ui.uid,
           provider: ui.provider,
-          tenantId: tenant.id,
-          userUuid: user.uuid,
+          tenantPk: tenant.pk,
+          userId: user.id,
           deletedAt: tenant.deletedAt,
           user: {
             create: user,
@@ -214,7 +214,7 @@ export class UsersService {
       // create a tenant
       tenant = await prisma.tenant.create({
         data: {
-          uuid: Utils.uuid(),
+          id: Utils.uuid(),
           emailHost,
           name: emailHost,
           type: 1,
@@ -225,12 +225,12 @@ export class UsersService {
     return tenant;
   }
 
-  findOne(uuid: string) {
+  findOne(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.user.findUnique({
         select,
-        where: { uuid },
+        where: { id },
       }),
     );
   }
@@ -238,7 +238,7 @@ export class UsersService {
   /**
    * @param email
    * @param resetPwd
-   * @param userId current user uuid, may null
+   * @param userId current user id, may null
    * @param create whether create account if not found
    */
   @Transactional()
@@ -298,12 +298,12 @@ export class UsersService {
           'Sorry, the user account is deactivated:' + email,
         );
 
-      if (resetPwd) await this.updateLocalPassword(pwd, ui.id);
+      if (resetPwd) await this.updateLocalPassword(pwd, ui.pk);
       else if (ui.email_verified)
         throw new BadRequestException(email + ' is already verified');
       else
         prisma.userIdentity.update({
-          where: { id: ui.id },
+          where: { pk: ui.pk },
           data: { email_verified: true },
         });
     } else {
@@ -344,16 +344,16 @@ export class UsersService {
   }
 
   @Transactional()
-  async updateLocalPassword(pwd: string, id?: number) {
+  async updateLocalPassword(pwd: string, pk?: number) {
     // TODO check pwd complexity
     if (pwd && (typeof pwd !== 'string' || pwd?.length < 8))
       throw new BadRequestException('Password should be at least 8 characters');
 
     const credentials = pwd ? await Utils.hashSalted(pwd) : undefined;
-    if (id) {
+    if (pk) {
       const prisma = this.txHost.tx as PrismaClient;
       await prisma.userIdentity.update({
-        where: { id },
+        where: { pk },
         data: { credentials },
       });
     }

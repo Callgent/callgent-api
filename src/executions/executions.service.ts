@@ -33,15 +33,15 @@ export class ExecutionsService {
    */
   @Transactional()
   async execute(
-    callgentUuids: string[],
+    callgentIds: string[],
     rawReq: object,
     reqAdaptorKey: string,
     ctx: { taskId?: string; caller?: JwtPayload; callback?: string } = {},
-    reqEndpointUuid?: string,
+    reqEndpointId?: string,
     action?: string,
   ) {
-    if (!callgentUuids?.length)
-      throw new BadRequestException('callgentUuids must be specified');
+    if (!callgentIds?.length)
+      throw new BadRequestException('callgentIds must be specified');
 
     // client adaptor
     const reqAdaptor = this.endpointsService.getAdaptor(
@@ -54,29 +54,27 @@ export class ExecutionsService {
       );
 
     let reqEndpoint: EndpointDto;
-    if (reqEndpointUuid) {
-      reqEndpoint = await this.endpointsService.findOne(reqEndpointUuid);
+    if (reqEndpointId) {
+      reqEndpoint = await this.endpointsService.findOne(reqEndpointId);
       if (
         !reqEndpoint ||
         reqEndpoint.type != EndpointType.CLIENT ||
         reqEndpoint.adaptorKey != reqAdaptorKey ||
-        !callgentUuids.includes(reqEndpoint.callgentUuid)
+        !callgentIds.includes(reqEndpoint.callgentId)
       )
-        throw new NotFoundException(
-          `Endpoint not found, uuid=${reqEndpointUuid}`,
-        );
+        throw new NotFoundException(`Endpoint not found, id=${reqEndpointId}`);
     }
 
     // load callgents
     const prisma = this.txHost.tx as PrismaClient;
     const callgents = await prisma.callgent.findMany({
-      where: { uuid: { in: callgentUuids } },
-      select: { uuid: true, name: true, summary: true },
+      where: { id: { in: callgentIds } },
+      select: { id: true, name: true, summary: true },
     });
-    if (callgents.length != callgentUuids.length)
+    if (callgents.length != callgentIds.length)
       throw new NotFoundException(
-        `Callgent not found, uuid=${callgentUuids
-          .filter((x) => !callgents.find((y) => y.uuid == x))
+        `Callgent not found, id=${callgentIds
+          .filter((x) => !callgents.find((y) => y.id == x))
           .join(', ')}`,
       );
 
@@ -98,7 +96,7 @@ export class ExecutionsService {
 
     // return this._invocationFlow(
     //   { endpoint: reqEndpoint, adaptor: reqAdaptor, req: rawReq },
-    //   callgentUuids[0],
+    //   callgentIds[0],
     //   action,
     // );
   }
@@ -106,15 +104,15 @@ export class ExecutionsService {
   /** invocation flow, and lifecycle events */
   // protected async _invocationFlow(
   //   req: any,
-  //   callgentUuid: string,
+  //   callgentId: string,
   //   actionName?: string,
   // ) {
   //   const prisma = this.txHost.tx as PrismaClient;
 
   //   // specific/AI routing from req, get action params/code, TODO: [and specific mapping]
   //   const where = actionName
-  //     ? { AND: [{ name: actionName }, { callgentUuid }] }
-  //     : { callgentUuid };
+  //     ? { AND: [{ name: actionName }, { callgentId }] }
+  //     : { callgentId };
   //   const take = actionName ? 1 : undefined;
   //   const actions = await prisma.callgentFunction.findMany({ where, take });
   //   const action = actionName
@@ -122,7 +120,7 @@ export class ExecutionsService {
   //     : await this._routing(req, actions);
   //   if (!action)
   //     throw new BadRequestException(
-  //       'Action entry not found on callgent: ' + callgentUuid,
+  //       'Action entry not found on callgent: ' + callgentId,
   //     );
 
   //   // may reply ack to client directly, async result
@@ -141,15 +139,15 @@ export class ExecutionsService {
   // @Transactional()
   // async callout(action: CallgentFunctionDto, req: any) {
   //   // get server endpoint(sep), and sAdaptor
-  //   const sEndpoint = null; // await this.findOne(action.endpointUuid);
+  //   const sEndpoint = null; // await this.findOne(action.endpointId);
   //   if (!sEndpoint)
   //     throw new NotFoundException(
-  //       `Endpoint not found, uuid=${action.endpointUuid}`,
+  //       `Endpoint not found, id=${action.endpointId}`,
   //     );
   //   const sAdaptor = null; // this.getAdaptor(sEndpoint.adaptorKey, sEndpoint.type);
   //   if (!sAdaptor)
   //     throw new NotFoundException(
-  //       `Endpoint#${action.endpointUuid} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
+  //       `Endpoint#${action.endpointId} adaptor not found, adaptorKey=${sEndpoint.adaptorKey}`,
   //     );
 
   //   //// async/sync execute action command, given action params/code/req/[specific mapping], with cb

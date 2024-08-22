@@ -19,8 +19,8 @@ export class TasksService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.TaskSelect = {
-    id: false,
-    tenantId: false,
+    pk: false,
+    tenantPk: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -37,7 +37,7 @@ export class TasksService {
     select?: Prisma.TaskSelect,
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
-    (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
+    (data.id = Utils.uuid()), (data.createdBy = createdBy);
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Task = await selectHelper(
@@ -65,7 +65,7 @@ export class TasksService {
     const r = 0;
     // await prisma.callgentReceiver.findFirst({
     //   where: {
-    //     callgentUuid: callgent.uuid,
+    //     callgentId: callgent.id,
     //     receiverType,
     //   },
     //   orderBy: {
@@ -116,34 +116,34 @@ export class TasksService {
   }
 
   @Transactional()
-  delete(uuid: string) {
+  delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.task.delete({ select, where: { uuid } }),
+      prisma.task.delete({ select, where: { id } }),
     );
   }
 
   @Transactional()
   update(dto: UpdateTaskDto) {
-    if (!dto.uuid) return;
+    if (!dto.id) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.task.update({
         select,
-        where: { uuid: dto.uuid },
+        where: { id: dto.id },
         data: dto,
       }),
     );
   }
 
-  findOne(uuid: string, select?: Prisma.TaskSelect) {
+  findOne(id: string, select?: Prisma.TaskSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
         prisma.task.findUnique({
           select,
-          where: { uuid },
+          where: { id },
         }),
       this.defSelect,
     );

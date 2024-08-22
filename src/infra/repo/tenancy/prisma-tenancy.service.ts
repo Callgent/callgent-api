@@ -8,9 +8,9 @@ export class PrismaTenancyService {
 
   public static readonly TENANT_ID_KEY = 'TENANT_ID';
 
-  setTenantId(tenantId: number) {
+  setTenantId(tenantPk: number) {
     this.cls.enter({ ifNested: 'reuse' });
-    this.cls.set(PrismaTenancyService.TENANT_ID_KEY, tenantId);
+    this.cls.set(PrismaTenancyService.TENANT_ID_KEY, tenantPk);
   }
 
   getTenantId(): number {

@@ -10,13 +10,15 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Callgent } from '@prisma/client';
-import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
-import { CallgentsService } from '../callgents/callgents.service';
-import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
-import { EndpointsService } from '../endpoints/endpoints.service';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
+import { CallgentsService } from '../../callgents/callgents.service';
+import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
+import { EndpointsService } from '../../endpoints/endpoints.service';
+import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 
+@ApiTags('bff')
 @UseGuards(JwtGuard)
 @Controller('bff')
 export class CallgentTreeController {
@@ -32,9 +34,9 @@ export class CallgentTreeController {
   /**
    * @returns callgent with endpoints tree
    */
-  @Get('callgent-endpoints/:uuid')
-  async findOne(@Param('uuid') uuid: string) {
-    const callgent = await this.callgentsService.findOne(uuid);
+  @Get('callgent-endpoints/:id')
+  async findOne(@Param('id') id: string) {
+    const callgent = await this.callgentsService.findOne(id);
     if (!callgent) throw new NotFoundException();
 
     const data = await this._callgentTree(callgent);
@@ -56,25 +58,25 @@ export class CallgentTreeController {
 
   private async _callgentTree(callgent: Callgent) {
     const endpoints = await this.endpointsService.findAll({
-      select: { callgentUuid: false },
-      where: { callgentUuid: callgent.uuid },
+      select: { callgentId: false },
+      where: { callgentId: callgent.id },
     });
 
     const [CEP, SEP, EEP] = [[], [], []];
     await Promise.all(
       endpoints.map(async (ep: any) => {
-        ep = { ...ep, id: ep.uuid, uuid: undefined };
+        ep = { ...ep, id: ep.id, pk: undefined };
         if (ep.type == 'CLIENT') {
           CEP.push(ep);
         } else if (ep.type == 'SERVER') {
           const funcs = await this.callgentFunctionsService.findMany({
-            select: { fullCode: false, callgentUuid: false, content: false },
-            where: { endpointUuid: ep.id },
+            select: { fullCode: false, callgentId: false, content: false },
+            where: { endpointId: ep.id },
           });
           ep.children = funcs.map((f) => ({
             ...f,
-            id: f.uuid,
-            uuid: undefined,
+            id: f.id,
+            pk: undefined,
           }));
           SEP.push(ep);
         } else if (ep.type == 'EVENT') {
@@ -82,13 +84,13 @@ export class CallgentTreeController {
           // TODO listeners as children
         } else
           this.logger.error(
-            `Unknown endpoint type: ${ep.type}, ep.uuid=${ep.uuid}`,
+            `Unknown endpoint type: ${ep.type}, ep.id=${ep.id}`,
           );
       }),
     );
 
     const data = {
-      id: callgent.uuid,
+      id: callgent.id,
       name: callgent.name,
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,

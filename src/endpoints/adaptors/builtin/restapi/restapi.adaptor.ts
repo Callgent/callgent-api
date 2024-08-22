@@ -172,7 +172,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     const { method, headers: rawHeaders, query, body, raw } = request;
     if (request.url.indexOf('/invoke/api/') < 0)
       throw new Error(
-        'Unsupported URL, should be /callgents/:uuids/:endpoint/invoke/api/*',
+        'Unsupported URL, should be /callgents/:ids/:endpoint/invoke/api/*',
       );
     const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
 

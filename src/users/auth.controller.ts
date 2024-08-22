@@ -48,18 +48,18 @@ export class AuthController extends LocalAuthController {
     const ui = await this.userService.registerUserFromIdentity(dto);
     const user = ui.user;
     const token = this.jwtService.sign({
-      tenantId: user.tenantId,
-      id: user.id,
-      sub: user.uuid,
+      tenantPk: user.tenantPk,
+      id: user.pk,
+      sub: user.id,
       iss: dto.provider,
-      aud: user.uuid,
+      aud: user.id,
     });
     return {
       data: {
         ...user,
         tenant: undefined,
         id: undefined,
-        tenantId: undefined,
+        tenantPk: undefined,
         deletedAt: undefined,
       },
       meta: { token },

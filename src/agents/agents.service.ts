@@ -35,7 +35,7 @@ export class AgentsService {
     reqEvent: ClientRequestEvent,
   ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
     const {
-      uuid,
+      id,
       srcId,
       dataType: cepAdaptor,
       data: { callgentName, req, funName, progressive },
@@ -45,7 +45,7 @@ export class AgentsService {
       .functions as unknown as CallgentFunctionDto[];
     if (!callgentFunctions?.length)
       throw new BadRequestException(
-        'No functions for mapping, ClientRequestEvent#' + uuid,
+        'No functions for mapping, ClientRequestEvent#' + id,
       );
 
     // FIXME map from all targetId events
@@ -69,7 +69,7 @@ export class AgentsService {
       // emit progressive requesting event
       const { event: prEvent, statusCode } =
         await this.eventListenersService.emit(
-          new ProgressiveRequestEvent(srcId, uuid, cepAdaptor, { progressive }),
+          new ProgressiveRequestEvent(srcId, id, cepAdaptor, { progressive }),
         );
       if (!statusCode) {
         // direct return, no persistent async
@@ -111,7 +111,7 @@ export class AgentsService {
   }
 
   async genPseudoCmd(
-    callgents: { uuid: string; name: string; summary: string }[],
+    callgents: { id: string; name: string; summary: string }[],
     taskaAction: TaskActionDto,
   ) {}
 

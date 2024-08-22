@@ -31,7 +31,7 @@ describe('Callgent Endpoint (e2e)', () => {
     const callgent = await prepareCannyCallgent();
 
     // request for task by callgent api
-    await invokeCallgentByApi(callgent.uuid).expectStatus(400);
+    await invokeCallgentByApi(callgent.id).expectStatus(400);
   });
 
   it(`(POST): add a new canny.io rest-api server endpoint to invoke 200`, async () => {
@@ -40,7 +40,7 @@ describe('Callgent Endpoint (e2e)', () => {
     // mount server endpoint auth
 
     // request for task by callgent api
-    await invokeCallgentByApi(callgent.uuid).expectStatus(400);
+    await invokeCallgentByApi(callgent.id).expectStatus(400);
   });
 });
 
@@ -54,7 +54,7 @@ export const prepareCannyCallgent = async () => {
   const {
     json: { data: serverEndpoint },
   } = await createEndpoint('restAPI', {
-    callgentUuid: callgent.uuid,
+    callgentId: callgent.id,
     type: 'SERVER',
     host: 'https://canny.io/api/v1',
   });
@@ -64,7 +64,7 @@ export const prepareCannyCallgent = async () => {
   const {
     json: { data: functionCount },
   } = await addCallgentFunctions({
-    endpoint: serverEndpoint.uuid,
+    endpoint: serverEndpoint.id,
     text: jsonData,
     format: 'openAPI',
   });
@@ -95,10 +95,10 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
     .expectStatus(200);
 };
 
-export const invokeCallgentByApi = (callgentUuid, body?: any) => {
+export const invokeCallgentByApi = (callgentId, body?: any) => {
   return pactum
     .spec()
-    .post(`/api/callgents/${callgentUuid}//invoke/api/boards/list`)
+    .post(`/api/callgents/${callgentId}//invoke/api/boards/list`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(body)
     .expectStatus(200);

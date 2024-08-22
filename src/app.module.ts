@@ -17,8 +17,8 @@ import { ReposModule } from './infra/repo/repos.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
-import { CallgentTreeModule } from './bff-callgent-tree/callgent-tree.module';
-import { BffCallgentFunctionsModule } from './bff-callgent-functions/bff-callgent-functions.module';
+import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
+import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
 
 @Module({
   imports: [

@@ -25,15 +25,15 @@ export class CallgentCreatedListener {
       // API client endpoint
       this.endpointsService
         .create({
-          callgentUuid: callgent.uuid,
+          callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: `/api/callgents/${callgent.uuid}/{uuid}/invoke/api/`,
+          host: `/api/callgents/${callgent.id}/{id}/invoke/api/`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
           // no await init, it may be slow, init must restart a new tx
-          this.endpointsService.init(endpoint.uuid, []);
+          this.endpointsService.init(endpoint.id, []);
           return endpoint;
         }),
 
@@ -42,15 +42,15 @@ export class CallgentCreatedListener {
       // Email client endpoint
       this.endpointsService
         .create({
-          callgentUuid: callgent.uuid,
+          callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'Email',
-          host: `callgent+${callgent.uuid}@my.callgent.com`,
+          host: `callgent+${callgent.id}@my.callgent.com`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
           // no await init, it may be slow
-          this.endpointsService.init(endpoint.uuid, []);
+          this.endpointsService.init(endpoint.id, []);
           return endpoint;
         }),
     ]);

@@ -22,8 +22,8 @@ export class CallgentsService {
     private readonly tenancyService: PrismaTenancyService,
   ) {}
   protected readonly defSelect: Prisma.CallgentSelect = {
-    id: false,
-    tenantId: false,
+    pk: false,
+    tenantPk: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -35,7 +35,7 @@ export class CallgentsService {
     select?: Prisma.CallgentSelect,
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
-    (data.uuid = Utils.uuid()), (data.createdBy = createdBy);
+    (data.id = Utils.uuid()), (data.createdBy = createdBy);
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Callgent = await selectHelper(
@@ -88,58 +88,58 @@ export class CallgentsService {
   }
 
   @Transactional()
-  async findMany(uuids: string[], select?: Prisma.CallgentSelect) {
+  async findMany(ids: string[], select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
 
     const callgents = await selectHelper(
       select,
       async (select) =>
         await prisma.callgent.findMany({
-          where: { uuid: { in: uuids } },
+          where: { id: { in: ids } },
           select,
         }),
       this.defSelect,
     );
 
-    if (callgents.length != uuids.length)
+    if (callgents.length != ids.length)
       throw new NotFoundException(
-        `Callgent not found, uuid=${uuids
-          .filter((x) => !callgents.find((y) => y.uuid == x))
+        `Callgent not found, id=${ids
+          .filter((x) => !callgents.find((y) => y.id == x))
           .join(', ')}`,
       );
     return callgents;
   }
 
   @Transactional()
-  delete(uuid: string) {
+  delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.callgent.delete({ select, where: { uuid } }),
+      prisma.callgent.delete({ select, where: { id } }),
     );
   }
 
   @Transactional()
   update(dto: UpdateCallgentDto) {
-    if (!dto.uuid) return;
+    if (!dto.id) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.callgent.update({
         select,
-        where: { uuid: dto.uuid },
+        where: { id: dto.id },
         data: dto,
       }),
     );
   }
 
   @Transactional()
-  findOne(uuid: string, select?: Prisma.CallgentSelect) {
+  findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
         prisma.callgent.findUnique({
           select,
-          where: { uuid },
+          where: { id },
         }),
       this.defSelect,
     );
@@ -147,14 +147,14 @@ export class CallgentsService {
 
   @Transactional()
   getByName(name: string, select?: Prisma.CallgentSelect) {
-    const tenantId = this.tenancyService.getTenantId();
+    const tenantPk = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       { ...select, deletedAt: null },
       (select) =>
         prisma.callgent.findUnique({
           select,
-          where: { tenantId_name: { tenantId, name } },
+          where: { tenantPk_name: { tenantPk, name } },
         }),
       this.defSelect,
     ).then((c) => {
@@ -166,21 +166,19 @@ export class CallgentsService {
 
   @Transactional()
   async duplicateOverTenancy(
-    dupUuid: string,
+    dupId: string,
     dto: CreateCallgentDto,
     createdBy: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
 
     await this.tenancyService.bypassTenancy(prisma);
-    const dup = await prisma.callgent.findUnique({ where: { uuid: dupUuid } });
+    const dup = await prisma.callgent.findUnique({ where: { id: dupId } });
     if (!dup)
-      throw new NotFoundException(
-        'callgent to duplicate not found: ' + dupUuid,
-      );
+      throw new NotFoundException('callgent to duplicate not found: ' + dupId);
 
     await this.tenancyService.bypassTenancy(prisma, false);
-    const callgent = await this.create(dto, createdBy, { id: null });
+    return this.create(dto, createdBy, { id: null });
   }
 
   /**
@@ -193,18 +191,18 @@ export class CallgentsService {
   async please(
     act: string,
     args: any[],
-    endpoint: { callgentUuid: string; uuid?: string; adaptorKey?: string },
+    endpoint: { callgentId: string; id?: string; adaptorKey?: string },
   ) {
     // invoke callgent action api, through endpoint
     const prisma = this.txHost.tx as PrismaClient;
-    const withEndpoint = endpoint?.uuid || endpoint?.adaptorKey;
+    const withEndpoint = endpoint?.id || endpoint?.adaptorKey;
 
     // load targets
     if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
     const [callgent, actions, epClient] = await Promise.all([
-      prisma.callgent.findUnique({ where: { uuid: endpoint.callgentUuid } }),
+      prisma.callgent.findUnique({ where: { id: endpoint.callgentId } }),
       prisma.callgentFunction.findMany({
-        where: { name: act, callgentUuid: endpoint.callgentUuid },
+        where: { name: act, callgentId: endpoint.callgentId },
       }),
       withEndpoint &&
         prisma.endpoint.findFirst({ where: { ...endpoint, type: 'CLIENT' } }),
@@ -212,21 +210,19 @@ export class CallgentsService {
 
     // check targets
     if (!callgent)
-      throw new NotFoundException(
-        'callgent not found: ' + endpoint.callgentUuid,
-      );
+      throw new NotFoundException('callgent not found: ' + endpoint.callgentId);
     if (actions.length === 0)
       throw new NotFoundException(
-        `callgent=${endpoint.callgentUuid} API action not found: ${act}`,
+        `callgent=${endpoint.callgentId} API action not found: ${act}`,
       );
     if (withEndpoint) {
       if (!epClient)
         throw new NotFoundException(
-          `Client endpoint not found for callgent=${endpoint.callgentUuid}: ${
-            endpoint.uuid || endpoint.adaptorKey
+          `Client endpoint not found for callgent=${endpoint.callgentId}: ${
+            endpoint.id || endpoint.adaptorKey
           }`,
         );
-      this.tenancyService.setTenantId(callgent.tenantId);
+      this.tenancyService.setTenantId(callgent.tenantPk);
       this.tenancyService.bypassTenancy(prisma, false);
     }
 

@@ -35,7 +35,7 @@ export class EndpointsController {
   ) {}
 
   @Get('adaptors')
-  list(@Query('client') client?: boolean) {
+  listAdaptors(@Query('client') client?: boolean) {
     return this.endpointsService.list(client);
   }
 
@@ -63,31 +63,14 @@ export class EndpointsController {
     };
   }
 
-  @Put(':uuid')
+  @Put(':id')
   async updateEndpoint(
-    @Param('uuid') uuid: string,
+    @Param('id') id: string,
     @Body() dto: UpdateEndpointDto,
   ) {
     return {
-      data: await this.endpointsService.update(uuid, dto),
+      data: await this.endpointsService.update(id, dto),
     };
-  }
-
-  @ApiOkResponse({
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(EndpointDto) },
-          },
-        },
-      ],
-    },
-  })
-  @Delete('/:uuid')
-  async delete(@Param('uuid') uuid: string) {
-    return { data: await this.endpointsService.delete(uuid) };
   }
 
   /** for auth type `APP`, userKey is ignored */
@@ -102,14 +85,31 @@ export class EndpointsController {
   //   };
   // }
 
-  @Post(':uuid/init')
-  initEndpoint(@Param('uuid') uuid: string, @Body() initParams: object) {
-    this.endpointsService.init(uuid, initParams);
+  @Post(':id/init')
+  initEndpoint(@Param('id') id: string, @Body() initParams: object) {
+    this.endpointsService.init(id, initParams);
   }
 
   /** manual test endpoint */
-  @Post(':uuid/test')
-  testEndpoint(@Param('uuid') uuid: string, @Body() any: any) {
+  @Post(':id/test')
+  testEndpoint(@Param('id') id: string, @Body() any: any) {
     //
+  }
+
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: { $ref: getSchemaPath(EndpointDto) },
+          },
+        },
+      ],
+    },
+  })
+  @Delete('/:id')
+  async remove(@Param('id') id: string) {
+    return { data: await this.endpointsService.delete(id) };
   }
 }
