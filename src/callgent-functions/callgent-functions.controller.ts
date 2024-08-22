@@ -32,17 +32,17 @@ import { CallgentFunctionDto } from './dto/callgent-function.dto';
 import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
 
 export class CallgentApis extends ApiSpec {
-  @EntityIdExists('endpoint', 'uuid')
+  @EntityIdExists('endpoint', 'id')
   endpoint: string;
 }
 
 export class CallgentApiText {
   @ApiProperty({
     required: true,
-    description: 'The callgent server-endpoint uuid',
+    description: 'The callgent server-endpoint id',
   })
   @IsNotEmpty()
-  @EntityIdExists('endpoint', 'uuid')
+  @EntityIdExists('endpoint', 'id')
   endpoint: string;
 
   @ApiProperty({
@@ -68,7 +68,7 @@ export class CallgentApiText {
 export class CallgentFunctionsController {
   constructor(
     @Inject('CallgentFunctionsService')
-    private readonly CallgentFunctionService: CallgentFunctionsService,
+    private readonly callgentFunctionService: CallgentFunctionsService,
   ) {}
 
   @ApiOperation({
@@ -84,7 +84,7 @@ export class CallgentFunctionsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
     return {
-      data: await this.CallgentFunctionService.createBatch(
+      data: await this.callgentFunctionService.createBatch(
         endpoint,
         apis,
         req.user?.sub,
@@ -104,7 +104,7 @@ export class CallgentFunctionsController {
   ) {
     const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
     return {
-      data: await this.CallgentFunctionService.importBatch(
+      data: await this.callgentFunctionService.importBatch(
         endpoint,
         apiTxt,
         req.user?.sub,
@@ -124,44 +124,44 @@ export class CallgentFunctionsController {
       ],
     },
   })
-  @Get('/:uuid')
-  async findOne(@Param('uuid') uuid: string) {
-    return { data: await this.CallgentFunctionService.findOne(uuid) };
+  @Get('/:id')
+  async findOne(@Param('id') id: string) {
+    return { data: await this.callgentFunctionService.findOne(id) };
   }
 
-  @ApiQuery({ name: 'query', required: false, type: String })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'perPage', required: false, type: Number })
-  @ApiOkResponse({
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        {
-          properties: {
-            data: {
-              type: 'array',
-              items: { $ref: getSchemaPath(CallgentFunctionDto) },
-            },
-          },
-        },
-      ],
-    },
-  })
-  @Get()
-  async findAll(
-    @Query() query: { queryString?: string; page?: 1; perPage?: 10 },
-  ) {
-    const where = query.queryString
-      ? {
-          name: { contains: query.queryString },
-        }
-      : undefined;
-    return this.CallgentFunctionService.findAll({
-      page: query.page,
-      perPage: query.perPage,
-      where,
-    });
-  }
+  // @ApiQuery({ name: 'query', required: false, type: String })
+  // @ApiQuery({ name: 'page', required: false, type: Number })
+  // @ApiQuery({ name: 'perPage', required: false, type: Number })
+  // @ApiOkResponse({
+  //   schema: {
+  //     allOf: [
+  //       { $ref: getSchemaPath(RestApiResponse) },
+  //       {
+  //         properties: {
+  //           data: {
+  //             type: 'array',
+  //             items: { $ref: getSchemaPath(CallgentFunctionDto) },
+  //           },
+  //         },
+  //       },
+  //     ],
+  //   },
+  // })
+  // @Get()
+  // async findAll(
+  //   @Query() query: { queryString?: string; page?: 1; perPage?: 10 },
+  // ) {
+  //   const where = query.queryString
+  //     ? {
+  //         name: { contains: query.queryString },
+  //       }
+  //     : undefined;
+  //   return this.callgentFunctionService.findAll({
+  //     page: query.page,
+  //     perPage: query.perPage,
+  //     where,
+  //   });
+  // }
 
   @ApiOkResponse({
     schema: {
@@ -171,13 +171,13 @@ export class CallgentFunctionsController {
       ],
     },
   })
-  @Put('/:uuid')
+  @Put('/:id')
   async update(
-    @Param('uuid') uuid: string,
+    @Param('id') id: string,
     @Body() dto: UpdateCallgentFunctionDto,
   ) {
-    dto.uuid = uuid;
-    return { data: await this.CallgentFunctionService.update(dto) };
+    dto.id = id;
+    return { data: await this.callgentFunctionService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -192,8 +192,8 @@ export class CallgentFunctionsController {
       ],
     },
   })
-  @Delete('/:uuid')
-  async delete(@Param('uuid') uuid: string) {
-    return { data: await this.CallgentFunctionService.delete(uuid) };
+  @Delete('/:id')
+  async delete(@Param('id') id: string) {
+    return { data: await this.callgentFunctionService.delete(id) };
   }
 }

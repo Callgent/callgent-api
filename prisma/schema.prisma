@@ -20,23 +20,24 @@ generator nestjsDto {
 }
 
 datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL")
+  provider     = "postgres"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
-// db sharding base on tenantId: 
-// 1. id segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
+// db sharding base on tenantPk: 
+// 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
 // 2.chard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
 
 //////////////////// Authentication and Account ////////////////////////////
 
 model Tenant {
-  id         Int     @id @default(autoincrement())
+  pk         Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid       String  @unique @db.VarChar(36)
-  emailHost   String? @unique @db.VarChar(36) /// @description unique tenant email host
+  id         String  @unique @db.VarChar(36)
+  emailHost  String? @unique @db.VarChar(36) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
@@ -53,20 +54,20 @@ model Tenant {
 }
 
 model User {
-  id     Int     @id @default(autoincrement())
+  pk     Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid   String  @unique @db.VarChar(36)
+  id     String  @unique @db.VarChar(36)
   name   String  @db.VarChar(36)
   email  String? @db.VarChar(255) /// @description account primary verified email
   avatar String? @db.VarChar(1023)
   locale String? @default("en_US") @db.VarChar(10)
 
-  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  tenant       Tenant         @relation(fields: [tenantPk], references: [pk])
   /// @DtoRelationIncludeId
   // add to migration.sql
-  tenantId     Int            @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk     Int            @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
   /// @DtoReadOnly
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
@@ -78,15 +79,15 @@ model User {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([tenantId])
+  @@index([tenantPk])
 }
 
 model UserIdentity {
-  id             Int     @id @default(autoincrement())
+  pk             Int     @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId       Int     @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk       Int     @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -110,11 +111,11 @@ model UserIdentity {
   /// @DtoPlainApiResponse
   info           Json?   @map("info") /// @description  authentication info from realm
 
-  user     User   @relation(fields: [userId], references: [id])
-  userId   Int
+  user   User   @relation(fields: [userPk], references: [pk])
+  userPk Int
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  userUuid String @db.VarChar(36)
+  userId String @db.VarChar(36)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -124,15 +125,15 @@ model UserIdentity {
   deletedAt DateTime? /// @description logical deletion.
 
   @@unique([provider, uid])
+  @@index([userPk])
   @@index([userId])
-  @@index([userUuid])
-  @@index([tenantId])
+  @@index([tenantPk])
 }
 
 /// @DtoIgnoreModel
 /// @description non-organization email hosts
 model PublicMailHost {
-  id      Int    @id @default(autoincrement())
+  pk      Int    @id @default(autoincrement())
   /// @description starts with `.`, e.g.: '.gmail.com', '.hotmail.com'
   dotHost String @unique @db.VarChar(255)
 
@@ -143,15 +144,15 @@ model PublicMailHost {
 
 model Callgent {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name    String  @db.VarChar(255)
   /// @DtoCreateApiResponse
@@ -169,21 +170,21 @@ model Callgent {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@unique([tenantId, name])
-  @@index([tenantId])
+  @@unique([tenantPk, name])
+  @@index([tenantPk])
 }
 
 model CallgentFunction {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name      String   @db.VarChar(255)
   /// @description js function name to invoke this callgent function
@@ -193,15 +194,15 @@ model CallgentFunction {
   documents String   @db.VarChar(4095)
   /// @description js actual code to invoke this callgent function
   fullCode  String   @db.VarChar(1023)
-  /// @description endpoint uuid or command or code
+  /// @description endpoint id or command or code
   content   Json     @db.Json
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  callgentUuid   String  @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  callgentId String  @db.VarChar(36)
   /// @description actual server endpoint, when action type is `ENDPOINT`
-  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  endpointUuid String? @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'id', ../../infra/repo/validators/entity-exists.validator)
+  endpointId String? @db.VarChar(36)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -213,22 +214,23 @@ model CallgentFunction {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@unique([callgentUuid, name])
-  @@index([tenantId])
-  @@index([callgentUuid])
+  @@unique([callgentId, name])
+  @@index([tenantPk])
+  @@index([callgentId])
+  @@index([endpointId])
 }
 
 model Task {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   statusCode Int     @default(-1) /// @description Task statusCode, -1: pending, 0: done, <-1: failed
   name       String? @db.VarChar(64) /// @description task name
@@ -245,24 +247,24 @@ model Task {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([tenantId])
+  @@index([tenantPk])
 }
 
 model TaskAction {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   // client side information
-  /// @description action owner callgent uuid, responsible for progressive response
-  cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
+  /// @description action owner callgent id, responsible for progressive response
+  cepId       String? @db.VarChar(36) /// @description client endpoint id
   funName     String? @db.VarChar(255) /// @description optional callgent function name
   cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
   callback    Json?   @db.Json /// @description callback url template or callgent function
@@ -277,12 +279,12 @@ model TaskAction {
   message    String? @db.VarChar(255) /// @description error message
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  taskUuid String @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  taskId String @db.VarChar(36)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36) /// @description user uuid, anonymous ip, etc.
+  createdBy String    @db.VarChar(36) /// @description user id, anonymous ip, etc.
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -290,14 +292,14 @@ model TaskAction {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([tenantId])
-  @@index([taskUuid])
+  @@index([tenantPk])
+  @@index([taskId])
 }
 
 /// @DtoIgnoreModel
 model AuthToken {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
   token   String  @unique @db.VarChar(36)
   type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
@@ -319,16 +321,17 @@ enum EndpointType {
 /// @description a callgent may have multiple endpoints, including cep & sep
 model Endpoint {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
+  name       String       @default("") @db.VarChar(2047)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT
@@ -338,14 +341,14 @@ model Endpoint {
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
   priority   Int          @default(0) /// @description priority in the callgent
 
-  host       Json  @db.Json /// @description host address & configs
-  initParams Json? @db.Json /// @description initializing parameters
-  content    Json? @db.Json /// @description generated content/code by init method
+  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/api/', where `{id}` will be replaced with current endpoint id
+  initParams Json?  @db.Json /// @description initializing parameters
+  content    Json?  @db.Json /// @description generated content/code by init method
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  callgentUuid String @db.VarChar(36) /// @description callgent owning the endpoint
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  callgentId String @db.VarChar(36) /// @description callgent owning the endpoint
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -357,8 +360,8 @@ model Endpoint {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([tenantId])
-  @@index([callgentUuid])
+  @@index([tenantPk])
+  @@index([callgentId])
 }
 
 enum EndpointAuthType {
@@ -370,15 +373,15 @@ enum EndpointAuthType {
 /// @description endpoint app or user auth credentials
 model EndpointAuth {
   /// @DtoEntityHidden
-  id       Int @id @default(autoincrement())
+  pk       Int @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  endpointUuid String  @db.VarChar(36) /// @description endpoint uuid.
-  userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
+  /// @CustomValidator(EntityIdExists, 'endpoint', 'id', ../../infra/repo/validators/entity-exists.validator)
+  endpointId String  @db.VarChar(36) /// @description endpoint id.
+  userKey    String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
 
   credentials Json @db.Json /// @description auth credentials
 
@@ -388,15 +391,15 @@ model EndpointAuth {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  @@unique([endpointUuid, userKey])
-  @@index([tenantId])
-  @@index([endpointUuid])
+  @@unique([endpointId, userKey])
+  @@index([tenantPk])
+  @@index([endpointId])
 }
 
 /// @DtoIgnoreModel
 model LlmTemplate {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
   name   String @db.VarChar(32)
   prompt String @db.VarChar(4096)
@@ -410,7 +413,7 @@ model LlmTemplate {
 /// @DtoIgnoreModel
 model LlmCache {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
   name   String @db.VarChar(32)
   prompt String @db.VarChar(4096)
@@ -423,18 +426,20 @@ model LlmCache {
 
 model PersistedAsync {
   /// @DtoEntityHidden
-  id BigInt @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   statusCode Int    @default(-1) /// @description statusCode, -1: pending, 1: sent, 0: done, <-1: failed
   service    String @db.VarChar(127) /// @description callback service name
   method     String @db.VarChar(127) /// @description callback method name
 
-  parentAsyncId BigInt? @db.BigInt /// @description parent async id
+  parentPk BigInt? @db.BigInt /// @description parent async pk
 
   createdBy String    @db.VarChar(36)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime? /// @description logical deletion.
+
+  @@index(parentPk)
 }
 
 enum ServiceType {
@@ -444,17 +449,17 @@ enum ServiceType {
 
 model EventListener {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  srcUuid String @db.VarChar(36) /// @description event source id
+  srcId String @db.VarChar(36) /// @description event source id
 
   eventType String @db.VarChar(36)
   dataType  String @db.VarChar(36)
@@ -475,8 +480,8 @@ model EventListener {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  @@index([srcUuid])
-  @@index([tenantId])
+  @@index([srcId])
+  @@index([tenantPk])
 }
 
 enum EventCallbackType {
@@ -486,19 +491,19 @@ enum EventCallbackType {
 
 model EventStore {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(36)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  /// @Description src entity uuid which bind to the listener
+  /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)
-  /// @Description target uuid to relate several events
+  /// @Description target id to relate several events
   targetId     String?           @db.VarChar(36)
   eventType    String            @db.VarChar(36)
   dataType     String            @db.VarChar(36)
@@ -515,7 +520,7 @@ model EventStore {
   message          String? @db.VarChar(255)
   stopPropagation  Boolean
   defaultPrevented Boolean
-  listenerUuid     String? @db.VarChar(36)
+  listenerId       String? @db.VarChar(36)
   funName          String? @db.VarChar(255)
 
   createdAt DateTime  @default(now())
@@ -527,6 +532,5 @@ model EventStore {
 
   @@index([srcId])
   @@index([targetId])
-  @@index([tenantId])
-  @@index([uuid])
+  @@index([tenantPk])
 }

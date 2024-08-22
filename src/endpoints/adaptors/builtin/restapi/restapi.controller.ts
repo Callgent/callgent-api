@@ -35,14 +35,14 @@ export class RestApiController {
     description: 'rest-api client endpoint entry of multiple callgents',
   })
   @ApiParam({
-    name: 'uuid',
+    name: 'id',
     required: true,
-    description: "comma separated callgent uuids, eg: 'uuid1,uuid2,uuid3'. ",
+    description: "comma separated callgent ids, eg: 'id1,id2,id3'. ",
   })
   @ApiParam({
     name: 'endpoint',
     required: false,
-    description: 'endpoint uuid, optional: "/callgents/the-uuid`//`invoke/api/"',
+    description: 'endpoint id, optional: "/callgents/the-id`//`invoke/api/"',
   })
   @ApiParam({
     name: 'NOTE: swagger does not support wildcard param. Just document here',
@@ -57,10 +57,10 @@ export class RestApiController {
     description: 'progressive request responder',
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
-  @All(':uuid/:endpoint/invoke/api/*')
+  @All(':id/:endpoint/invoke/api/*')
   async execute(
     @Req() req,
-    @Param('uuid') callgentId: string,
+    @Param('id') callgentId: string,
     @Param('endpoint') endpoint?: string,
     @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
@@ -73,7 +73,7 @@ export class RestApiController {
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
-    // find callgent cep, then set tenantId
+    // find callgent cep, then set tenantPk
     const cep = await this.endpointsService.$findFirstByType(
       EndpointType.CLIENT,
       callgentId,
@@ -84,25 +84,21 @@ export class RestApiController {
       throw new NotFoundException(
         'restAPI endpoint not found for callgent: ' + callgentId,
       );
-    const callgent = await this.callgentsService.findOne(callgentId, { name: true });
-    if (!callgent) throw new NotFoundException('callgent not found: ' + callgentId);
+    const callgent = await this.callgentsService.findOne(callgentId, {
+      name: true,
+    });
+    if (!callgent)
+      throw new NotFoundException('callgent not found: ' + callgentId);
 
     const { event, statusCode, message } =
       await this.eventListenersService.emit(
-        new ClientRequestEvent(
-          cep.uuid,
-          taskId,
-          cep.adaptorKey,
-          req,
-          callback,
-          {
-            callgentId,
-            callgentName: callgent.name,
-            caller,
-            progressive,
-            funName,
-          },
-        ),
+        new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, req, callback, {
+          callgentId,
+          callgentName: callgent.name,
+          caller,
+          progressive,
+          funName,
+        }),
         // FIXME sync timeout
       );
     // FIXME data
@@ -152,7 +148,7 @@ export class RestApiController {
 
   //   const dto = await this.convertToTask(callerType, body, caller);
   //   if (!dto?.callgent)
-  //     throw new BadRequestException('callgent uuid is missing');
+  //     throw new BadRequestException('callgent id is missing');
 
   //   const [task] = await this.tasksService.create(dto);
 

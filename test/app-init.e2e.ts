@@ -129,10 +129,10 @@ export async function beforeEachFn() {
   console.log('Starting new transaction.');
 }
 
-export async function beforeEachFnTenanted(tenantId = 1) {
+export async function beforeEachFnTenanted(tenantPk = 1) {
   await prismaTestingHelper.startNewTransaction({ timeout: 888888 });
-  testApp.get(PrismaTenancyService).setTenantId(tenantId);
-  console.log('Starts test transaction, tenantId:', tenantId);
+  testApp.get(PrismaTenancyService).setTenantId(tenantPk);
+  console.log('Starts test transaction, tenantPk:', tenantPk);
 }
 
 // This function must be called after every test

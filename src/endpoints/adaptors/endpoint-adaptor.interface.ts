@@ -1,30 +1,89 @@
+import $RefParser from '@apidevtools/json-schema-ref-parser';
+import { BadRequestException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
+import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 
-export interface EndpointAdaptor {
-  preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
+export abstract class EndpointAdaptor {
+  protected readonly agentsService: AgentsService;
+  constructor(agentsService: AgentsService) {
+    this.agentsService = agentsService;
+  }
+
+  abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
   /** Endpoint config. */
-  getConfig(): EndpointConfig;
+  abstract getConfig(): EndpointConfig;
 
   /** init the endpoint. result in generated content */
-  initClient(initParams: object, endpoint: EndpointDto): Promise<string>;
-  initServer(initParams: object, endpoint: EndpointDto): Promise<string>;
-
-  /** parse api spec from text */
-  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec>;
+  abstract initClient(
+    initParams: object,
+    endpoint: EndpointDto,
+  ): Promise<string>;
+  abstract initServer(
+    initParams: object,
+    endpoint: EndpointDto,
+  ): Promise<string>;
 
   /** please declare hints in api-doc */
-  readData(name: string, hints?: { [key: string]: any }): Promise<any>;
-  invoke(params: object): Promise<any>;
+  abstract readData(name: string, hints?: { [key: string]: any }): Promise<any>;
+  abstract invoke(params: object): Promise<any>;
   /** get callback param */
-  getCallback(
+  abstract getCallback(
     callback: string,
     rawReq: unknown,
     reqEndpoint?: EndpointDto,
   ): Promise<string>;
+
   /** send response back to client */
-  callback(resp: any): Promise<boolean>;
+  abstract callback(resp: any): Promise<boolean>;
+
+  /** parse api spec from text */
+  async parseApis({ text, format }: { text: string; format?: string }) {
+    const ret: ApiSpec = { apis: [] };
+
+    if (!format || format === 'openAPI') {
+      let json = JSON.parse(text);
+      try {
+        json = await $RefParser.dereference(json);
+      } catch (err) {
+        throw new BadRequestException(err);
+      }
+      const { paths } = json;
+
+      if (paths) {
+        const ps = Object.entries(paths);
+        for (const [path, pathApis] of ps) {
+          const entries = Object.entries(pathApis);
+          for (const [method, restApi] of entries) {
+            // wrap schema
+
+            const apiName = EndpointAdaptor.formalActionName(method, path);
+            const func = await this.agentsService.api2Function(
+              'restAPI',
+              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ apiResult: any; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
+              {
+                apiName,
+                apiContent: JSON.stringify(restApi),
+              },
+            );
+            ret.apis.push({
+              name: apiName,
+              ...func,
+              content: restApi,
+            });
+          }
+        }
+      }
+
+      return ret;
+    }
+
+    throw new BadRequestException('Unsupported format: ' + format);
+  }
+
+  static formalActionName = (method, path) =>
+    `${(method || 'GET').toUpperCase()}:${path}`;
 }
 
 export interface AdaptedDataSource {}

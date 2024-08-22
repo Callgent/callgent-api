@@ -1,7 +1,7 @@
 /** through `callgent` to call method/assignee, with args */
 export class Invocation {
   /** callgent */
-  callgent: { uuid: string; name: string };
+  callgent: { id: string; name: string };
   func: string;
   /** expression referring to callgent response data */
   args?: { [key: string]: string };

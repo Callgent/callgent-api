@@ -46,7 +46,7 @@ export class AuthTokensService {
     if (authToken) {
       const expired = authToken.expiresAt < new Date();
       if (once || expired)
-        await prisma.authToken.delete({ where: { id: authToken.id } });
+        await prisma.authToken.delete({ where: { pk: authToken.pk } });
       if (!expired && !authToken.revoked)
         return authToken.payload as JwtPayload;
     }

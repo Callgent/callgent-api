@@ -7,7 +7,7 @@ import { PrismaTenancyService } from './prisma-tenancy.service';
 
 /**
  * postgres specific module.
- * automatically `SELECT set_config('tenancy.tenantId', cls.get('TENANT_ID'))`, before all operations.
+ * automatically `SELECT set_config('tenancy.tenantPk', cls.get('TENANT_ID'))`, before all operations.
  */
 @Global()
 @Module({

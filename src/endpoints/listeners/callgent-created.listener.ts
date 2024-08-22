@@ -12,7 +12,7 @@ export class CallgentCreatedListener {
     private readonly endpointsService: EndpointsService,
   ) {}
 
-  /** create a callgent with default api client endpoint, and email client/server endpoint */
+  /** create a callgent with default api client endpoint, and Email client/server endpoint */
   @Transactional()
   @OnEvent(CallgentCreatedEvent.eventName, { async: false })
   async handleEvent(event: CallgentCreatedEvent) {
@@ -25,32 +25,32 @@ export class CallgentCreatedListener {
       // API client endpoint
       this.endpointsService
         .create({
-          callgentUuid: callgent.uuid,
+          callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: {},
+          host: `/api/callgents/${callgent.id}/{id}/invoke/api/`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
-          // no await init, it may be slow, TODO: tx invalid
-          this.endpointsService.init(endpoint.uuid, []);
+          // no await init, it may be slow, init must restart a new tx
+          this.endpointsService.init(endpoint.id, []);
           return endpoint;
         }),
 
       // TODO API event endpoint
 
-      // email client endpoint
+      // Email client endpoint
       this.endpointsService
         .create({
-          callgentUuid: callgent.uuid,
+          callgentId: callgent.id,
           type: 'CLIENT',
-          adaptorKey: 'email',
-          host: { email: `callgent+${callgent.uuid}@my.callgent.com` },
+          adaptorKey: 'Email',
+          host: `callgent+${callgent.id}@my.callgent.com`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {
           // no await init, it may be slow
-          this.endpointsService.init(endpoint.uuid, []);
+          this.endpointsService.init(endpoint.id, []);
           return endpoint;
         }),
     ]);

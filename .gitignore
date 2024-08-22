@@ -5,7 +5,6 @@
 # generated files
 /src/*/dto/*.dto.ts
 /src/*/entities/*.entity.ts
-/prisma/migrations/20*
 
 # Logs
 logs

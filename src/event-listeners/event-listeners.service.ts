@@ -47,7 +47,7 @@ export class EventListenersService {
             return {
               event,
               statusCode: event.statusCode,
-              message: `Sync invocation timeout(${timeout}ms), respond via callback`,
+              message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
             };
           }),
         ])
@@ -61,13 +61,13 @@ export class EventListenersService {
   ): Promise<{ event: T; statusCode?: number; message?: string }> {
     const prisma = this.txHost.tx as PrismaClient;
     const event = await prisma.eventStore.findUnique({
-      where: { uuid: eventId },
+      where: { id: eventId },
     });
-    if (!event) throw new NotFoundException('Event not found, uuid=' + eventId);
+    if (!event) throw new NotFoundException('Event not found, id=' + eventId);
     // -1: processing, 0: done, 1: pending, >1: error
     if (event.statusCode <= 0)
       throw new BadRequestException(
-        `Cannot resume event with status ${event.statusCode}, uuid=${eventId}`,
+        `Cannot resume event with status ${event.statusCode}, id=${eventId}`,
       );
 
     const listeners = await this.resumeListeners(event);
@@ -128,7 +128,7 @@ export class EventListenersService {
       } finally {
         const nextListener =
           statusCode > 0 ? listener : statusCode == 0 ? null : listeners[idx];
-        await this.upsertEvent(event, funName, nextListener?.uuid, statusCode);
+        await this.upsertEvent(event, funName, nextListener?.id, statusCode);
       }
     }
     return { event, statusCode };
@@ -142,12 +142,12 @@ export class EventListenersService {
     },
     deleted = false,
   ) {
-    const { srcId: srcUuid, eventType, dataType } = event;
+    const { srcId: srcId, eventType, dataType } = event;
 
     const prisma = this.txHost.tx as PrismaClient;
     const AND: Prisma.EventListenerWhereInput[] = [
       {
-        OR: [{ srcUuid }, { tenantId: 0, srcUuid: 'GLOBAL' }],
+        OR: [{ srcId }, { tenantPk: 0, srcId: 'GLOBAL' }],
       },
       { OR: [{ eventType }, { dataType }] },
     ];
@@ -166,7 +166,7 @@ export class EventListenersService {
       .sort((a, b) => {
         const diff =
           a.priority - b.priority ||
-          (a.srcUuid === 'GLOBAL' ? -1 : 1) - (b.srcUuid === 'GLOBAL' ? -1 : 1);
+          (a.srcId === 'GLOBAL' ? -1 : 1) - (b.srcId === 'GLOBAL' ? -1 : 1);
         return diff;
       });
     if (!listeners.length)
@@ -176,16 +176,16 @@ export class EventListenersService {
     return listeners;
   }
 
-  /** load listeners by event id after event.listenerUuid[including] */
+  /** load listeners by event id after event.listenerId[including] */
   async resumeListeners(event: EventStore) {
     let listeners = await this.loadListeners(event, true);
-    if (event.listenerUuid) {
+    if (event.listenerId) {
       const idx = listeners.findIndex(
-        (listener) => listener.uuid === event.listenerUuid,
+        (listener) => listener.id === event.listenerId,
       );
       if (idx < 0)
         throw new NotFoundException(
-          `Invalid listener uuid ${event.listenerUuid} for event ${event.uuid}`,
+          `Invalid listener id ${event.listenerId} for event ${event.id}`,
         );
 
       listeners = listeners.splice(0, idx);
@@ -205,26 +205,26 @@ export class EventListenersService {
     }
   }
   protected async _invokeService<T extends EventObject>(
-    target: { uuid: string; serviceName: string; funName: string },
+    target: { id: string; serviceName: string; funName: string },
     event: EventObject,
     funName?: string,
   ): Promise<{ event: T; funName?: string }> {
     const service = this.moduleRef.get(target.serviceName, { strict: false });
     if (!service)
       throw new Error(
-        `Service ${target.serviceName} not found for event listener#${target.uuid}`,
+        `Service ${target.serviceName} not found for event listener#${target.id}`,
       );
     const fun = service[funName || target.funName];
     if (!fun)
       throw new Error(
-        `Service ${target.serviceName}.${target.funName} not found for event listener#${target.uuid}`,
+        `Service ${target.serviceName}.${target.funName} not found for event listener#${target.id}`,
       );
 
     return fun.apply(service, [event]);
   }
 
   protected async _invokeCallgent<T extends EventObject>(
-    target: { uuid: string; serviceName: string; funName: string },
+    target: { id: string; serviceName: string; funName: string },
     event: T,
     funName?: string,
   ): Promise<{ event: T; funName?: string }> {
@@ -236,9 +236,9 @@ export class EventListenersService {
     data.eventType || (data.eventType = '*');
     data.dataType || (data.dataType = '*');
 
-    const uuid = Utils.uuid();
+    const id = Utils.uuid();
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.eventListener.create({ data: { ...data, uuid, createdBy } });
+    return prisma.eventListener.create({ data: { ...data, id, createdBy } });
   }
 
   @Transactional()
@@ -254,7 +254,7 @@ export class EventListenersService {
   upsertEvent(
     event: EventObject,
     funName: string,
-    listenerUuid: string,
+    listenerId: string,
     status: number,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
@@ -262,11 +262,11 @@ export class EventListenersService {
     const data: Prisma.EventStoreCreateInput = {
       ...event,
       funName,
-      listenerUuid,
+      listenerId,
     };
     delete (data as any).rawReq;
     return prisma.eventStore.upsert({
-      where: { uuid: event.uuid },
+      where: { id: event.id },
       create: data,
       update: data,
     });

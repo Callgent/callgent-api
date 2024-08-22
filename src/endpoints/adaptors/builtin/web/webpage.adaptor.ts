@@ -1,15 +1,20 @@
+import { Inject } from '@nestjs/common';
+import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  AdaptedDataSource,
   ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
 
 @EndpointAdaptorName('webpage', 'both')
-export class WebpageAdaptor implements EndpointAdaptor {
+export class WebpageAdaptor extends EndpointAdaptor {
+  constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
+    super(agentsService);
+  }
+
   getCallback(
     callback: string,
     rawReq: object,

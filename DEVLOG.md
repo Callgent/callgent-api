@@ -32,7 +32,7 @@ npx prisma db seed # init db data
 
 - init db test data
 ```shell
-pnpm run prisma:seed:test # init db test data
+pnpm run prisma:seed-test # init db test data
 ```
 
 - start server
@@ -80,24 +80,24 @@ npx prisma migrate dev --name init
 ```
 
 ### multi-tenancy
-1. write default value for `tenancy.tenantId` in db
+1. write default value for `tenancy.tenantPk` in db
   ```text
-  tenantId Int  @default(dbgenerated("(current_setting('tenancy.tenantId'))::int"))
+  tenantPk Int  @default(dbgenerated("(current_setting('tenancy.tenantPk'))::int"))
   ```
 
-2. enable postgres row level security(RLS), so that we can filter data by `tenantId` automatically:
+2. enable postgres row level security(RLS), so that we can filter data by `tenantPk` automatically:
    config in prisma/migrations/01_row_level_security/migration.sql,
    @see <https://github.com/prisma/prisma-client-extensions/tree/main/row-level-security>
 
-3. set `tenantId` into `cls` context:
+3. set `tenantPk` into `cls` context:
    ```ts
    cls.set('TENANT_ID', ..
    ```
 
-4. extend `PrismaClient` to set `tenantId` before any query
+4. extend `PrismaClient` to set `tenantPk` before any query
 
    ```sql
-   SELECT set_config('tenancy.tenantId', cls.get('TENANT_ID') ...
+   SELECT set_config('tenancy.tenantPk', cls.get('TENANT_ID') ...
    ```
 
 5. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
@@ -124,9 +124,9 @@ all validation is based on bearer token, with payload:
 
   ```js
   {
-    sub: user.id.toString(),
-    iss: user.tenantId.toString(),
-    aud: user.uuid,
+    sub: user.pk.toString(),
+    iss: user.tenantPk.toString(),
+    aud: user.id,
   }
   ```
 
@@ -219,8 +219,8 @@ export class CreateTaskDto {
   // ...
 
   // automatically validation check if the callgent exists in db on controller requesting
-  @EntityIdExists('callgent', 'uuid') // @EntityIdExists('entityType', 'fieldName')
-  callgentUuid: string;
+  @EntityIdExists('callgent', 'id') // @EntityIdExists('entityType', 'fieldName')
+  callgentId: string;
 }
 ```
 
@@ -231,8 +231,8 @@ Based on `prisma-generator-nestjs-dto`, you may also annotate this decorator in 
 ```prisma
 model Task {
   // ...
-  /// @CustomValidator(EntityIdExists, 'callgent', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  callgentUuid String @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  callgentId String @db.VarChar(36)
 }
 ```
 
@@ -240,10 +240,10 @@ This makes the generated DTO to be annotated with `@EntityIdExists` decorator.
 
 #### Retrieves the entity instance
 
-This makes sure the `callgentUuid` field is a valid UUID of a callgent in the database.  
+This makes sure the `callgentId` field is a valid UUID of a callgent in the database.  
 you can retrieve the entity instance directly from the dto:
 
 ```typescript
-const callgent = EntityIdExists.entity<Callgent>(dto, 'callgentUuid') ||
-          (await prisma.callgent.findUnique({ where: {uuid: dto.callgentUuid} }));
+const callgent = EntityIdExists.entity<Callgent>(dto, 'callgentId') ||
+          (await prisma.callgent.findUnique({ where: {id: dto.callgentId} }));
 ```

@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   ApiBody,
   ApiConsumes,
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
@@ -63,10 +64,10 @@ export class UsersController {
   @UseGuards(new JwtGuard(true))
   @Get('info')
   async findOne(@Req() req) {
-    const uuid = req.user?.sub;
-    if (!uuid) return { data: null };
+    const id = req.user?.sub;
+    if (!id) return { data: null };
 
-    const user = await this.userService.findOne(uuid);
+    const user = await this.userService.findOne(id);
     const token = user
       ? req.headers.authorization?.split(' ')[1] ||
         req.cookies[AuthUtils.getAuthCookieName(this.configService)]
@@ -78,9 +79,9 @@ export class UsersController {
   @ApiOperation({
     summary: 'Reset password by sending validation email with reset url',
   })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { type: 'boolean' } } },
       ],
@@ -89,8 +90,8 @@ export class UsersController {
   @UseGuards(new JwtGuard(true))
   @Post('send-confirm-email')
   async sendConfirmEmail(@Body() vo: ValidationEmailVo, @Req() req) {
-    const uuid = req.user?.sub;
-    const sent = await this.userService.sendValidationEmail(vo, uuid);
+    const id = req.user?.sub;
+    const sent = await this.userService.sendValidationEmail(vo, id);
 
     return { data: sent };
   }

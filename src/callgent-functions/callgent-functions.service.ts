@@ -21,8 +21,11 @@ export class CallgentFunctionsService {
     private readonly endpointsService: EndpointsService,
   ) {}
   protected readonly defSelect: Prisma.CallgentFunctionSelect = {
-    id: false,
-    tenantId: false,
+    pk: false,
+    tenantPk: false,
+    fullCode: false,
+    content: false,
+    callgentId: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -36,13 +39,13 @@ export class CallgentFunctionsService {
     // TODO if too many functions, use summary first
     const { data: funcs } = await this.findAll({
       select: { createdAt: false, updatedAt: false },
-      where: { callgentUuid: callgentId, name: funName },
+      where: { callgentId: callgentId, name: funName },
       perPage: Number.MAX_SAFE_INTEGER,
     });
     if (!funcs.length)
       throw new BadRequestException(
         `No function found on callgent#${callgentId}${
-          funName ? 'name=' + funName : ''
+          funName ? ' name=' + funName : ''
         }`,
       );
     reqEvent.context.functions = funcs as any[];
@@ -83,7 +86,7 @@ export class CallgentFunctionsService {
   async createBatch(endpoint: EndpointDto, spec: ApiSpec, createdBy: string) {
     if (endpoint.type != 'SERVER')
       throw new BadRequestException(
-        'endpoint must be of type `SERVER`, uuid=' + endpoint.uuid,
+        'endpoint must be of type `SERVER`, id=' + endpoint.id,
       );
 
     const { apis } = spec;
@@ -92,9 +95,12 @@ export class CallgentFunctionsService {
       (e) => {
         return {
           ...e,
-          uuid: Utils.uuid(),
-          endpointUuid: endpoint.uuid,
-          callgentUuid: endpoint.callgentUuid,
+          id: Utils.uuid(),
+          funName: e.name,
+          documents: e.content.summary,
+          fullCode: '',
+          endpointId: endpoint.id,
+          callgentId: endpoint.callgentId,
           createdBy: createdBy,
         };
       },
@@ -153,42 +159,50 @@ export class CallgentFunctionsService {
     );
   }
 
-  findMany(args: {
+  findMany({
+    select,
+    where,
+    orderBy,
+  }: {
     select?: Prisma.CallgentFunctionSelect;
     where?: Prisma.CallgentFunctionWhereInput;
     orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.callgentFunction.findMany({ ...args });
+    return selectHelper(
+      select,
+      (select) => prisma.callgentFunction.findMany({ where, select, orderBy }),
+      this.defSelect,
+    );
   }
 
   @Transactional()
-  delete(uuid: string) {
+  delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.callgentFunction.delete({ select, where: { uuid } }),
+      prisma.callgentFunction.delete({ select, where: { id } }),
     );
   }
 
   @Transactional()
   update(dto: UpdateCallgentFunctionDto) {
-    if (!dto.uuid) return;
+    if (!dto.id) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.callgentFunction.update({
         select,
-        where: { uuid: dto.uuid },
+        where: { id: dto.id },
         data: dto,
       }),
     );
   }
 
-  findOne(uuid: string) {
+  findOne(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.callgentFunction.findUnique({
         select,
-        where: { uuid },
+        where: { id },
       }),
     );
   }

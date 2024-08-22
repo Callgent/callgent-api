@@ -1,11 +1,9 @@
-import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, Inject } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
@@ -30,10 +28,10 @@ class ResponseJson {
 }
 
 @EndpointAdaptorName('restAPI', 'both')
-export class RestAPIAdaptor implements EndpointAdaptor {
-  constructor(
-    @Inject('AgentsService') private readonly agentsService: AgentsService,
-  ) {}
+export class RestAPIAdaptor extends EndpointAdaptor {
+  constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
+    super(agentsService);
+  }
 
   getConfig(): EndpointConfig {
     return {
@@ -159,50 +157,6 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     reqEvent.data.req = this.req2Json(reqEvent.rawReq);
   }
 
-  async parseApis(apiTxt: { text: string; format?: string }) {
-    const ret: ApiSpec = { apis: [] };
-
-    const { text, format } = apiTxt;
-    if (!format || format === 'openAPI') {
-      let json = JSON.parse(text);
-      try {
-        json = await $RefParser.dereference(json);
-      } catch (err) {
-        throw new BadRequestException(err);
-      }
-      const { paths } = json;
-
-      if (paths) {
-        const ps = Object.entries(paths);
-        for (const [path, pathApis] of ps) {
-          const entries = Object.entries(pathApis);
-          for (const [method, restApi] of entries) {
-            // wrap schema
-
-            const apiName = RestAPIAdaptor.formalActionName(method, path);
-            const func = await this.agentsService.api2Function(
-              'restAPI',
-              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ apiResult: any; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
-              {
-                apiName,
-                apiContent: JSON.stringify(restApi),
-              },
-            );
-            ret.apis.push({
-              name: apiName,
-              ...func,
-              content: restApi,
-            });
-          }
-        }
-      }
-
-      return ret;
-    }
-
-    throw new BadRequestException('Unsupported format: ' + format);
-  }
-
   // async invoke() {}
 
   async getCallback(
@@ -218,7 +172,7 @@ export class RestAPIAdaptor implements EndpointAdaptor {
     const { method, headers: rawHeaders, query, body, raw } = request;
     if (request.url.indexOf('/invoke/api/') < 0)
       throw new Error(
-        'Unsupported URL, should be /callgents/:uuids/:endpoint/invoke/api/*',
+        'Unsupported URL, should be /callgents/:ids/:endpoint/invoke/api/*',
       );
     const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
 
@@ -262,7 +216,4 @@ export class RestAPIAdaptor implements EndpointAdaptor {
   callback(resp: any): Promise<boolean> {
     throw new Error('Method not implemented.');
   }
-
-  static formalActionName = (method, path) =>
-    `${(method || 'GET').toUpperCase()}:${path}`;
 }

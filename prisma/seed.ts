@@ -28,10 +28,10 @@ function initEventListeners() {
     priority = -100;
   const els: Prisma.EventListenerUncheckedCreateInput[] = [
     {
-      id: elId++,
-      uuid: 'CR-ADAPTOR-PREPROCESS',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
+      pk: elId++,
+      id: 'CR-ADAPTOR-PREPROCESS',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -41,10 +41,10 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      id: elId++,
-      uuid: 'CR-LOAD-FUNCTIONS',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
+      pk: elId++,
+      id: 'CR-LOAD-FUNCTIONS',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -54,10 +54,10 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      id: elId++,
-      uuid: 'CR-LOAD-TARGET',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
+      pk: elId++,
+      id: 'CR-LOAD-TARGET',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -67,10 +67,10 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      id: elId++,
-      uuid: 'CR-MAP-2-FUNCTION',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
+      pk: elId++,
+      id: 'CR-MAP-2-FUNCTION',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -80,10 +80,10 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      id: elId++,
-      uuid: 'CR-MAP-2-ARGS',
-      srcUuid: 'GLOBAL',
-      tenantId: 0,
+      pk: elId++,
+      id: 'CR-MAP-2-ARGS',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -93,10 +93,10 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     // {
-    //   id: elId++,
-    //   uuid: 'PR-MAP-2-ARGS',
-    //   srcUuid: 'GLOBAL',
-    //   tenantId: 0,
+    //   pk: elId++,
+    //   id: 'PR-MAP-2-ARGS',
+    //   srcId: 'GLOBAL',
+    //   tenantPk: 0,
     //   eventType: 'CLIENT_REQUEST',
     //   dataType: '*',
     //   serviceType: 'SERVICE',
@@ -110,7 +110,7 @@ function initEventListeners() {
   return els.map((el) =>
     prisma.eventListener
       .upsert({
-        where: { id: el.id },
+        where: { pk: el.pk },
         update: el,
         create: el,
       })
@@ -121,7 +121,7 @@ function initEventListeners() {
 async function initLlmTemplates() {
   const llmTemplates: Prisma.LlmTemplateUncheckedCreateInput[] = [
     {
-      id: 1,
+      pk: 1,
       name: 'api2Function',
       prompt: `Please convert below API doc of format {{=it.format}}:
 { "{{=it.apiName}}": {{=it.apiContent}} }
@@ -134,7 +134,7 @@ please generate the js function with **full implementation and error handling**!
 {"funName":"function name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
     },
     {
-      id: 2,
+      pk: 2,
       name: 'map2Function',
       prompt: `given below service functions:
 class {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
@@ -159,7 +159,7 @@ output a single-line json object:
   return llmTemplates.map((llmTpl) =>
     prisma.llmTemplate
       .upsert({
-        where: { id: llmTpl.id },
+        where: { pk: llmTpl.pk },
         update: llmTpl,
         create: llmTpl,
       })

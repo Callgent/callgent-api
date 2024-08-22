@@ -11,7 +11,7 @@ import { EventObject } from '../../event-listeners/event-object';
  */
 export class ClientRequestEvent extends EventObject {
   constructor(
-    /** client endpoint uuid */
+    /** client endpoint id */
     cepId: string,
     /** empty to create new task */
     taskId: string,
