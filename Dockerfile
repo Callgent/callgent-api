@@ -5,6 +5,8 @@ WORKDIR /app
 
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
+COPY pnpm-lock.yaml ./
+COPY prisma ./prisma/
 
 # Install app dependencies
 RUN npm install -g pnpm
@@ -14,7 +16,18 @@ COPY . .
 
 # Generate Prisma client using the Prisma CLI.
 RUN npx prisma generate
-RUN pnpm run build
+RUN pnpm build
+
+FROM node:18.19.1
+RUN npm install -g pnpm
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY .env* ./
 
 EXPOSE 3000
-CMD [ "pnpm", "run", "start:prod" ]
+CMD /bin/bash -c "npx prisma migrate deploy && pnpm start:prod"
