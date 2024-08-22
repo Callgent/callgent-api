@@ -25,8 +25,9 @@ WORKDIR /app
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
+COPY .env.dev ./
 
 EXPOSE 3000
-CMD /bin/bash -c "npx prisma migrate deploy && pnpm start:prod"
+CMD /bin/bash -c "if [ -n "$DATABASE_URL" ]; then echo "" >> .env; echo "DATABASE_URL=$DATABASE_URL" >> .env fi ; npx prisma migrate deploy && pnpm start:prod"
