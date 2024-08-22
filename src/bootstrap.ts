@@ -76,7 +76,6 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   const configService = app.get(ConfigService);
-  this.logger.info(configService.get('DATABASE_URL'));
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
       origin: [
