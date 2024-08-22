@@ -30,4 +30,4 @@ COPY --from=builder /app/dist ./dist
 COPY .env.dev ./
 
 EXPOSE 3000
-CMD /bin/bash -c 'if [ -n "$DATABASE_URL" ]; then echo "" >> .env; echo "DATABASE_URL=$DATABASE_URL" >> .env fi ; npx prisma migrate deploy && pnpm start:prod'
+CMD /bin/bash -c 'if [ -n "$DATABASE_URL" ]; then echo "" >> .env; echo "DATABASE_URL=$DATABASE_URL" >> .env; fi ; npx prisma migrate deploy && pnpm start:prod'
