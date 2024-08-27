@@ -33,7 +33,7 @@ import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
 
 export class CallgentApis extends ApiSpec {
   @EntityIdExists('endpoint', 'id')
-  endpoint: string;
+  endpointId: string;
 }
 
 export class CallgentApiText {
@@ -43,7 +43,7 @@ export class CallgentApiText {
   })
   @IsNotEmpty()
   @EntityIdExists('endpoint', 'id')
-  endpoint: string;
+  endpointId: string;
 
   @ApiProperty({
     required: true,
@@ -82,7 +82,7 @@ export class CallgentFunctionsController {
     @Body()
     apis: CallgentApis,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpoint');
+    const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpointId');
     return {
       data: await this.callgentFunctionService.createBatch(
         endpoint,
@@ -102,7 +102,7 @@ export class CallgentFunctionsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
+    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpointId');
     return {
       data: await this.callgentFunctionService.importBatch(
         endpoint,

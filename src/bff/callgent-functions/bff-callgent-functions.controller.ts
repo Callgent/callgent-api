@@ -21,7 +21,7 @@ export class BffCallgentFunctionsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpoint');
+    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpointId');
     await this.callgentFunctionService.importBatch(
       endpoint,
       apiTxt,

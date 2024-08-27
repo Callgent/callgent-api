@@ -37,9 +37,6 @@ ALTER TABLE "EndpointAuth" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting(
 ALTER TABLE "EventListener" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
 
 -- AlterTable
-ALTER TABLE "EventStore" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
 ALTER TABLE "Task" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
 
 -- AlterTable
@@ -103,7 +100,7 @@ CREATE TABLE "LlmTemplate" (
 
 -- CreateTable
 CREATE TABLE "LlmCache" (
-    "pk" SERIAL NOT NULL,
+    "pk" BIGSERIAL NOT NULL,
     "name" VARCHAR(32) NOT NULL,
     "prompt" VARCHAR(4096) NOT NULL,
     "result" VARCHAR(4096) NOT NULL,
@@ -207,9 +204,6 @@ CREATE INDEX "EventStore_srcId_idx" ON "EventStore"("srcId");
 
 -- CreateIndex
 CREATE INDEX "EventStore_targetId_idx" ON "EventStore"("targetId");
-
--- CreateIndex
-CREATE INDEX "EventStore_tenantPk_idx" ON "EventStore"("tenantPk");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Task_id_key" ON "Task"("id");

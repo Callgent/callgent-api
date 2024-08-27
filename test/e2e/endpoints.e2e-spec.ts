@@ -64,7 +64,7 @@ export const prepareCannyCallgent = async () => {
   const {
     json: { data: functionCount },
   } = await addCallgentFunctions({
-    endpoint: serverEndpoint.id,
+    endpointId: serverEndpoint.id,
     text: jsonData,
     format: 'openAPI',
   });

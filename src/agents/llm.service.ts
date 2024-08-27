@@ -1,4 +1,4 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +24,7 @@ export class LLMService {
    * @param args  prompt args
    * @param returnType if not empty, try to parse the response as the specified json
    */
+  @Transactional()
   async template<T>(
     template: string,
     args: { [key: string]: any },
@@ -57,7 +58,7 @@ export class LLMService {
       this._checkJsonType(returnType, ret, isArray);
     }
 
-    if (notCached) this._llmCache(template, prompt, result);
+    if (notCached) await this._llmCache(template, prompt, result);
 
     return ret;
   }

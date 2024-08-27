@@ -64,7 +64,10 @@ export class AgentsService {
     reqEvent.context.function = mapped;
 
     if (mapped.question) {
-      if (!progressive) throw new BadRequestException(mapped.question);
+      if (!progressive)
+        throw new BadRequestException(
+          'Question from service: ' + mapped.question,
+        );
 
       // emit progressive requesting event
       const { event: prEvent, statusCode } =

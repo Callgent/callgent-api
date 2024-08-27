@@ -413,7 +413,7 @@ model LlmTemplate {
 /// @DtoIgnoreModel
 model LlmCache {
   /// @DtoEntityHidden
-  pk Int @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   name   String @db.VarChar(32)
   prompt String @db.VarChar(4096)
@@ -491,15 +491,11 @@ enum EventCallbackType {
 
 model EventStore {
   /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   id       String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)
@@ -532,5 +528,4 @@ model EventStore {
 
   @@index([srcId])
   @@index([targetId])
-  @@index([tenantPk])
 }

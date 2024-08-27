@@ -13,7 +13,12 @@ export const mainPrismaServiceOptions = (
 ): PrismaServiceOptions => {
   const logLevels = config.get('LOG_LEVELS_PRISMA');
   return {
-    prismaOptions: { log: logLevels ? JSON.parse(logLevels) : [] },
+    prismaOptions: {
+      log: logLevels ? JSON.parse(logLevels) : [],
+      transactionOptions: {
+        timeout: parseInt(config.get('PRISMA_TRANSACTION_TIMEOUT', '5000')),
+      },
+    },
     middlewares: [
       loggingMiddleware({
         logger: new Logger('Prisma'),

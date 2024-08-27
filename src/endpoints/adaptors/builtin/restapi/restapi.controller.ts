@@ -40,7 +40,7 @@ export class RestApiController {
     description: "comma separated callgent ids, eg: 'id1,id2,id3'. ",
   })
   @ApiParam({
-    name: 'endpoint',
+    name: 'endpointId',
     required: false,
     description: 'endpoint id, optional: "/callgents/the-id`//`invoke/api/"',
   })
@@ -57,16 +57,18 @@ export class RestApiController {
     description: 'progressive request responder',
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
-  @All(':id/:endpoint/invoke/api/*')
+  @ApiHeader({ name: 'x-callgent-timeout', required: false })
+  @All(':id/:endpointId/invoke/api/*')
   async execute(
     @Req() req,
     @Param('id') callgentId: string,
-    @Param('endpoint') endpoint?: string,
+    @Param('endpointId') endpointId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
+    @Headers('x-callgent-timeout') timeout?: string,
   ) {
-    const basePath = `${callgentId}/${endpoint}/invoke/api/`;
+    const basePath = `${callgentId}/${endpointId}/invoke/api/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName)
       funName = RestAPIAdaptor.formalActionName(req.method, '/' + funName);
@@ -78,7 +80,7 @@ export class RestApiController {
       EndpointType.CLIENT,
       callgentId,
       'restAPI',
-      endpoint,
+      endpointId,
     );
     if (!cep)
       throw new NotFoundException(
@@ -99,7 +101,7 @@ export class RestApiController {
           progressive,
           funName,
         }),
-        // FIXME sync timeout
+        parseInt(timeout) || 0, //  sync timeout
       );
     // FIXME data
     if (statusCode < 400) return { event, statusCode, message };

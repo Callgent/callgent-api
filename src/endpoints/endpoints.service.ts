@@ -111,11 +111,11 @@ export class EndpointsService {
     type: EndpointType,
     callgentId: string,
     adaptorKey: string,
-    endpoint?: string,
+    endpointId?: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, callgentId, adaptorKey, endpoint).then(
+      this.findFirstByType(type, callgentId, adaptorKey, endpointId).then(
         async (v) => {
           v && this.tenancyService.setTenantId(v.tenantPk);
           await this.tenancyService.bypassTenancy(prisma, false);

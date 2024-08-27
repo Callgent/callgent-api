@@ -121,9 +121,8 @@ CREATE TABLE "EndpointAuth" (
 
 -- CreateTable
 CREATE TABLE "EventStore" (
-    "pk" SERIAL NOT NULL,
+    "pk" BIGSERIAL NOT NULL,
     "id" VARCHAR(36) NOT NULL,
-    "tenantPk" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
     "srcId" VARCHAR(36) NOT NULL,
     "targetId" VARCHAR(36),
     "eventType" VARCHAR(36) NOT NULL,
@@ -220,7 +219,6 @@ ALTER TABLE "CallgentFunction" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Endpoint" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "EndpointAuth" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "EventListener" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "EventStore" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Task" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "TaskAction" ENABLE ROW LEVEL SECURITY;
 
@@ -232,7 +230,6 @@ ALTER TABLE "CallgentFunction" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "Endpoint" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "EndpointAuth" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "EventListener" FORCE ROW LEVEL SECURITY;
-ALTER TABLE "EventStore" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "Task" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "TaskAction" FORCE ROW LEVEL SECURITY;
 
@@ -244,7 +241,6 @@ CREATE POLICY tenant_isolation_policy ON "CallgentFunction" USING (("tenantPk" =
 CREATE POLICY tenant_isolation_policy ON "Endpoint" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
 CREATE POLICY tenant_isolation_policy ON "EndpointAuth" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
 CREATE POLICY tenant_isolation_policy ON "EventListener" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
-CREATE POLICY tenant_isolation_policy ON "EventStore" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
 CREATE POLICY tenant_isolation_policy ON "Task" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
 CREATE POLICY tenant_isolation_policy ON "TaskAction" USING (("tenantPk" = 0) OR ("tenantPk" = current_setting('tenancy.tenantPk', TRUE)::int));
 
@@ -256,6 +252,5 @@ CREATE POLICY bypass_rls_policy ON "CallgentFunction" USING (current_setting('te
 CREATE POLICY bypass_rls_policy ON "Endpoint" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
 CREATE POLICY bypass_rls_policy ON "EndpointAuth" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
 CREATE POLICY bypass_rls_policy ON "EventListener" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
-CREATE POLICY bypass_rls_policy ON "EventStore" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
 CREATE POLICY bypass_rls_policy ON "Task" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
 CREATE POLICY bypass_rls_policy ON "TaskAction" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');

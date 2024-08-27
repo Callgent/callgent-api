@@ -98,7 +98,7 @@ export class CallgentFunctionsService {
           id: Utils.uuid(),
           funName: e.name,
           documents: e.content.summary,
-          fullCode: '',
+          fullCode: e.fullCode,
           endpointId: endpoint.id,
           callgentId: endpoint.callgentId,
           createdBy: createdBy,

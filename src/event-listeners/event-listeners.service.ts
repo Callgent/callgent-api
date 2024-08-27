@@ -45,7 +45,7 @@ export class EventListenersService {
           result,
           Utils.sleep(timeout).then(() => {
             return {
-              event,
+              event: { ...event, rawReq: undefined },
               statusCode: event.statusCode,
               message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
             };

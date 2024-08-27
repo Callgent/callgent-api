@@ -47,7 +47,7 @@ export abstract class EndpointAdaptor {
       try {
         json = await $RefParser.dereference(json);
       } catch (err) {
-        throw new BadRequestException(err);
+        throw new BadRequestException('Only openAPI.JSON is supported');
       }
       const { paths } = json;
 
@@ -79,7 +79,7 @@ export abstract class EndpointAdaptor {
       return ret;
     }
 
-    throw new BadRequestException('Unsupported format: ' + format);
+    throw new BadRequestException('Only openAPI.JSON is supported');
   }
 
   static formalActionName = (method, path) =>
