@@ -61,7 +61,7 @@ export class AgentsService {
       },
       { funName: '', mapping: '', question: '' },
     ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
-    reqEvent.context.function = mapped;
+    reqEvent.context.map2Function = mapped;
 
     if (mapped.question) {
       if (!progressive)
@@ -81,6 +81,13 @@ export class AgentsService {
       if (statusCode == 1)
         return { event: reqEvent, callbackName: 'map2FunctionProgressive' };
       throw new HttpException(prEvent.message, statusCode);
+    } else {
+      const functions = reqEvent.context.functions.filter(
+        (f) => f.name == mapped.funName,
+      );
+      if (functions?.length != 1)
+        throw new BadRequestException('Failed to map to function: ' + mapped);
+      reqEvent.context.functions = functions;
     }
   }
 

@@ -468,6 +468,7 @@ model EventListener {
   serviceType ServiceType // callgent, service
   serviceName String      @db.VarChar(255)
   funName     String      @db.VarChar(255)
+  description String      @default("") @db.VarChar(2000)
   // TODO add the listener's input/output props in event.context, for automatic checking
 
   /// @DtoReadOnly
@@ -491,11 +492,11 @@ enum EventCallbackType {
 
 model EventStore {
   /// @DtoEntityHidden
-  pk       BigInt @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
+  id String @unique @db.VarChar(36)
 
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)

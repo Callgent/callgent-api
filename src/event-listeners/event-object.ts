@@ -18,7 +18,7 @@ export class EventObject {
   }
   public readonly id: string;
   public statusCode = -1; // for response only
-  public readonly context: { [key: string]: JsonValue } = {};
+  public readonly context: { [key: string]: any } = {};
   public message: string;
   public stopPropagation = false;
   public defaultPrevented = false;

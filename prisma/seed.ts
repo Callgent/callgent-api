@@ -37,6 +37,7 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'EndpointsService',
       funName: 'preprocessClientRequest',
+      description: 'Find the CEP, then preprocess the request',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -50,6 +51,8 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'CallgentFunctionsService',
       funName: 'loadFunctions',
+      description:
+        'Load all entries of the callgent into event.context.functions',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -63,6 +66,8 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'EventStoresService',
       funName: 'loadTargetEvents',
+      description:
+        'Load all events of same targetId into event.context.tgtEvents',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -76,6 +81,8 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'AgentsService',
       funName: 'map2Function',
+      description:
+        'Map the request event to a endpoint function, put into event.context.map2Function and event.context.functions[0]',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -89,6 +96,7 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'SandBoxService',
       funName: 'map2Args',
+      description: 'Map the request event to the function arguments',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
