@@ -174,6 +174,7 @@ model Callgent {
   @@index([tenantPk])
 }
 
+/// @description callgent function in openAPI.json format
 model CallgentFunction {
   /// @DtoEntityHidden
   pk       Int    @id @default(autoincrement())
@@ -186,16 +187,14 @@ model CallgentFunction {
   // add to migration.sql
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  name      String   @db.VarChar(255)
-  /// @description js function name to invoke this callgent function
-  funName   String   @db.VarChar(255)
-  params    String[] @db.VarChar(31)
-  /// @description js function api docs
-  documents String   @db.VarChar(4095)
-  /// @description js actual code to invoke this callgent function
-  fullCode  String   @db.VarChar(1023)
-  /// @description endpoint id or command or code
-  content   Json     @db.Json
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  name      String @db.VarChar(1023) /// @description `${method} ${path}`
+  path      String @db.VarChar(1000) /// @description openAPI path
+  method    String @db.VarChar(15) /// @description openAPI method
+  summary   String @default("") @db.VarChar(1023)
+  signature Json   @db.Json /// @description declaration of API params and responses
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)

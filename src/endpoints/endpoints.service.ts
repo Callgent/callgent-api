@@ -275,12 +275,14 @@ export class EndpointsService {
     throw new NotFoundException(`Endpoint not found, id=${id}`);
   }
 
+  /** parse APIs to openAPI.json format */
   async parseApis(
     endpoint: EndpointDto,
-    apiTxt: { text: string; format?: string },
+    apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
   ) {
     const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
-    return adaptor.parseApis(apiTxt);
+    // TODO read endpoint.components
+    return adaptor.parseApis(apiTxt); //, endpoint.components);
   }
 
   /** preprocess req from cep, by adaptor */

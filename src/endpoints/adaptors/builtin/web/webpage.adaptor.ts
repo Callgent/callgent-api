@@ -4,7 +4,6 @@ import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  ApiSpec,
   EndpointAdaptor,
   EndpointConfig,
 } from '../../endpoint-adaptor.interface';
@@ -85,10 +84,6 @@ export class WebpageAdaptor extends EndpointAdaptor {
 
   async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
     //
-  }
-
-  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {
-    throw new Error('Method not implemented.');
   }
 
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {

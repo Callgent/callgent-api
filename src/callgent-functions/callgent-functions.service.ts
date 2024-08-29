@@ -2,7 +2,7 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -23,8 +23,7 @@ export class CallgentFunctionsService {
   protected readonly defSelect: Prisma.CallgentFunctionSelect = {
     pk: false,
     tenantPk: false,
-    fullCode: false,
-    content: false,
+    signature: false,
     callgentId: false,
     createdBy: false,
     deletedAt: false,
@@ -92,18 +91,14 @@ export class CallgentFunctionsService {
     const { apis } = spec;
     // validation
     const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>(
-      (e) => {
-        return {
-          ...e,
-          id: Utils.uuid(),
-          funName: e.name,
-          documents: e.content.summary,
-          fullCode: e.fullCode,
-          endpointId: endpoint.id,
-          callgentId: endpoint.callgentId,
-          createdBy: createdBy,
-        };
-      },
+      (f) => ({
+        ...f,
+        id: Utils.uuid(),
+        name: Utils.formalApiName(f.method, f.path),
+        endpointId: endpoint.id,
+        callgentId: endpoint.callgentId,
+        createdBy: createdBy,
+      }),
     );
 
     const prisma = this.txHost.tx as PrismaClient;
@@ -116,9 +111,14 @@ export class CallgentFunctionsService {
   @Transactional()
   async importBatch(
     endpoint: EndpointDto,
-    apiTxt: { text: string; format?: string },
+    apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
     createdBy: string,
   ) {
+    if (endpoint?.type != EndpointType.SERVER)
+      throw new BadRequestException(
+        'Function entries can only be imported into Server Endpoint. ',
+      );
+
     const apis = await this.endpointsService.parseApis(endpoint, apiTxt);
     return this.createBatch(endpoint, apis, createdBy);
   }
@@ -187,6 +187,7 @@ export class CallgentFunctionsService {
   @Transactional()
   update(dto: UpdateCallgentFunctionDto) {
     if (!dto.id) return;
+    dto.name = Utils.formalApiName(dto.method, dto.path);
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.callgentFunction.update({

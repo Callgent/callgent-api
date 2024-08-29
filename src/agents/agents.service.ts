@@ -14,21 +14,21 @@ export class AgentsService {
     private readonly eventListenersService: EventListenersService,
   ) {}
 
-  async api2Function(
-    format: string,
-    handle: string,
-    args: { [key: string]: string },
-  ) {
-    return this.llmService.template(
-      'api2Function',
-      {
-        format,
-        handle,
-        ...args,
-      },
-      { funName: '', params: [''], documents: '', fullCode: '' },
-    );
-  }
+  // async api2Function(
+  //   format: string,
+  //   handle: string,
+  //   args: { [key: string]: string },
+  // ) {
+  //   return this.llmService.template(
+  //     'api2Function',
+  //     {
+  //       format,
+  //       handle,
+  //       ...args,
+  //     },
+  //     { funName: '', params: [''], documents: '', fullCode: '' },
+  //   );
+  // }
 
   /** args mapping to a single invocation, w/o vars/flows/functions */
   async map2Function(

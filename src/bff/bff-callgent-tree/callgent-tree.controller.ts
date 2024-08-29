@@ -69,15 +69,10 @@ export class CallgentTreeController {
         if (ep.type == 'CLIENT') {
           CEP.push(ep);
         } else if (ep.type == 'SERVER') {
-          const funcs = await this.callgentFunctionsService.findMany({
-            select: { fullCode: false, callgentId: false, content: false },
+          ep.children = await this.callgentFunctionsService.findMany({
+            select: { pk: false, signature: false, callgentId: false },
             where: { endpointId: ep.id },
           });
-          ep.children = funcs.map((f) => ({
-            ...f,
-            id: f.id,
-            pk: undefined,
-          }));
           SEP.push(ep);
         } else if (ep.type == 'EVENT') {
           EEP.push(ep);

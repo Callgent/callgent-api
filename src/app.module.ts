@@ -19,6 +19,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
 import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
+import { SandboxModule } from './sandbox/sandbox.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgen
     EmailsModule,
     CallgentTreeModule,
     BffCallgentFunctionsModule,
+    SandboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

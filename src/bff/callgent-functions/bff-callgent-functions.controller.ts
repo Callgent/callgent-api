@@ -1,10 +1,19 @@
-import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Inject,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CallgentApiText } from '../../callgent-functions/callgent-functions.controller';
 import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../../infra/repo/validators/entity-exists.validator';
+import { EndpointType } from '@prisma/client';
 
 @ApiTags('bff')
 @UseGuards(JwtGuard)

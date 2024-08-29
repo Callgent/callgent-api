@@ -4,9 +4,8 @@ import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 import {
-  ApiSpec,
   EndpointAdaptor,
-  EndpointConfig,
+  EndpointConfig
 } from '../../endpoint-adaptor.interface';
 
 @EndpointAdaptorName('Email', 'both')
@@ -42,9 +41,6 @@ export class EmailAdaptor extends EndpointAdaptor {
     //
   }
 
-  parseApis(apiTxt: { text: string; format?: string }): Promise<ApiSpec> {
-    return super.parseApis(apiTxt);
-  }
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
     throw new Error('Method not implemented.');
   }

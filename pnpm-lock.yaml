@@ -133,6 +133,9 @@ dependencies:
   v8-sandbox:
     specifier: ^3.2.10
     version: 3.2.10(debug@2.6.9)
+  yaml:
+    specifier: ^2.5.0
+    version: 2.5.0
 
 devDependencies:
   '@chax-at/transactional-prisma-testing':
@@ -9018,6 +9021,12 @@ packages:
     resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
     engines: {node: '>= 6'}
     dev: true
+
+  /yaml@2.5.0:
+    resolution: {integrity: sha512-2wWLbGbYDiSqqIKoPjar3MPgB94ErzCtrNE1FdqGuaO0pi2JGjmE8aW8TDZwzU7vuxcGRdL/4gPQwQ7hD5AMSw==}
+    engines: {node: '>= 14'}
+    hasBin: true
+    dev: false
 
   /yargs-parser@2.4.1:
     resolution: {integrity: sha512-9pIKIJhnI5tonzG6OnCFlz/yln8xHYcGl+pn3xR0Vzff0vzN1PbNRaelgfgRUwZ3s4i3jvxT9WhmUGL4whnasA==}
