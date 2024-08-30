@@ -1,9 +1,11 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
+import yaml from 'yaml';
+import { Prisma } from '@prisma/client';
 
 export abstract class EndpointAdaptor {
   protected readonly agentsService: AgentsService;
@@ -38,64 +40,81 @@ export abstract class EndpointAdaptor {
   /** send response back to client */
   abstract callback(resp: any): Promise<boolean>;
 
-  /** parse api spec from text */
-  async parseApis({ text, format }: { text: string; format?: string }) {
+  /** parse api to openAPI.JSON format */
+  async parseApis({
+    text,
+    format,
+  }: {
+    text: string;
+    format?: 'json' | 'yaml' | 'text';
+  }) {
     const ret: ApiSpec = { apis: [] };
 
-    if (!format || format === 'openAPI') {
-      let json = JSON.parse(text);
-      try {
-        json = await $RefParser.dereference(json);
-      } catch (err) {
-        throw new BadRequestException('Only openAPI.JSON is supported');
+    let json: any;
+    try {
+      if (format == 'yaml') {
+        json = yaml.parse(text);
+      } else if (format == 'json') {
+        json = JSON.parse(text);
       }
-      const { paths } = json;
 
-      if (paths) {
-        const ps = Object.entries(paths);
-        for (const [path, pathApis] of ps) {
-          const entries = Object.entries(pathApis);
-          for (const [method, restApi] of entries) {
-            // wrap schema
+      if (!json?.openapi || !json.paths) {
+        // convert text to openAPI.JSON
+        throw new Error('Not implemented.');
+      }
+    } catch (err) {
+      throw new BadRequestException(
+        `Failed to parse content as ${format || 'text'} format, msg: ${
+          err.message
+        }`,
+      );
+    }
+    try {
+      json = await $RefParser.dereference(json);
+    } catch (err) {
+      throw new BadRequestException(
+        'Invalid openAPI.JSON, failed to dereference.',
+      );
+    }
+    const { paths, components } = json; // TODO: save components onto SEP
 
-            const apiName = EndpointAdaptor.formalActionName(method, path);
-            const func = await this.agentsService.api2Function(
-              'restAPI',
-              '(req:{ path: string; method: string; headers?: { [key: string]: string }; query?: { [key: string]: string }; params?: { [key: string]: string }; files?: { [key: string]: any }; body?: any; form?: any;})=>Promise<{ apiResult: any; headers?: { [key: string]: string }; status?: number; statusText?: string;}>',
-              {
-                apiName,
-                apiContent: JSON.stringify(restApi),
-              },
-            );
-            ret.apis.push({
-              name: apiName,
-              ...func,
-              content: restApi,
-            });
-          }
+    const ps = paths && Object.entries(paths);
+    if (ps?.length) {
+      for (const [path, pathApis] of ps) {
+        const entries = Object.entries(pathApis);
+        for (const [method, restApi] of entries) {
+          const summary = `${
+            restApi.operationId ? restApi.operationId + ': ' : ''
+          }${restApi.summary}`;
+          const description = restApi.description;
+
+          delete restApi.summary;
+          delete restApi.description;
+          delete restApi.operationId;
+          ret.apis.push({
+            path: path.toLowerCase(),
+            method: method.toUpperCase(),
+            summary,
+            description,
+            signature: restApi,
+          });
         }
       }
-
       return ret;
     }
-
-    throw new BadRequestException('Only openAPI.JSON is supported');
+    throw new NotFoundException('No API found in the text.');
   }
-
-  static formalActionName = (method, path) =>
-    `${(method || 'GET').toUpperCase()}:${path}`;
 }
 
 export interface AdaptedDataSource {}
 
 export class ApiSpec {
   apis: {
-    name: string;
-    funName: string;
-    params: string[];
-    documents: string;
-    fullCode: string;
-    content: any;
+    path: string;
+    method: string;
+    summary: string;
+    description: string;
+    signature: Prisma.JsonObject;
   }[];
 }
 

@@ -54,10 +54,11 @@ export class CallgentApiText {
 
   @ApiProperty({
     required: false,
-    description: 'The format of the api content text',
+    description: 'The format of the api content: json, yaml, text',
+    enum: ['json', 'yaml', 'text'],
   })
   @IsOptional()
-  format?: string;
+  format?: 'json' | 'yaml' | 'text';
 }
 
 @ApiTags('CallgentFunctions')

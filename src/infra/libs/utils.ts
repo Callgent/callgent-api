@@ -74,6 +74,9 @@ export class Utils {
   static sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+
+  static formalApiName = (method: string, path: string) =>
+    `${method.toUpperCase()} ${path.toLowerCase()}`;
 }
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */

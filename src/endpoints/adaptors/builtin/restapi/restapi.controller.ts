@@ -12,12 +12,12 @@ import {
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { EndpointType } from '@prisma/client';
+import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
+import { Utils } from '../../../../infra/libs/utils';
 import { EndpointsService } from '../../../endpoints.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { RestAPIAdaptor } from './restapi.adaptor';
-import { CallgentsService } from '../../../../callgents/callgents.service';
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
@@ -70,8 +70,7 @@ export class RestApiController {
   ) {
     const basePath = `${callgentId}/${endpointId}/invoke/api/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
-    if (funName)
-      funName = RestAPIAdaptor.formalActionName(req.method, '/' + funName);
+    if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
     const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
