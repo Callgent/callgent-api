@@ -30,7 +30,9 @@ export class AgentsService {
   //   );
   // }
 
-  /** args mapping to a single invocation, w/o vars/flows/functions */
+  /**
+   * map req to an API function, generate args(with vars/conversations), argsMapping function if applicable
+   */
   async map2Function(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
@@ -59,7 +61,7 @@ export class AgentsService {
         cepAdaptor,
         callgentFunctions,
       },
-      { funName: '', mapping: '', question: '' },
+      { endpoint: '', args: '', mapping: '', question: '' },
     ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
     reqEvent.context.map2Function = mapped;
 
@@ -83,7 +85,7 @@ export class AgentsService {
       throw new HttpException(prEvent.message, statusCode);
     } else {
       const functions = reqEvent.context.functions.filter(
-        (f) => f.name == mapped.funName,
+        (f) => f.name == mapped.endpoint,
       );
       if (functions?.length != 1)
         throw new BadRequestException('Failed to map to function: ' + mapped);

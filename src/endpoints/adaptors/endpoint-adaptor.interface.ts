@@ -83,12 +83,19 @@ export abstract class EndpointAdaptor {
       for (const [path, pathApis] of ps) {
         const entries = Object.entries(pathApis);
         for (const [method, restApi] of entries) {
-          const summary = restApi.summary;
+          const summary = `${
+            restApi.operationId ? restApi.operationId + ': ' : ''
+          }${restApi.summary}`;
+          const description = restApi.description;
+
           delete restApi.summary;
+          delete restApi.description;
+          delete restApi.operationId;
           ret.apis.push({
             path: path.toLowerCase(),
             method: method.toUpperCase(),
             summary,
+            description,
             signature: restApi,
           });
         }
@@ -106,6 +113,7 @@ export class ApiSpec {
     path: string;
     method: string;
     summary: string;
+    description: string;
     signature: Prisma.JsonObject;
   }[];
 }

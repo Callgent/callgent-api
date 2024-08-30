@@ -23,6 +23,7 @@ DROP COLUMN "params",
 ADD COLUMN     "method" VARCHAR(15) NOT NULL,
 ADD COLUMN     "path" VARCHAR(1000) NOT NULL,
 ADD COLUMN     "signature" JSON NOT NULL,
+ADD COLUMN     "summary" VARCHAR(511) NOT NULL DEFAULT '',
 ADD COLUMN     "summary" VARCHAR(1023) NOT NULL DEFAULT '',
 ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int),
 ALTER COLUMN "name" SET DATA TYPE VARCHAR(1023);

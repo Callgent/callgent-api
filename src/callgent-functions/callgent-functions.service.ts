@@ -37,7 +37,7 @@ export class CallgentFunctionsService {
 
     // TODO if too many functions, use summary first
     const { data: funcs } = await this.findAll({
-      select: { createdAt: false, updatedAt: false },
+      select: { createdAt: false, updatedAt: false, signature: null },
       where: { callgentId: callgentId, name: funName },
       perPage: Number.MAX_SAFE_INTEGER,
     });

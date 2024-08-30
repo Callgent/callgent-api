@@ -190,11 +190,12 @@ model CallgentFunction {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  name      String @db.VarChar(1023) /// @description `${method} ${path}`
-  path      String @db.VarChar(1000) /// @description openAPI path
-  method    String @db.VarChar(15) /// @description openAPI method
-  summary   String @default("") @db.VarChar(1023)
-  signature Json   @db.Json /// @description declaration of API params and responses
+  name        String @db.VarChar(1023) /// @description `${method} ${path}`
+  path        String @db.VarChar(1000) /// @description openAPI path
+  method      String @db.VarChar(15) /// @description openAPI method
+  summary     String @default("") @db.VarChar(511)
+  description String @default("") @db.VarChar(1023)
+  signature   Json   @db.Json /// @description declaration of API params and responses
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)

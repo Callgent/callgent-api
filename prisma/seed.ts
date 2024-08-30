@@ -144,23 +144,21 @@ please generate the js function with **full implementation and error handling**!
     {
       pk: 2,
       name: 'map2Function',
-      prompt: `given below service functions:
-class {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
-  "function name: {{=fun.name}}": {"params":[{{=fun.params}}], "documents":"{{=fun.documents}}"},
-{{~}}
-}
-and an service \`invoker\` function.
+      prompt: `given below service APIs:
+service {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
+  "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"signature":{{=JSON.stringify(fun.signature)}} },
+{{~}}}
 
-Please choose one function to fulfill below request:
+Please choose one API to fulfill below request:
 {
-{{ if (it.funName) { }}"requesting function": "{{=it.funName}}",
+{{ if (it.funName) { }}"requesting endpoint": "{{=it.funName}}",
 {{ } }}"request from": "{{=it.cepAdaptor}}",
 "request_object": {{=JSON.stringify(it.req)}},
 }
 and code for request_object to chosen function args mapping. if any data missing/unclear/ambiguous from request_object to invocation args, please ask question to the caller in below json.question field.
 
 output a single-line json object:
-{ "funName": "the function name to be invoked", "params":"param names of the chosen function", "mapping": "the js function (invoker, request_object)=>{...;return functionArgsArray;}, full implementation to return the **real** args from request_object to invoke the chosen service function. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
+{ "endpoint": "the chosen API endpoint to be invoked", "args":"request params/body/headers/..., with same structure as the signature JSON object(no more args than it), or null if no args needed", "mapping": "if the the request_object is structured (or null if unstructured), generate the js function (request_object)=>{...;return API_signature_args;}, full implementation to return the **real** args from request_object to invoke the API. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
     },
   ];
 

@@ -45,7 +45,8 @@ function mergeSelects<S extends object>(defaultSelect: S, select: S): S {
   select = { ...select };
   Object.entries(defaultSelect).forEach(([key, value]) => {
     if (!(key in select)) select[key] = value;
-    else if (null === select[key]) delete select[key];
+    else if (null === select[key] || undefined === select[key])
+      delete select[key];
   });
 
   return select;

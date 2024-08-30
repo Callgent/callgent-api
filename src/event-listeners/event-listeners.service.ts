@@ -43,6 +43,7 @@ export class EventListenersService {
     return timeout > 0
       ? Promise.race([
           result,
+          // FIXME: timeout response will cause tx close, fails listeners execution!
           Utils.sleep(timeout).then(() => {
             return {
               event: { ...event, rawReq: undefined },
