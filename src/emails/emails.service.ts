@@ -112,10 +112,9 @@ export class EmailsService implements OnModuleInit {
    * @see https://developers.sparkpost.com/api/relay-webhooks/
    */
   handleRelayMessage(msg: RelayMessage): void {
-    let mailTo = msg?.rcpt_to;
-    mailTo = mailTo.toLowerCase();
+    let mailTo = msg?.rcpt_to?.toLowerCase();
     const mailHost = this.configService.get('EMAIL_RELAY_HOST');
-    if (!mailTo.endsWith(mailHost))
+    if (!mailTo?.endsWith(mailHost))
       return this.logger.error('Invalid relay host, ignored message: %j', msg);
 
     mailTo = mailTo.substring(0, mailTo.indexOf('@'));
