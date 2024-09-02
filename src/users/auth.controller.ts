@@ -81,20 +81,20 @@ export class AuthController extends LocalAuthController {
     @Body()
     {
       grant_type,
-      username,
-      password,
+      client_id,
+      client_secret,
     }: {
       grant_type: string;
-      username: string;
-      password: string;
+      client_id: string;
+      client_secret: string;
     },
   ) {
     if (grant_type !== 'client_credentials')
       throw new BadRequestException('Unsupported grant type ' + grant_type);
 
-    const user = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID');
+    const cid = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID');
     const pwd = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_SECRET');
-    if (user !== username || pwd !== password)
+    if (cid !== client_id || pwd !== client_secret)
       throw new UnauthorizedException('Invalid credentials');
 
     const expires_in = parseInt(
@@ -102,7 +102,7 @@ export class AuthController extends LocalAuthController {
     );
     return {
       access_token: this.jwtService.sign({
-        sub: user,
+        sub: cid,
         iss: 'sparkpost-relay',
         aud: 'sparkpost-relay',
       }),
