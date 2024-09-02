@@ -11,8 +11,6 @@
   - Added the required column `signature` to the `CallgentFunction` table without a default value. This is not possible if the table is not empty.
 
 */
--- AlterTable
-ALTER TABLE "Callgent" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
 
 -- AlterTable
 ALTER TABLE "CallgentFunction" DROP COLUMN "content",
@@ -23,28 +21,6 @@ DROP COLUMN "params",
 ADD COLUMN     "method" VARCHAR(15) NOT NULL,
 ADD COLUMN     "path" VARCHAR(1000) NOT NULL,
 ADD COLUMN     "signature" JSON NOT NULL,
-ADD COLUMN     "summary" VARCHAR(511) NOT NULL DEFAULT '',
 ADD COLUMN     "summary" VARCHAR(1023) NOT NULL DEFAULT '',
 ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int),
 ALTER COLUMN "name" SET DATA TYPE VARCHAR(1023);
-
--- AlterTable
-ALTER TABLE "Endpoint" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "EndpointAuth" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "EventListener" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "Task" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "TaskAction" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "User" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "UserIdentity" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
