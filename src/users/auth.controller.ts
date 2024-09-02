@@ -90,7 +90,7 @@ export class AuthController extends LocalAuthController {
     },
   ) {
     if (grant_type !== 'credentials')
-      throw new BadRequestException('Unsupported grant type');
+      throw new BadRequestException('Unsupported grant type ' + grant_type);
 
     const user = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID');
     const pwd = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_SECRET');
