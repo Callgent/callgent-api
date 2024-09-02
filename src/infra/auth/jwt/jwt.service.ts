@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Utils } from '../../libs/utils';
@@ -40,11 +40,13 @@ export class JwtAuthService {
 
   /**
    * @returns decoded object
+   * @throws UnauthorizedException
    */
-  verify(token: string) {
-    return (
-      this.jwtService.verify(token) &&
-      this.jwtService.decode(token, { json: true, complete: true })
-    );
+  verify(token: string): JwtPayload {
+    try {
+      return this.jwtService.verify(token, { complete: true })?.payload;
+    } catch (error) {
+      throw new UnauthorizedException(error.message);
+    }
   }
 }

@@ -22,7 +22,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional } from 'class-validator';
-import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
+import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';

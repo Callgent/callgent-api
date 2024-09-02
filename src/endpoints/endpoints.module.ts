@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CallgentsModule } from '../callgents/callgents.module';
 import { EmailAdaptor } from './adaptors/builtin/email/email.adaptor';
 import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
 import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
@@ -6,7 +7,6 @@ import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
 import { CallgentCreatedListener } from './listeners/callgent-created.listener';
-import { CallgentsModule } from '../callgents/callgents.module';
 
 @Module({
   imports: [CallgentsModule],

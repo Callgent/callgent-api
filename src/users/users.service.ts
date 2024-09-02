@@ -271,7 +271,7 @@ export class UsersService {
       'API_KEY',
     );
     // send email
-    return this.emailsService.sendTemplateMail(
+    return this.emailsService.sendTemplateEmail(
       [{ email, name: ui?.name || email }],
       'validation-email',
       { token, resetPwd, create },

@@ -6,6 +6,7 @@ import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 import yaml from 'yaml';
 import { Prisma } from '@prisma/client';
+import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
 
 export abstract class EndpointAdaptor {
   protected readonly agentsService: AgentsService;
@@ -29,7 +30,6 @@ export abstract class EndpointAdaptor {
 
   /** please declare hints in api-doc */
   abstract readData(name: string, hints?: { [key: string]: any }): Promise<any>;
-  abstract invoke(params: object): Promise<any>;
   /** get callback param */
   abstract getCallback(
     callback: string,
@@ -104,6 +104,13 @@ export abstract class EndpointAdaptor {
     }
     throw new NotFoundException('No API found in the text.');
   }
+
+  abstract invoke(
+    fun: CallgentFunctionDto,
+    args: object,
+    sep: EndpointDto,
+    reqEvent: ClientRequestEvent,
+  ): Promise<any>;
 }
 
 export interface AdaptedDataSource {}

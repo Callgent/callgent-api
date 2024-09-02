@@ -1,12 +1,10 @@
-import { Inject } from '@nestjs/common';
+import { Inject, NotImplementedException } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
+import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
+import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
-import {
-  EndpointAdaptor,
-  EndpointConfig,
-} from '../../endpoint-adaptor.interface';
 
 @EndpointAdaptorName('webpage', 'both')
 export class WebpageAdaptor extends EndpointAdaptor {
@@ -19,7 +17,7 @@ export class WebpageAdaptor extends EndpointAdaptor {
     rawReq: object,
     reqEndpoint?: EndpointDto,
   ): Promise<string> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   getConfig(): EndpointConfig {
@@ -70,7 +68,7 @@ export class WebpageAdaptor extends EndpointAdaptor {
 
   /** generate a web page endpoint */
   initClient(params: object, endpoint: EndpointDto): Promise<string> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   /** generate operation script based on the Chrome plugin */
@@ -79,7 +77,7 @@ export class WebpageAdaptor extends EndpointAdaptor {
     const url = endpoint.host['Page URL'];
     // - script to operate the page
     // auth handler
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
@@ -87,18 +85,23 @@ export class WebpageAdaptor extends EndpointAdaptor {
   }
 
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   req2Json(req: object) {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
-  async invoke(params: object) {
-    throw new Error('Method not implemented.');
+  async invoke(
+    fun: CallgentFunctionDto,
+    args: object,
+    sep: EndpointDto,
+    reqEvent: ClientRequestEvent,
+  ) {
+    throw new NotImplementedException('Method not implemented.');
   }
 
   callback(resp: any): Promise<boolean> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 }

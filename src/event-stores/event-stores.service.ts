@@ -1,7 +1,7 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { EventObject } from '../event-listeners/event-object';
 import { Utils } from '../infra/libs/utils';
 
@@ -25,5 +25,34 @@ export class EventStoresService {
         throw new NotFoundException('Invalid event.targetId: ' + targetId);
       event.context.tgtEvents = es;
     } else event.targetId = Utils.uuid(); // create new targetId
+  }
+
+  findOne(eventId: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.eventStore.findUnique({
+      where: { id: eventId },
+    });
+  }
+
+  @Transactional()
+  upsertEvent(
+    event: EventObject,
+    funName: string,
+    listenerId: string,
+    status: number,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    event.statusCode = status;
+    const data: Prisma.EventStoreCreateInput = {
+      ...event,
+      funName,
+      listenerId,
+    };
+    delete (data as any).rawReq;
+    return prisma.eventStore.upsert({
+      where: { id: event.id },
+      create: data,
+      update: data,
+    });
   }
 }
