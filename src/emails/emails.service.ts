@@ -1,8 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { EmailTemplateProvider } from './email-template.provider';
 import path from 'path';
+import { EmailTemplateProvider } from './email-template.provider';
+import { RelayMessage } from './dto/sparkpost-relay-object.interface';
 
 @Injectable()
 export class EmailsService implements OnModuleInit {
@@ -16,7 +17,7 @@ export class EmailsService implements OnModuleInit {
     await this.emailTemplates.loadTemplates(path.join(__dirname, 'templates'));
   }
 
-  async sendTemplateMail(
+  async sendTemplateEmail(
     to: { name: string; email: string }[],
     template: string,
     context: { [key: string]: any } = {},
@@ -29,7 +30,7 @@ export class EmailsService implements OnModuleInit {
     });
     const subject = this._extractSubject(content);
     if (!subject) throw new Error('No subject found. template=' + template);
-    return this.sendMail(to, subject, content, sender);
+    return this.sendEmail(to, subject, content, sender);
   }
 
   private _extractSubject(content: string) {
@@ -38,15 +39,20 @@ export class EmailsService implements OnModuleInit {
     return content.substring(idx + 7, content.indexOf('</title>')).trim();
   }
 
-  async sendMail(
-    to: string[] | { name: string; email: string }[],
+  async sendEmail(
+    to:
+      | string
+      | { name: string; email: string }
+      | (string | { name: string; email: string })[],
     subject: string,
     htmlContent: string,
-    sender?: { name: string; email: string },
+    sender?: string | { name: string; email: string },
   ) {
     const apiKey = this.configService.get('EMAIL_BREVO_API_KEY');
-    sender ||
-      (sender = JSON.parse(this.configService.get('EMAIL_DEFAULT_SENDER')));
+    to = this._formalizeEmails(to) as { name: string; email: string }[];
+    sender = sender
+      ? this._formalizeEmails(sender)[0]
+      : (sender = JSON.parse(this.configService.get('EMAIL_DEFAULT_SENDER')));
 
     // https://developers.brevo.com/reference/sendtransacemail
     const url = 'https://api.brevo.com/v3/smtp/email';
@@ -62,10 +68,26 @@ export class EmailsService implements OnModuleInit {
       'api-key': apiKey,
       'content-type': 'application/json',
     };
-    await axios.post(url, data, { headers }).then(function (data) {
-      Logger.debug('API called successfully. Returned data: %j', data?.data);
+    return axios.post(url, data, { headers }).then(function (resp) {
+      const sent = resp.status < 300;
+      if (!sent) {
+        this.logger.error('Failed to send email. resp: %j', {
+          ...resp,
+          request: { url, data },
+        });
+      }
+      return sent;
     });
-    return true;
+  }
+  private _formalizeEmails(
+    emails:
+      | (string | { name: string; email: string })
+      | (string | { name: string; email: string })[],
+  ) {
+    if (!Array.isArray(emails)) emails = [emails];
+    return emails.map((d) =>
+      (d as any).email ? (d as { email: string }) : { email: d as string },
+    );
   }
 
   // private _getTemplateId(template: string) {
@@ -75,4 +97,50 @@ export class EmailsService implements OnModuleInit {
   //     throw new Error('Brevo email template not found: ' + templateKey);
   //   return parseInt(templateId);
   // }
+
+  /**
+   *
+   * @returns `${relayType}+${id}@${mailHost}`
+   */
+  getRelayAddress(id: string, relayType: EmailRelayKey) {
+    const mailHost = this.configService.get('EMAIL_RELAY_HOST');
+    return `${relayType}+${id}@${mailHost}`;
+  }
+
+  /**
+   * sparkpost relay message
+   * @see https://developers.sparkpost.com/api/relay-webhooks/
+   */
+  handleRelayMessage(msg: RelayMessage): void {
+    let { rcpt_to: mailTo } = msg;
+    mailTo = mailTo.toLowerCase();
+    const mailHost = this.configService.get('EMAIL_RELAY_HOST');
+    if (!mailTo.endsWith(mailHost))
+      return this.logger.error('Invalid relay host, ignored message: %j', msg);
+
+    mailTo = mailTo.substring(0, mailTo.indexOf('@'));
+    const [relayKey, relayId] = mailTo.split('+');
+    switch (relayKey) {
+      case 'request':
+        this.logger.debug('relay request: %j', msg);
+        // TODO
+        break;
+      case 'callgent':
+        this.logger.debug('relay callgent: %j', msg);
+        // TODO
+        break;
+      default:
+        this.logger.error(
+          'Invalid relay key %s, ignored message: %j',
+          relayKey,
+          msg,
+        );
+    }
+  }
 }
+
+/**
+ * 'request': request call from email SEP.
+ * 'callgent': callgent email CEP.
+ */
+export type EmailRelayKey = 'request' | 'callgent';

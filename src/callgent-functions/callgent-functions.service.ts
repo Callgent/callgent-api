@@ -3,7 +3,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
-import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.interface';
+import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
@@ -32,7 +32,7 @@ export class CallgentFunctionsService {
   @Transactional()
   async loadFunctions(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
     const { funName, callgentId } = reqEvent.data;
 
     // TODO if too many functions, use summary first

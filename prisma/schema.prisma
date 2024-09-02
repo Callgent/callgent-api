@@ -504,7 +504,7 @@ model EventStore {
   targetId     String?           @db.VarChar(36)
   eventType    String            @db.VarChar(36)
   dataType     String            @db.VarChar(36)
-  /// @Description callback url or parent event id
+  /// @Description callback url or parent event id to invoke
   callback     String?           @db.VarChar(1023)
   /// @Description callback type, 'URL' or 'EVENT'
   callbackType EventCallbackType @default(EVENT)
@@ -512,13 +512,13 @@ model EventStore {
   data    Json? @db.Json
   context Json? @db.Json
 
-  /// @description statusCode, -1: processing, 0: done, 1: pending, >1: error
+  /// @description statusCode, -1: processing, 0: done, 1: pending: waiting for external event trigger to to resume calling current-listener.funName, >1: error
   statusCode       Int     @default(-1)
   message          String? @db.VarChar(255)
   stopPropagation  Boolean
   defaultPrevented Boolean
   listenerId       String? @db.VarChar(36)
-  funName          String? @db.VarChar(255)
+  funName          String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt

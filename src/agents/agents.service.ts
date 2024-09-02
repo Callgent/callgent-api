@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
-import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.interface';
+import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.base';
 import { TaskActionDto } from '../task-actions/dto/task-action.dto';
 import { LLMService } from './llm.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
@@ -35,7 +35,7 @@ export class AgentsService {
    */
   async map2Function(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
     const {
       id,
       srcId,
@@ -51,6 +51,8 @@ export class AgentsService {
       );
 
     // FIXME map from all targetId events
+
+    // TODO how to use mapping function: for specific req & function
 
     const mapped = await this.llmService.template(
       'map2Function',
@@ -72,16 +74,20 @@ export class AgentsService {
         );
 
       // emit progressive requesting event
-      const { event: prEvent, statusCode } =
+      const { data: prEvent, statusCode } =
         await this.eventListenersService.emit(
-          new ProgressiveRequestEvent(srcId, id, cepAdaptor, { progressive }),
+          new ProgressiveRequestEvent(srcId, id, cepAdaptor, {
+            progressive,
+            // mapped,
+          }),
         );
-      if (!statusCode) {
+      if (!statusCode)
         // direct return, no persistent async
         return this.map2FunctionProgressive(prEvent, reqEvent);
-      }
+
       if (statusCode == 1)
-        return { event: reqEvent, callbackName: 'map2FunctionProgressive' };
+        // pending
+        return { data: reqEvent, callbackName: 'map2FunctionProgressive' };
       throw new HttpException(prEvent.message, statusCode);
     } else {
       const functions = reqEvent.context.functions.filter(
@@ -95,9 +101,9 @@ export class AgentsService {
 
   /** progressive response, to continue mapping */
   async map2FunctionProgressive(
-    event: ProgressiveRequestEvent,
+    data: ProgressiveRequestEvent,
     reqEvent?: ClientRequestEvent,
-  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
     // handle resp
   }
 

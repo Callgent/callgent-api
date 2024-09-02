@@ -1,5 +1,4 @@
 import { EventCallbackType } from '@prisma/client';
-import { JsonValue } from '@prisma/client/runtime/library';
 import { Utils } from '../infra/libs/utils';
 
 export class EventObject {

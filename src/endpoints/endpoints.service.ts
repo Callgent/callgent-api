@@ -10,14 +10,16 @@ import {
   Injectable,
   InjectionToken,
   NotFoundException,
+  NotImplementedException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
+import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { EndpointAdaptor } from './adaptors/endpoint-adaptor.base';
 import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
-import { EndpointAdaptor } from './adaptors/endpoint-adaptor.interface';
 import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { ClientRequestEvent } from './events/client-request.event';
@@ -202,7 +204,7 @@ export class EndpointsService {
 
   @Transactional()
   update(id: string, dto: UpdateEndpointDto) {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   @Transactional()
@@ -289,7 +291,7 @@ export class EndpointsService {
   @Transactional()
   async preprocessClientRequest(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
     const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
     if (!adaptor)
       throw new Error(
@@ -299,5 +301,20 @@ export class EndpointsService {
     const endpoint = await this.findOne(reqEvent.srcId);
 
     await adaptor.preprocess(reqEvent, endpoint);
+  }
+
+  /** preprocess req from cep, by adaptor */
+  @Transactional()
+  async invokeSEP(reqEvent: ClientRequestEvent) {
+    const { map2Function, functions } = reqEvent.context;
+    if (!map2Function || !functions?.length)
+      throw new Error('Failed to invoke, No mapping function found');
+
+    const func = functions[0] as CallgentFunctionDto;
+    const sep = await this.findOne(func.endpointId);
+    const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
+
+    if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
+    adapter.invoke(func, map2Function.args, sep, reqEvent);
   }
 }

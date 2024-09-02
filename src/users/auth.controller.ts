@@ -1,5 +1,13 @@
 import { CacheTTL } from '@nestjs/cache-manager';
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse, ApiTags, getSchemaPath } from '@nestjs/swagger';
 import { JwtAuthService } from '../infra/auth/jwt/jwt.service';
@@ -63,6 +71,43 @@ export class AuthController extends LocalAuthController {
         deletedAt: undefined,
       },
       meta: { token },
+    };
+  }
+
+  /** oauth2 credentials auth */
+  @Post('tokens')
+  @HttpCode(HttpStatus.OK)
+  async getTokenByOauth2Credentials(
+    @Body()
+    {
+      grant_type,
+      username,
+      password,
+    }: {
+      grant_type: string;
+      username: string;
+      password: string;
+    },
+  ) {
+    if (grant_type !== 'credentials')
+      throw new BadRequestException('Unsupported grant type');
+
+    const user = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID');
+    const pwd = this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_SECRET');
+    if (user !== username || pwd !== password)
+      throw new UnauthorizedException('Invalid credentials');
+
+    const expires_in = parseInt(
+      this.configService.get('EMAIL_SPARKPOST_RELAY_EXPIRES_IN'),
+    );
+    return {
+      access_token: this.jwtService.sign({
+        sub: user,
+        iss: 'sparkpost-relay',
+        aud: 'sparkpost-relay',
+      }),
+      token_type: 'Bearer',
+      expires_in,
     };
   }
 }

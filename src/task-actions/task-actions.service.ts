@@ -1,6 +1,10 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
@@ -138,7 +142,7 @@ export class TaskActionsService {
 
     // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
     // 可能用到多个，
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   /** invocation flow, and lifecycle events */

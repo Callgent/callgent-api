@@ -1,12 +1,14 @@
-import { BadRequestException, Inject } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  NotImplementedException,
+} from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
+import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
+import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
-import {
-  EndpointAdaptor,
-  EndpointConfig,
-} from '../../endpoint-adaptor.interface';
 
 class RequestJson {
   url: string;
@@ -120,7 +122,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   /** generate a web page endpoint */
   initClient(params: object, endpoint: EndpointDto): Promise<string> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   /** generate operation script based on the Chrome plugin */
@@ -131,13 +133,13 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     // const reqTemplate = endpoint.reqParamTemplate;
     // - script to operate the page
     // auth handler
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   async preprocess(
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
-  ): Promise<void | { event: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
     if (!reqEvent.rawReq)
       throw new BadRequestException(
         'Missing request object for ClientRequestEvent',
@@ -205,15 +207,20 @@ export class RestAPIAdaptor extends EndpointAdaptor {
   }
 
   async readData(name: string, hints?: { [key: string]: any }) {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
-  async invoke(req: RequestJson): Promise<ResponseJson> {
+  async invoke(
+    fun: CallgentFunctionDto,
+    args: object,
+    sep: EndpointDto,
+    reqEvent: ClientRequestEvent,
+  ): Promise<ResponseJson> {
     //
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 
   callback(resp: any): Promise<boolean> {
-    throw new Error('Method not implemented.');
+    throw new NotImplementedException('Method not implemented.');
   }
 }

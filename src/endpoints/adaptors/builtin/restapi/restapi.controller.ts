@@ -91,19 +91,18 @@ export class RestApiController {
     if (!callgent)
       throw new NotFoundException('callgent not found: ' + callgentId);
 
-    const { event, statusCode, message } =
-      await this.eventListenersService.emit(
-        new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, req, callback, {
-          callgentId,
-          callgentName: callgent.name,
-          caller,
-          progressive,
-          funName,
-        }),
-        parseInt(timeout) || 0, //  sync timeout
-      );
+    const { data, statusCode, message } = await this.eventListenersService.emit(
+      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, req, callback, {
+        callgentId,
+        callgentName: callgent.name,
+        caller,
+        progressive,
+        funName,
+      }),
+      parseInt(timeout) || 0, //  sync timeout
+    );
     // FIXME data
-    if (statusCode < 400) return { event, statusCode, message };
+    if (statusCode < 400) return { data, statusCode, message };
 
     throw new HttpException(message, statusCode);
   }
