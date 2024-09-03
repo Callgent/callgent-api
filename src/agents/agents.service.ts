@@ -35,7 +35,7 @@ export class AgentsService {
    */
   async map2Function(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const {
       id,
       srcId,
@@ -87,7 +87,7 @@ export class AgentsService {
 
       if (statusCode == 1)
         // pending
-        return { data: reqEvent, callbackName: 'map2FunctionProgressive' };
+        return { data: reqEvent, resumeFunName: 'map2FunctionProgressive' };
       throw new HttpException(prEvent.message, statusCode);
     } else {
       const functions = reqEvent.context.functions.filter(
@@ -103,7 +103,7 @@ export class AgentsService {
   async map2FunctionProgressive(
     data: ProgressiveRequestEvent,
     reqEvent?: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     // handle resp
   }
 

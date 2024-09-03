@@ -59,18 +59,22 @@ export class EventListenersService {
       : result;
   }
 
+  loadEvent = (eventId: string) => this.eventStoresService.findOne(eventId);
+
   /** resume pending event, from external callback */
   @Transactional()
   async resume<T extends EventObject>(
-    eventId: string,
+    event: string | EventStore,
   ): Promise<{ data: T; statusCode?: number; message?: string }> {
-    const event = await this.eventStoresService.findOne(eventId);
-    if (!event) throw new NotFoundException('Event not found, id=' + eventId);
+    if (typeof event === 'string')
+      event = (await this.loadEvent(event)) || event;
+    if (!event || typeof event === 'string')
+      throw new NotFoundException('Event not found, id=' + event);
 
     // -1: processing, 0: done, 1: pending, >1: error
     if (event.statusCode <= 0)
       throw new BadRequestException(
-        `Cannot resume event with status ${event.statusCode}, id=${eventId}`,
+        `Cannot resume event with status ${event.statusCode}, id=${event.id}`,
       );
 
     const listeners = await this.resumeListeners(event);
@@ -114,7 +118,7 @@ export class EventListenersService {
         const result = await this._invokeListener(listener, data, funName);
         if (result) {
           result.data && (data = result.data);
-          result.callbackName && (funName = result.callbackName);
+          result.resumeFunName && (funName = result.resumeFunName);
         } else funName = undefined;
 
         statusCode = funName
@@ -206,7 +210,7 @@ export class EventListenersService {
     listener: EventListener,
     data: T,
     funName?: string,
-  ): Promise<{ data: T; callbackName?: string }> {
+  ): Promise<{ data: T; resumeFunName?: string }> {
     if (listener.serviceType == ServiceType.CALLGENT) {
       return this._invokeCallgent(listener, data, funName);
     } else {
@@ -238,7 +242,7 @@ export class EventListenersService {
     target: { id: string; serviceName: string; funName: string },
     data: T,
     funName?: string,
-  ): Promise<{ data: T; callbackName?: string }> {
+  ): Promise<{ data: T; resumeFunName?: string }> {
     return { data };
   }
 

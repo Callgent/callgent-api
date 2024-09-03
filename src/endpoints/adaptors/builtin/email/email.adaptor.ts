@@ -1,11 +1,15 @@
 import { Inject, NotImplementedException } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
-import { EmailsService } from '../../../../emails/emails.service';
+import {
+  EmailRelayKey,
+  EmailsService,
+} from '../../../../emails/emails.service';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import { EventObject } from '../../../../event-listeners/event-object';
 
 @EndpointAdaptorName('Email', 'both')
 export class EmailAdaptor extends EndpointAdaptor {
@@ -63,21 +67,25 @@ export class EmailAdaptor extends EndpointAdaptor {
    * @param sep - server endpoint
    * @param reqEvent - client request event
    */
-  async invoke(
+  async invoke<T extends EventObject>(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: ClientRequestEvent,
+    reqEvent: T,
   ) {
-    const emailFrom = this.emailsService.getRelayAddress(reqEvent.id, 'request');
+    const emailFrom = this.emailsService.getRelayAddress(
+      reqEvent.id,
+      EmailRelayKey.request,
+    );
     const { host: emailTo } = sep;
-    const subject = '';
-    const body = '';
+    const subject = `Please Respond to call: '${fun.name}', from Callgent ${}`;
+    const body = 'xxx';
     return this.emailsService
       .sendEmail(emailTo, subject, body, emailFrom)
       .then((res) => ({
-        statusCode: res ? -1 : 500, // processing or error
-        event: { ...reqEvent, rawReq: undefined },
+        statusCode: res ? 1 : 500, // pending or error
+        data: reqEvent,
+        resumeFunName: 'postInvokeSEP',
         message: res
           ? 'Service called via email, please wait for async response'
           : 'Failed to call service via email',

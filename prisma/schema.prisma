@@ -170,6 +170,8 @@ model Callgent {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
+  endpoints Endpoint[]
+
   @@unique([tenantPk, name])
   @@index([tenantPk])
 }
@@ -348,7 +350,8 @@ model Endpoint {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
-  callgentId String @db.VarChar(36) /// @description callgent owning the endpoint
+  callgentId String   @db.VarChar(36) /// @description callgent owning the endpoint
+  callgent   Callgent @relation(fields: [callgentId], references: [id])
 
   /// @DtoReadOnly
   /// @DtoEntityHidden

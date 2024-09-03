@@ -32,7 +32,7 @@ export class CallgentFunctionsService {
   @Transactional()
   async loadFunctions(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const { funName, callgentId } = reqEvent.data;
 
     // TODO if too many functions, use summary first

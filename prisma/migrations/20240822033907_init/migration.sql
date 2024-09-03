@@ -20,33 +20,8 @@
 CREATE TYPE "EndpointAuthType" AS ENUM ('NONE', 'APP', 'USER');
 
 -- AlterTable
-ALTER TABLE "Callgent" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "CallgentFunction" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
 ALTER TABLE "Endpoint" ADD COLUMN     "name" VARCHAR(2047) NOT NULL DEFAULT '',
-ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int),
 ALTER COLUMN "host" SET DATA TYPE VARCHAR(2047);
-
--- AlterTable
-ALTER TABLE "EndpointAuth" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "EventListener" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "Task" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "TaskAction" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "User" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
-
--- AlterTable
-ALTER TABLE "UserIdentity" ALTER COLUMN "tenantPk" SET DEFAULT (current_setting('tenancy.tenantPk')::int);
 
 -- CreateTable
 CREATE TABLE "Tenant" (

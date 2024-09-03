@@ -1,9 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import axios from 'axios';
 import path from 'path';
+import { RelayEmail } from './dto/sparkpost-relay-object.interface';
 import { EmailTemplateProvider } from './email-template.provider';
-import { RelayMessage } from './dto/sparkpost-relay-object.interface';
+import { EmailRelayEvent } from './events/email-relay.event';
+import { Transactional } from '@nestjs-cls/transactional';
 
 @Injectable()
 export class EmailsService implements OnModuleInit {
@@ -11,6 +14,7 @@ export class EmailsService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private emailTemplates: EmailTemplateProvider,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async onModuleInit() {
@@ -68,16 +72,22 @@ export class EmailsService implements OnModuleInit {
       'api-key': apiKey,
       'content-type': 'application/json',
     };
-    return axios.post(url, data, { headers }).then(function (resp) {
-      const sent = resp.status < 300;
-      if (!sent) {
-        this.logger.error('Failed to send email. resp: %j', {
-          ...resp,
-          request: { url, data },
-        });
-      }
-      return sent;
-    });
+    this.logger.debug('Sending email to %j. from: %j', to, sender);
+    try {
+      return axios.post(url, data, { headers }).then(function (resp) {
+        const sent = resp.status < 300;
+        if (!sent) {
+          this.logger.error('Failed to send email. resp: %j', {
+            ...resp,
+            request: { url, data },
+          });
+        }
+        return sent;
+      });
+    } catch (err) {
+      this.logger.error('Failed to send email to %j. err: %s', to, err.message);
+      throw err;
+    }
   }
   private _formalizeEmails(
     emails:
@@ -99,7 +109,6 @@ export class EmailsService implements OnModuleInit {
   // }
 
   /**
-   *
    * @returns `${relayType}+${id}@${mailHost}`
    */
   getRelayAddress(id: string, relayType: EmailRelayKey) {
@@ -111,36 +120,34 @@ export class EmailsService implements OnModuleInit {
    * sparkpost relay message
    * @see https://developers.sparkpost.com/api/relay-webhooks/
    */
-  handleRelayMessage(msg: RelayMessage): void {
-    let { rcpt_to: mailTo } = msg;
-    mailTo = mailTo.toLowerCase();
+  @Transactional()
+  handleRelayEmail(email: RelayEmail): void {
+    let mailTo = email?.rcpt_to?.toLowerCase();
     const mailHost = this.configService.get('EMAIL_RELAY_HOST');
-    if (!mailTo.endsWith(mailHost))
-      return this.logger.error('Invalid relay host, ignored message: %j', msg);
+    if (!mailTo?.endsWith(mailHost))
+      return this.logger.error('Invalid relay host, ignored: %j', email);
 
     mailTo = mailTo.substring(0, mailTo.indexOf('@'));
     const [relayKey, relayId] = mailTo.split('+');
     switch (relayKey) {
       case 'request':
-        this.logger.debug('relay request: %j', msg);
-        // TODO
-        break;
       case 'callgent':
-        this.logger.debug('relay callgent: %j', msg);
-        // TODO
+        // this.logger.debug('relay %j', msg);
+        // FIXME persistent emit, to prevent lost event
+        this.eventEmitter.emit(
+          EmailRelayEvent.eventPrefix + relayKey,
+          new EmailRelayEvent(relayKey as EmailRelayKey, relayId, email),
+        );
         break;
       default:
-        this.logger.error(
-          'Invalid relay key %s, ignored message: %j',
-          relayKey,
-          msg,
-        );
+        this.logger.error('Invalid relay key %s, ignored: %j', mailTo, email);
     }
   }
 }
 
-/**
- * 'request': request call from email SEP.
- * 'callgent': callgent email CEP.
- */
-export type EmailRelayKey = 'request' | 'callgent';
+export enum EmailRelayKey {
+  /** ClientRequestEvent callback from email SEP */
+  request = 'request',
+  /** callgent email CEP */
+  callgent = 'callgent',
+}

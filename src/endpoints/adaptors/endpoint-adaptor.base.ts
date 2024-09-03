@@ -1,12 +1,13 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
+import { Prisma } from '@prisma/client';
+import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
+import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
+import { EventObject } from '../../event-listeners/event-object';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
-import yaml from 'yaml';
-import { Prisma } from '@prisma/client';
-import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
 
 export abstract class EndpointAdaptor {
   protected readonly agentsService: AgentsService;
@@ -56,11 +57,21 @@ export abstract class EndpointAdaptor {
         json = yaml.parse(text);
       } else if (format == 'json') {
         json = JSON.parse(text);
+      } else {
+        try {
+          json = JSON.parse(text);
+        } catch (err) {
+          try {
+            json = yaml.parse(text);
+          } catch (err) {
+            // pass
+          }
+        }
       }
 
       if (!json?.openapi || !json.paths) {
         // convert text to openAPI.JSON
-        throw new Error('Not implemented.');
+        throw new Error('TODO: Not implemented.');
       }
     } catch (err) {
       throw new BadRequestException(
@@ -105,12 +116,12 @@ export abstract class EndpointAdaptor {
     throw new NotFoundException('No API found in the text.');
   }
 
-  abstract invoke(
+  abstract invoke<T extends EventObject>(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: ClientRequestEvent,
-  ): Promise<any>;
+    reqEvent: T,
+  ): Promise<{ data: T; resumeFunName?: string }>;
 }
 
 export interface AdaptedDataSource {}

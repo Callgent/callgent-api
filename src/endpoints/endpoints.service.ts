@@ -87,9 +87,13 @@ export class EndpointsService {
   }
 
   @Transactional()
-  findOne(id: string) {
+  findOne(id: string, select?: Prisma.EndpointSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpoint.findUnique({ where: { id } });
+    return selectHelper(
+      select,
+      (select) => prisma.endpoint.findUnique({ select, where: { id } }),
+      this.defSelect,
+    );
   }
 
   @Transactional()
@@ -150,8 +154,8 @@ export class EndpointsService {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
-      async (select) =>
-        await prisma.endpoint.findMany({
+      (select) =>
+        prisma.endpoint.findMany({
           where,
           select,
           orderBy,
@@ -291,7 +295,7 @@ export class EndpointsService {
   @Transactional()
   async preprocessClientRequest(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
     if (!adaptor)
       throw new Error(
@@ -303,7 +307,6 @@ export class EndpointsService {
     await adaptor.preprocess(reqEvent, endpoint);
   }
 
-  /** preprocess req from cep, by adaptor */
   @Transactional()
   async invokeSEP(reqEvent: ClientRequestEvent) {
     const { map2Function, functions } = reqEvent.context;
@@ -311,10 +314,32 @@ export class EndpointsService {
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId);
+    const sep = await this.findOne(func.endpointId, {});
     const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
 
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-    adapter.invoke(func, map2Function.args, sep, reqEvent);
+
+    // may returns pending result
+    return adapter
+      .invoke(func, map2Function.args, sep, reqEvent)
+      .then((res) => {
+        if (res?.resumeFunName) return res;
+        return this.postInvokeSEP(res.data);
+      });
+  }
+
+  /** called after pending invokeSEP, convert resp to formal object */
+  @Transactional()
+  async postInvokeSEP(reqEvent: ClientRequestEvent) {
+    const {
+      data: { resp },
+      context: { functions },
+    } = reqEvent;
+    if (!functions?.length)
+      throw new Error('Failed to invoke, No mapping function found');
+
+    const func = functions[0] as CallgentFunctionDto;
+
+    return { data: reqEvent }; // do nothing
   }
 }
