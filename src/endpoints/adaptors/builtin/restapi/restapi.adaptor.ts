@@ -192,10 +192,12 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     const type = request.isFormSubmission ? 'form' : 'body';
 
     // filter all x-callgent- args
-    const headers = { ...rawHeaders };
-    Object.keys(headers).forEach((key) => {
-      if (key.startsWith('x-callgent-')) delete headers[key];
-    });
+    const headers = {};
+    Object.keys(rawHeaders)
+      .sort()
+      .forEach((key) => {
+        if (!key.startsWith('x-callgent-')) headers[key] = rawHeaders[key];
+      });
 
     // FIXME change authorization to x-callgent-authorization
     return {

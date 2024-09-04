@@ -314,7 +314,17 @@ export class EndpointsService {
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId, {});
+    const sep = await this.findOne(func.endpointId, {
+      id: true,
+      name: true,
+      type: true,
+      adaptorKey: true,
+      priority: true,
+      host: true,
+      content: true,
+      callgentId: true,
+      callgent: { select: { id: true, name: true } },
+    });
     const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
 
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');

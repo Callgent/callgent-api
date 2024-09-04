@@ -11,9 +11,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Callgent } from '@prisma/client';
 import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
 import { CallgentsService } from '../../callgents/callgents.service';
+import { CallgentDto } from '../../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
 import { EndpointsService } from '../../endpoints/endpoints.service';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
@@ -49,14 +49,16 @@ export class CallgentTreeController {
    */
   @Post('callgent-endpoints')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
-    let callgent = await this.callgentsService.getByName(dto.name);
+    let callgent = (await this.callgentsService.getByName(
+      dto.name,
+    )) as CallgentDto;
     if (!callgent)
       callgent = await this.callgentsService.create(dto, req.user.sub);
     const data = await this._callgentTree(callgent);
     return { data };
   }
 
-  private async _callgentTree(callgent: Callgent) {
+  private async _callgentTree(callgent: CallgentDto) {
     const endpoints = await this.endpointsService.findAll({
       select: { callgentId: false },
       where: { callgentId: callgent.id },

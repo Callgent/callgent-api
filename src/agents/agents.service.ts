@@ -65,6 +65,10 @@ export class AgentsService {
       },
       { endpoint: '', args: '', mapping: '', question: '' },
     ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
+    if (!mapped)
+      throw new Error(
+        'LLM service not available: map2Function for event#' + id,
+      );
     reqEvent.context.map2Function = mapped;
 
     if (mapped.question) {
@@ -85,7 +89,7 @@ export class AgentsService {
         // direct return, no persistent async
         return this.map2FunctionProgressive(prEvent, reqEvent);
 
-      if (statusCode == 1)
+      if (statusCode == 2)
         // pending
         return { data: reqEvent, resumeFunName: 'map2FunctionProgressive' };
       throw new HttpException(prEvent.message, statusCode);

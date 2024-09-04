@@ -5,11 +5,12 @@ import {
   EmailRelayKey,
   EmailsService,
 } from '../../../../emails/emails.service';
+import { EventObject } from '../../../../event-listeners/event-object';
 import { EndpointDto } from '../../../dto/endpoint.dto';
+import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
-import { EventObject } from '../../../../event-listeners/event-object';
 
 @EndpointAdaptorName('Email', 'both')
 export class EmailAdaptor extends EndpointAdaptor {
@@ -70,7 +71,7 @@ export class EmailAdaptor extends EndpointAdaptor {
   async invoke<T extends EventObject>(
     fun: CallgentFunctionDto,
     args: object,
-    sep: EndpointDto,
+    sep: Endpoint,
     reqEvent: T,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
@@ -78,12 +79,15 @@ export class EmailAdaptor extends EndpointAdaptor {
       EmailRelayKey.request,
     );
     const { host: emailTo } = sep;
-    const subject = `Please Respond to call: '${fun.name}', from Callgent ${}`;
-    const body = 'xxx';
     return this.emailsService
-      .sendEmail(emailTo, subject, body, emailFrom)
+      .sendTemplateEmail(
+        emailTo,
+        'relay-sep-invoke',
+        { relayId: reqEvent.id, fun, sep, args },
+        emailFrom,
+      )
       .then((res) => ({
-        statusCode: res ? 1 : 500, // pending or error
+        statusCode: res ? 2 : 500, // pending or error
         data: reqEvent,
         resumeFunName: 'postInvokeSEP',
         message: res

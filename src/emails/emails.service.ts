@@ -21,15 +21,28 @@ export class EmailsService implements OnModuleInit {
     await this.emailTemplates.loadTemplates(path.join(__dirname, 'templates'));
   }
 
+  /**
+   * @param template - template file name
+   */
   async sendTemplateEmail(
-    to: { name: string; email: string }[],
+    to:
+      | string
+      | { name: string; email: string }
+      | (string | { name: string; email: string })[],
     template: string,
     context: { [key: string]: any } = {},
-    sender?: { name: string; email: string },
+    sender?: string | { name: string; email: string },
   ): Promise<boolean> {
+    to = this._formalizeEmails(to) as { name: string; email: string }[];
+    sender = this._formalizeEmails(sender)[0] as {
+      name: string;
+      email: string;
+    };
+
     const content = this.emailTemplates.render(template, {
       ...context,
       to,
+      sender,
       configs: this.configService,
     });
     const subject = this._extractSubject(content);
@@ -95,9 +108,11 @@ export class EmailsService implements OnModuleInit {
       | (string | { name: string; email: string })[],
   ) {
     if (!Array.isArray(emails)) emails = [emails];
-    return emails.map((d) =>
-      (d as any).email ? (d as { email: string }) : { email: d as string },
-    );
+    return emails.map((d) => {
+      const email = (d as any).email || d;
+      const name = (d as any).name || email.split('@')[0];
+      return { name, email };
+    });
   }
 
   // private _getTemplateId(template: string) {
@@ -122,13 +137,15 @@ export class EmailsService implements OnModuleInit {
    */
   @Transactional()
   handleRelayEmail(email: RelayEmail): void {
-    let mailTo = email?.rcpt_to?.toLowerCase();
+    const mailTo = email?.rcpt_to;
     const mailHost = this.configService.get('EMAIL_RELAY_HOST');
     if (!mailTo?.endsWith(mailHost))
       return this.logger.error('Invalid relay host, ignored: %j', email);
 
-    mailTo = mailTo.substring(0, mailTo.indexOf('@'));
-    const [relayKey, relayId] = mailTo.split('+');
+    const relayKey = mailTo.substring(0, mailTo.indexOf('+'));
+    const relayId = email.content.subject.substring(
+      email.content.subject.lastIndexOf('#') + 1,
+    );
     switch (relayKey) {
       case 'request':
       case 'callgent':

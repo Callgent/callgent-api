@@ -1,4 +1,4 @@
-import { Transactional } from '@nestjs-cls/transactional';
+import { Propagation, Transactional } from '@nestjs-cls/transactional';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { JsonObject } from '@prisma/client/runtime/library';
@@ -11,7 +11,7 @@ export class RequestRelayListener {
   private readonly logger = new Logger(RequestRelayListener.name);
   constructor(private readonly eventListenersService: EventListenersService) {}
 
-  @Transactional()
+  @Transactional(Propagation.RequiresNew)
   @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request)
   async handleEvent(event: EmailRelayEvent) {
     this.logger.debug('Handling event: %j', event);
@@ -21,13 +21,16 @@ export class RequestRelayListener {
     const resp = email as object;
     const reqEvent = await this.eventListenersService.loadEvent(reqEventId);
     if (!reqEvent || reqEvent.eventType != 'CLIENT_REQUEST')
-      return this.logger.error('Event not found: %j', event);
+      return this.logger.error(
+        'CLIENT_REQUEST event not found: %s',
+        reqEventId,
+      );
 
     reqEvent.data
       ? ((reqEvent.data as JsonObject).resp = resp)
       : (reqEvent.data = { resp });
 
     // resuming event chain
-    this.eventListenersService.resume(reqEvent);
+    await this.eventListenersService.resume(reqEvent);
   }
 }

@@ -1,4 +1,8 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
+import {
+  Propagation,
+  TransactionHost,
+  Transactional,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
@@ -30,7 +34,7 @@ export class EventListenersService {
   ) {}
 
   /**
-   * @returns: { data: event, message?, statusCode?: -1-processing, 0-done, 1-pending, >1-error}
+   * @returns: { data: event, message?, statusCode?: 1-processing, 0-done, 2-pending, (<0 || >399)-error}
    */
   @Transactional()
   async emit<T extends EventObject>(
@@ -40,6 +44,7 @@ export class EventListenersService {
     // load persist listeners
     const listeners = await this.loadListeners(data);
 
+    // timeout response will cause current tx close, so Propagation.RequiresNew!
     const result = this._invokeListeners(listeners, data).then((result) =>
       this._invokeCallback(result, true),
     );
@@ -47,14 +52,11 @@ export class EventListenersService {
     return timeout > 0
       ? Promise.race([
           result,
-          // FIXME: timeout response will cause tx close, fails listeners execution!
-          Utils.sleep(timeout).then(() => {
-            return {
-              data: { ...data, rawReq: undefined },
-              statusCode: data.statusCode,
-              message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
-            };
-          }),
+          Utils.sleep(timeout).then(() => ({
+            data: { ...data, rawReq: undefined },
+            statusCode: data.statusCode,
+            message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
+          })),
         ])
       : result;
   }
@@ -71,8 +73,8 @@ export class EventListenersService {
     if (!event || typeof event === 'string')
       throw new NotFoundException('Event not found, id=' + event);
 
-    // -1: processing, 0: done, 1: pending, >1: error
-    if (event.statusCode <= 0)
+    // 1: processing, 0: done, 2: pending, <0: error
+    if (event.statusCode != 2)
       throw new BadRequestException(
         `Cannot resume event with status ${event.statusCode}, id=${event.id}`,
       );
@@ -105,13 +107,15 @@ export class EventListenersService {
     // URL callback
   }
 
-  private async _invokeListeners<T extends EventObject>(
+  /** timeout response will cause current tx close, so Propagation.RequiresNew! */
+  @Transactional(Propagation.RequiresNew)
+  protected async _invokeListeners<T extends EventObject>(
     listeners: EventListener[],
     data: T,
     funName?: string,
   ): Promise<{ data: T; statusCode?: number; message?: string }> {
     // invoke listeners, supports persisted-async
-    let statusCode = -1;
+    let statusCode = 1;
     for (let idx = 0; idx < listeners.length; ) {
       const listener = listeners[idx++];
       try {
@@ -122,20 +126,24 @@ export class EventListenersService {
         } else funName = undefined;
 
         statusCode = funName
-          ? 1 // pending
+          ? 2 // pending
           : data.stopPropagation || idx >= listeners.length
           ? 0 // done
-          : -1; // processing
+          : 1; // processing
         if (funName || data.stopPropagation) break;
       } catch (e) {
-        statusCode = e.status || 2; // error
+        statusCode = e.status || -1; // error
         const message = (data.message = `[ERROR] ${e.name}: ${e.message}`);
         e.status < 500 || this.logger.error(e);
         return { data: data, statusCode, message };
       } finally {
-        // if statusCode > 0, stay in current listener
         const nextListener =
-          statusCode > 0 ? listener : statusCode == 0 ? null : listeners[idx];
+          statusCode == 1
+            ? listeners[idx] // processing: next
+            : statusCode == 0 || (statusCode > 2 && statusCode < 399)
+            ? null // success: null
+            : listener; // error/pending: current
+
         await this.eventStoresService.upsertEvent(
           data,
           funName,
@@ -206,6 +214,7 @@ export class EventListenersService {
     return listeners.filter((listener) => !listener.deletedAt);
   }
 
+  @Transactional()
   protected async _invokeListener<T extends EventObject>(
     listener: EventListener,
     data: T,
@@ -219,6 +228,7 @@ export class EventListenersService {
   }
 
   /** service.func_signature(event): Promise<{ data: T; funName?: string }> */
+  @Transactional()
   protected async _invokeService<T extends EventObject>(
     target: { id: string; serviceName: string; funName: string },
     data: EventObject,
@@ -238,6 +248,7 @@ export class EventListenersService {
     return fun.apply(service, [data]);
   }
 
+  @Transactional()
   protected async _invokeCallgent<T extends EventObject>(
     target: { id: string; serviceName: string; funName: string },
     data: T,
