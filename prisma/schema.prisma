@@ -234,7 +234,7 @@ model Task {
   // add to migration.sql
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  statusCode Int     @default(-1) /// @description Task statusCode, -1: pending, 0: done, <-1: failed
+  statusCode Int     @default(1) /// @description Task statusCode, 1: pending, 0: done, <0: failed
   name       String? @db.VarChar(64) /// @description task name
   brief      String? @db.VarChar(255) /// @description task brief or description
   content    Json? /// @description optional task content
@@ -350,6 +350,7 @@ model Endpoint {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @DtoRelationIncludeId
   callgentId String   @db.VarChar(36) /// @description callgent owning the endpoint
   callgent   Callgent @relation(fields: [callgentId], references: [id])
 
@@ -431,7 +432,7 @@ model PersistedAsync {
   /// @DtoEntityHidden
   pk BigInt @id @default(autoincrement())
 
-  statusCode Int    @default(-1) /// @description statusCode, -1: pending, 1: sent, 0: done, <-1: failed
+  statusCode Int    @default(1) /// @description statusCode, 1: pending, 2: sent, 0: done, <0: failed
   service    String @db.VarChar(127) /// @description callback service name
   method     String @db.VarChar(127) /// @description callback method name
 
@@ -515,8 +516,8 @@ model EventStore {
   data    Json? @db.Json
   context Json? @db.Json
 
-  /// @description statusCode, -1: processing, 0: done, 1: pending: waiting for external event trigger to to resume calling current-listener.funName, >1: error
-  statusCode       Int     @default(-1)
+  /// @description statusCode, 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume calling current-listener.funName, <0: error
+  statusCode       Int     @default(1)
   message          String? @db.VarChar(255)
   stopPropagation  Boolean
   defaultPrevented Boolean

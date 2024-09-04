@@ -39,10 +39,10 @@ export class EventStoresService {
     event: EventObject,
     funName: string,
     listenerId: string,
-    status: number,
+    statusCode: number,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    event.statusCode = status;
+    event.statusCode = statusCode;
     const data: Prisma.EventStoreCreateInput = {
       ...event,
       funName,

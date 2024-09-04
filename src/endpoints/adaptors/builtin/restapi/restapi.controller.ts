@@ -102,7 +102,8 @@ export class RestApiController {
       parseInt(timeout) || 0, //  sync timeout
     );
     // FIXME data
-    if (statusCode < 400) return { data, statusCode, message };
+    if (0 <= statusCode && statusCode < 400)
+      return { data, statusCode, message };
 
     throw new HttpException(message, statusCode);
   }

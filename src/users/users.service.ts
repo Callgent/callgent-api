@@ -32,10 +32,9 @@ export class UsersService {
     private readonly authTokensService: AuthTokensService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
-  protected readonly defSelect: Prisma.CallgentSelect = {
+  protected readonly defSelect: Prisma.UserSelect = {
     pk: false,
     tenantPk: false,
-    createdBy: false,
     deletedAt: false,
   };
 
