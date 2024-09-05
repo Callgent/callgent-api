@@ -1,4 +1,8 @@
-import { Inject, NotImplementedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  NotImplementedException,
+} from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
 import {
@@ -104,9 +108,20 @@ export class EmailAdaptor extends EndpointAdaptor {
     const list = [];
     if (!args) return list;
     const { parameters, requestBody } = args as any;
-    parameters?.forEach((p) => list.push(p.value));
-    // no name means it's a request body
-    requestBody && list.push(requestBody); // TODO format
+    parameters?.forEach((p) => {
+      if (!p.value)
+        throw new BadRequestException('Missing value for parameter:' + p.name);
+      list.push(p.value);
+    });
+    if (requestBody) {
+      if (!requestBody.value)
+        throw new BadRequestException('Missing value for requestBody');
+      list.push({
+        ...requestBody,
+        name: 'Request Body',
+        content: this._formatMediaType(requestBody.content),
+      }); // TODO format
+    }
   }
 
   private _responses30x(responses: any) {
@@ -118,8 +133,48 @@ export class EmailAdaptor extends EndpointAdaptor {
       if (k == 'default') return;
       // FIXME format headers, links, also change 'relay-sep-invoke.dot'
       const { headers, links, content, description } = responses[k];
-      list.push({ name: httpStatus[k] || k, description, content }); // TODO format
+      list.push({
+        name: httpStatus[k] || k,
+        description,
+        content: this._formatMediaType(content),
+      }); // TODO format
     });
     return list;
+  }
+
+  private _formatMediaType(content: any) {
+    const list = [];
+    if (!content) return content;
+
+    Object.values(content).forEach((c: any) => {
+      if (c.schema) {
+        list.push(this._formatSchema(c.schema));
+      } else if (c.examples) {
+        // TODO examples
+        list.push(...c.examples);
+      } else if (c.example) list.push(c.example);
+    });
+
+    return list.length == 1 ? list[0] : list;
+  }
+  private _formatSchema(schema: any) {
+    if (schema.type == 'array') {
+      return [this._formatSchema(schema.items)];
+    } else if (schema.type == 'object') {
+      const props = {};
+      Object.entries(schema.properties).forEach((entry: [string, any]) => {
+        const [k, v] = entry;
+        props[k + `${v.required ? '*' : ''}`] = this._formatSchema({
+          ...v,
+          required: undefined,
+        });
+      });
+      return props;
+    } else if (schema.type == 'string') {
+      let pre = schema.format ? `format: ${schema.format}, ` : '';
+      pre += schema.pattern ? `pattern: ${schema.pattern}, ` : '';
+      pre += schema.enum ? `enums: ${JSON.stringify(schema.enum)}, ` : '';
+      return pre + (schema.description || 'string');
+    } else return schema;
   }
 }

@@ -37,7 +37,7 @@
     <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Arguments:</span>
     {{~it.args :arg}}
     <div>
-        <span style="display: inline-block; width: 8em;">{{=arg.name || 'Request Body'}}{{=arg.required ? '<span style="color: red;">*</span>' : ''}}:</span>
+        <span style="display: inline-block; width: 8em;font-weight: bold">{{=arg.name}}{{=arg.required ? '<span style="color: red;">*</span>' : ''}}:</span>
         <span>{{=arg.description}}</span>
         <div style="padding-left:8em">{{=JSON.stringify(arg.value)}}</div>
     </div>
@@ -51,7 +51,7 @@
     <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Possible Responses:</span>
     {{~it.responses :resp}}
     <div>
-        <span style="display: inline-block; width: 8em;">Response {{=resp.name}}:</span>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Response {{=resp.name}}:</span>
         <span>{{=resp.description}}</span>
         <div style="padding-left:8em">{{=resp.content ? JSON.stringify(resp.content) : ''}}</div>
     </div>
