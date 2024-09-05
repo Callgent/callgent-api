@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- relay email title always ends with #relayId -->
 <title>[Callgent] Function calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. #{{=it.relayId}}</title>
-<!-- { relayId, fun, sep, args, to, sender, configs } -->
+<!-- { relayId, fun, sep, args[], responses[], to, sender, configs } -->
 </head>
 <body>
 <p>Hello {{=it.to[0].name }}!</p>
@@ -32,20 +32,36 @@
     {{ } }}
 </div>
 
-{{ if (it.args) { }}
-{{~ Object.keys(it.args) :key}}
+{{ if (it.args.length) { }}
 <div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
     <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Arguments:</span>
+    {{~it.args :arg}}
     <div>
-        <span style="display: inline-block; width: 8em;">Name:</span>
-        <span>{{=it.fun.name}}</span>
+        <span style="display: inline-block; width: 8em;">{{=arg.name || 'Request Body'}}{{=arg.required ? '<span style="color: red;">*</span>' : ''}}:</span>
+        <span>{{=arg.description}}</span>
+        <div style="padding-left:8em">{{=JSON.stringify(arg.value)}}</div>
     </div>
+    {{~}}
 </div>
 {{ } }}
 
+
+{{ if (it.responses.length) { }}
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Possible Responses:</span>
+    {{~it.responses :resp}}
+    <div>
+        <span style="display: inline-block; width: 8em;">Response {{=resp.name}}:</span>
+        <span>{{=resp.description}}</span>
+        <div style="padding-left:8em">{{=resp.content ? JSON.stringify(resp.content) : ''}}</div>
+    </div>
+    {{~}}
+</div>
+{{ } }}
 <br/>
 <br/>
-<small>{{=new Date().toLocaleString('sv-SE') }}</small>
+<!-- TODO: TZ -->
+<small>{{=new Date().toUTCString() }}</small>
 </body>
 </html>
 

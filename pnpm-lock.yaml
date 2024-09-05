@@ -85,6 +85,9 @@ dependencies:
   glob:
     specifier: ^10.3.10
     version: 10.3.10
+  http-status:
+    specifier: ^1.7.4
+    version: 1.7.4
   jsonrepair:
     specifier: ^3.7.0
     version: 3.7.0
@@ -4939,6 +4942,11 @@ packages:
       debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /http-status@1.7.4:
+    resolution: {integrity: sha512-c2qSwNtTlHVYAhMj9JpGdyo0No/+DiKXCJ9pHtZ2Yf3QmPnBIytKSRT7BuyIiQ7icXLynavGmxUqkOjSrAuMuA==}
+    engines: {node: '>= 0.4.0'}
     dev: false
 
   /https-proxy-agent@5.0.1:

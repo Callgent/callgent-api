@@ -158,7 +158,7 @@ Please choose one API to fulfill below request:
 and code for request_object to chosen function args mapping. if any data missing/unclear/ambiguous from request_object to invocation args, please ask question to the caller in below json.question field.
 
 output a single-line json object:
-{ "endpoint": "the chosen API endpoint to be invoked", "args":"request params/body/headers/..., with same structure as the signature JSON object(no more args than it), or null if no args needed", "mapping": "if the the request_object is structured (or null if unstructured), generate the js function (request_object)=>{...;return API_signature_args;}, full implementation to return the **real** args from request_object to invoke the API. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
+{ "endpoint": "the chosen API endpoint to be invoked", "args":"params/body/headers/..., with same structure as the 'params' JSON object(no more args than it) with additional 'value' prop, or null if no args needed", "mapping": "if the the request_object is structured (or null if unstructured), generate the js function (request_object)=>{...;return API_signature_args;}, full implementation to return the **real** args from request_object to invoke the API. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
     },
   ];
 

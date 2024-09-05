@@ -11,6 +11,7 @@ import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import * as httpStatus from 'http-status';
 
 @EndpointAdaptorName('Email', 'both')
 export class EmailAdaptor extends EndpointAdaptor {
@@ -80,12 +81,13 @@ export class EmailAdaptor extends EndpointAdaptor {
     );
     const { host: emailTo } = sep;
 
-    args = this._argsList(args);
+    args = this._argsList30x(args);
+    const responses = this._responses30x(fun.responses);
     return this.emailsService
       .sendTemplateEmail(
         emailTo,
         'relay-sep-invoke',
-        { relayId: reqEvent.id, fun, sep, args },
+        { relayId: reqEvent.id, fun, sep, args, responses },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
       .then((res) => ({
@@ -98,9 +100,26 @@ export class EmailAdaptor extends EndpointAdaptor {
       }));
   }
 
-  private _argsList(args: object): object[] {
+  private _argsList30x(args: object): object[] {
     const list = [];
     if (!args) return list;
-    const { parameters, requestBody } = args;
+    const { parameters, requestBody } = args as any;
+    parameters?.forEach((p) => list.push(p.value));
+    // no name means it's a request body
+    requestBody && list.push(requestBody); // TODO format
+  }
+
+  private _responses30x(responses: any) {
+    const list = [];
+    if (!responses) return list;
+    if (responses.default)
+      list.push({ ...responses.default, name: 'Default Response' });
+    Object.keys(responses).forEach((k) => {
+      if (k == 'default') return;
+      // FIXME format headers, links, also change 'relay-sep-invoke.dot'
+      const { headers, links, content, description } = responses[k];
+      list.push({ name: httpStatus[k] || k, description, content }); // TODO format
+    });
+    return list;
   }
 }

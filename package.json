@@ -59,6 +59,7 @@
     "fastify": "4.26.2",
     "fastify-ip": "^1.0.0",
     "glob": "^10.3.10",
+    "http-status": "^1.7.4",
     "jsonrepair": "^3.7.0",
     "module": "^1.2.5",
     "ms": "^2.1.3",
