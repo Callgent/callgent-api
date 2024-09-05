@@ -41,7 +41,10 @@ export abstract class EndpointAdaptor {
   /** send response back to client */
   abstract callback(resp: any): Promise<boolean>;
 
-  /** parse api to openAPI.JSON format */
+  /**
+   * parse APIs to openAPI.json format
+   * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
+   */
   async parseApis({
     text,
     format,
@@ -87,7 +90,11 @@ export abstract class EndpointAdaptor {
         'Invalid openAPI.JSON, failed to dereference.',
       );
     }
-    const { paths, components } = json; // TODO: save components onto SEP
+    const { openapi, paths } = json; // TODO: save components onto SEP
+    if (!openapi?.startsWith('3.0'))
+      throw new BadRequestException(
+        'Only openAPI `3.0.x` is supported now, openapi=' + openapi,
+      );
 
     const ps = paths && Object.entries(paths);
     if (ps?.length) {
@@ -97,17 +104,24 @@ export abstract class EndpointAdaptor {
           const summary = `${
             restApi.operationId ? restApi.operationId + ': ' : ''
           }${restApi.summary}`;
-          const description = restApi.description;
+          let description = restApi.description || '';
+          if (restApi.tags?.length)
+            description += ` Tags: ${restApi.tags.join(', ')}`;
+          const responses = restApi.responses;
+          const params = {
+            parameters: restApi.parameters,
+            requestBody: restApi.requestBody,
+          };
+          // TODO restApi.callbacks
 
-          delete restApi.summary;
-          delete restApi.description;
-          delete restApi.operationId;
           ret.apis.push({
             path: path.toLowerCase(),
             method: method.toUpperCase(),
             summary,
             description,
-            signature: restApi,
+            params,
+            responses,
+            rawJson: restApi,
           });
         }
       }
@@ -132,7 +146,9 @@ export class ApiSpec {
     method: string;
     summary: string;
     description: string;
-    signature: Prisma.JsonObject;
+    params: Prisma.JsonObject;
+    responses: Prisma.JsonObject;
+    rawJson: Prisma.JsonObject;
   }[];
 }
 

@@ -281,7 +281,10 @@ export class EndpointsService {
     throw new NotFoundException(`Endpoint not found, id=${id}`);
   }
 
-  /** parse APIs to openAPI.json format */
+  /**
+   * parse APIs to openAPI.json format
+   * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
+   */
   async parseApis(
     endpoint: EndpointDto,
     apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },

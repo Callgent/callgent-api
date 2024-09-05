@@ -197,7 +197,9 @@ model CallgentFunction {
   method      String @db.VarChar(15) /// @description openAPI method
   summary     String @default("") @db.VarChar(511)
   description String @default("") @db.VarChar(1023)
-  signature   Json   @db.Json /// @description declaration of API params and responses
+  params      Json?  @db.Json /// @description declaration of API params
+  responses   Json?  @db.Json /// @description declaration of API responses
+  rawJson     Json   @db.Json
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)

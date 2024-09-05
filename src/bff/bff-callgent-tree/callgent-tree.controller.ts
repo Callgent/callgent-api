@@ -72,7 +72,12 @@ export class CallgentTreeController {
           CEP.push(ep);
         } else if (ep.type == 'SERVER') {
           ep.children = await this.callgentFunctionsService.findMany({
-            select: { pk: false, signature: false, callgentId: false },
+            select: {
+              pk: false,
+              params: false,
+              responses: false,
+              callgentId: false,
+            },
             where: { endpointId: ep.id },
           });
           SEP.push(ep);

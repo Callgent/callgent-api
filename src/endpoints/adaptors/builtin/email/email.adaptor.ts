@@ -79,12 +79,14 @@ export class EmailAdaptor extends EndpointAdaptor {
       EmailRelayKey.request,
     );
     const { host: emailTo } = sep;
+
+    args = this._argsList(args);
     return this.emailsService
       .sendTemplateEmail(
         emailTo,
         'relay-sep-invoke',
         { relayId: reqEvent.id, fun, sep, args },
-        emailFrom,
+        { email: emailFrom, name: 'Callgent Invoker' },
       )
       .then((res) => ({
         statusCode: res ? 2 : 500, // pending or error
@@ -94,5 +96,11 @@ export class EmailAdaptor extends EndpointAdaptor {
           ? 'Service called via email, please wait for async response'
           : 'Failed to call service via email',
       }));
+  }
+
+  private _argsList(args: object): object[] {
+    const list = [];
+    if (!args) return list;
+    const { parameters, requestBody } = args;
   }
 }

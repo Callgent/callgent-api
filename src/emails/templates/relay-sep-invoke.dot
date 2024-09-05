@@ -12,48 +12,40 @@
 <p>Somebody is calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. Below is the detailed request information:</p>
 <hr/>
 
-<fieldset style="padding: 1em 1em 1.5em 1em;margin: 2em 0;">
-    <legend>Function Calling</legend>
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Calling:</span>
     <div>
-        <label style="display: inline-block; width: 8em;">Name:</label>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Name:</span>
         <span>{{=it.fun.name}}</span>
     </div>
     {{ if (it.fun.summary) { }}
     <div>
-        <label style="display: inline-block; width: 8em;">Summary:</label>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Summary:</span>
         <span>{{=it.fun.summary}}</span>
     </div>
     {{ } }}
     {{ if (it.fun.description) { }}
     <div>
-        <label style="display: inline-block; width: 8em;">Description:</label>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Description:</span>
         <span>{{=it.fun.description}}</span>
     </div>
     {{ } }}
-</fieldset>
+</div>
 
-{{ if (it.args && it.args.length) { }}
-<fieldset style="padding: 1em 1em 1.5em 1em;margin: 2em 0;">
-    <legend>Function Arguments</legend>
+{{ if (it.args) { }}
+{{~ Object.keys(it.args) :key}}
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Arguments:</span>
     <div>
-        <label style="display: inline-block; width: 8em;">Name:</label>
+        <span style="display: inline-block; width: 8em;">Name:</span>
         <span>{{=it.fun.name}}</span>
     </div>
-    {{ if (it.fun.summary) { }}
-    <div>
-        <label style="display: inline-block; width: 8em;">Summary:</label>
-        <span>{{=it.fun.summary}}</span>
-    </div>
-    {{ } }}
-    {{ if (it.fun.description) { }}
-    <div>
-        <label style="display: inline-block; width: 8em;">Description:</label>
-        <span>{{=it.fun.description}}</span>
-    </div>
-    {{ } }}
-</fieldset>
+</div>
 {{ } }}
 
+<br/>
+<br/>
+<small>{{=new Date().toLocaleString('sv-SE') }}</small>
 </body>
 </html>
 

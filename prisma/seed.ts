@@ -146,7 +146,7 @@ please generate the js function with **full implementation and error handling**!
       name: 'map2Function',
       prompt: `given below service APIs:
 service {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
-  "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"signature":{{=JSON.stringify(fun.signature)}} },
+  "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"params":{{=JSON.stringify(fun.params)}}, "responses":{{=JSON.stringify(fun.responses)}} },
 {{~}}}
 
 Please choose one API to fulfill below request:
