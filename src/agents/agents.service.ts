@@ -1,11 +1,9 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
-import { AdaptedDataSource } from '../endpoints/adaptors/endpoint-adaptor.base';
-import { TaskActionDto } from '../task-actions/dto/task-action.dto';
-import { LLMService } from './llm.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
+import { LLMService } from './llm.service';
 
 @Injectable()
 export class AgentsService {
@@ -56,19 +54,10 @@ export class AgentsService {
 
     const mapped = await this.llmService.template(
       'map2Function',
-      {
-        req,
-        funName,
-        callgentName,
-        cepAdaptor,
-        callgentFunctions,
-      },
-      { endpoint: '', args: '', mapping: '', question: '' },
+      { req, funName, callgentName, cepAdaptor, callgentFunctions },
+      { endpoint: '', args: {}, mapping: '', question: '' },
+      id,
     ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
-    if (!mapped)
-      throw new Error(
-        'LLM service not available: map2Function for event#' + id,
-      );
     reqEvent.context.map2Function = mapped;
 
     if (mapped.question) {
@@ -100,6 +89,8 @@ export class AgentsService {
       if (functions?.length != 1)
         throw new BadRequestException('Failed to map to function: ' + mapped);
       reqEvent.context.functions = functions;
+
+      mapped.args = this._args2List30x(mapped.args);
     }
   }
 
@@ -111,41 +102,42 @@ export class AgentsService {
     // handle resp
   }
 
-  async genScript(
-    CallgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
-    taskAction: TaskActionDto,
-  ) {
-    const ms = Object.values(CallgentFunctions)?.flat();
-
-    if (ms.length > 1) {
-      // routing
+  private _args2List30x(args: object) {
+    const list = [];
+    if (!args) return list;
+    const { parameters, requestBody } = args as any;
+    parameters?.forEach((p) => {
+      if (!p.value)
+        throw new BadRequestException('Missing value for parameter:' + p.name);
+      list.push(p);
+    });
+    if (requestBody) {
+      if (!requestBody.value)
+        throw new BadRequestException('Missing value for requestBody');
+      list.push({
+        ...requestBody,
+        name: 'Request Body',
+        // content: this._formatMediaType(requestBody.content),
+      }); // TODO format
     }
-
-    // return this.llmService.template(
-    //   'api2Function',
-    //   {
-    //     format,
-    //     handle,
-    //     ...args,
-    //   },
-    //   { signature: '', documents: '', fullCode: '' },
-    // );
+    return list;
   }
 
-  async genPseudoCmd(
-    callgents: { id: string; name: string; summary: string }[],
-    taskaAction: TaskActionDto,
-  ) {}
+  /** convert resp content into one of fun.responses */
+  async convert2Response(
+    args: { name: string; value: any }[],
+    resp: string,
+    fun: CallgentFunctionDto,
+    eventId: string,
+  ) {
+    args = args?.map((a) => ({ name: a.name, value: a.value })) || [];
+    const mapped = await this.llmService.template(
+      'convert2Response',
+      { args, resp, fun },
+      { 'response-code': 200, data: {} },
+      eventId,
+    ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
 
-  async routeAction(actions: CallgentFunctionDto[], req: AdaptedDataSource) {
-    if (!actions?.length) return;
-    // FIXME：是否需要task上下文来决定路由，
-    return actions[0];
-  }
-
-  /** map request params from task ctx */
-  async mapParams(content: any, req: AdaptedDataSource) {
-    // 从任务上下文中获取参数，并返回标准json参数结构？由server适配器封装为想要的格式
-    return [];
+    return { statusCode: mapped['response-code'], data: mapped.data };
   }
 }

@@ -13,11 +13,7 @@ export class WebpageAdaptor extends EndpointAdaptor {
     super(agentsService);
   }
 
-  getCallback(
-    callback: string,
-    rawReq: object,
-    reqEndpoint?: EndpointDto,
-  ): Promise<string> {
+  getCallback(callback: string, reqEndpoint?: EndpointDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
@@ -82,6 +78,10 @@ export class WebpageAdaptor extends EndpointAdaptor {
   }
 
   async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+    //
+  }
+
+  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
     //
   }
 

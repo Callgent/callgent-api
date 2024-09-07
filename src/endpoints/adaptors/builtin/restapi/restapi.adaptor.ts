@@ -139,11 +139,12 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   async preprocess(
     reqEvent: ClientRequestEvent,
-    endpoint: EndpointDto,
+    // endpoint: EndpointDto,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    if (!reqEvent.rawReq)
+    const req = reqEvent?.data.req;
+    if (!req)
       throw new BadRequestException(
-        'Missing request object for ClientRequestEvent',
+        'Missing request object for ClientRequestEvent#' + reqEvent.id,
       );
     const {
       callback,
@@ -157,17 +158,16 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     if (!progressive) {
     }
 
-    reqEvent.data.req = this.req2Json(reqEvent.rawReq);
-    delete reqEvent.rawReq;
+    reqEvent.data.req = this.req2Json(req);
+  }
+
+  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
+    //
   }
 
   // async invoke() {}
 
-  async getCallback(
-    callback: string,
-    rawReq: object,
-    reqEndpoint?: EndpointDto,
-  ) {
+  async getCallback(callback: string, reqEndpoint?: EndpointDto) {
     // FIXME
     return callback;
   }

@@ -35,8 +35,10 @@ export class EmailsController {
     }
 
     // handle relay event
-    relays?.forEach((relay) =>
-      this.emailsService.handleRelayEmail(relay.msys.relay_message),
+    relays?.forEach(
+      (relay) =>
+        relay?.msys?.relay_message &&
+        this.emailsService.handleRelayEmail(relay.msys.relay_message),
     );
     return; // return 200 to consume the event
   }

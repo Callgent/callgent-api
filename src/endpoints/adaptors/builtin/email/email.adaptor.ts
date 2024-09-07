@@ -1,10 +1,13 @@
+import { Transactional } from '@nestjs-cls/transactional';
 import {
   BadRequestException,
   Inject,
   NotImplementedException,
 } from '@nestjs/common';
+import * as httpStatus from 'http-status';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
+import { RelayEmail } from '../../../../emails/dto/sparkpost-relay-object.interface';
 import {
   EmailRelayKey,
   EmailsService,
@@ -15,7 +18,6 @@ import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
-import * as httpStatus from 'http-status';
 
 @EndpointAdaptorName('Email', 'both')
 export class EmailAdaptor extends EndpointAdaptor {
@@ -26,11 +28,7 @@ export class EmailAdaptor extends EndpointAdaptor {
     super(agentsService);
   }
 
-  getCallback(
-    callback: string,
-    rawReq: object,
-    reqEndpoint?: EndpointDto,
-  ): Promise<string> {
+  getCallback(callback: string, reqEndpoint?: EndpointDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
@@ -51,6 +49,23 @@ export class EmailAdaptor extends EndpointAdaptor {
 
   async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
     //
+  }
+
+  @Transactional()
+  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
+    const resp = reqEvent?.data?.resp as unknown as RelayEmail;
+    if (!resp?.content?.html)
+      throw new BadRequestException(
+        'Missing response for reqEvent#' + reqEvent.id,
+      );
+
+    // convert resp to api format
+    reqEvent.data.resp = await this.agentsService.convert2Response(
+      reqEvent?.context?.map2Function?.args,
+      resp.content.text || resp.content.html,
+      fun,
+      reqEvent.id,
+    );
   }
 
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
@@ -85,7 +100,6 @@ export class EmailAdaptor extends EndpointAdaptor {
     );
     const { host: emailTo } = sep;
 
-    args = this._argsList30x(args);
     const responses = this._responses30x(fun.responses);
     return this.emailsService
       .sendTemplateEmail(
@@ -102,26 +116,6 @@ export class EmailAdaptor extends EndpointAdaptor {
           ? 'Service called via email, please wait for async response'
           : 'Failed to call service via email',
       }));
-  }
-
-  private _argsList30x(args: object): object[] {
-    const list = [];
-    if (!args) return list;
-    const { parameters, requestBody } = args as any;
-    parameters?.forEach((p) => {
-      if (!p.value)
-        throw new BadRequestException('Missing value for parameter:' + p.name);
-      list.push(p.value);
-    });
-    if (requestBody) {
-      if (!requestBody.value)
-        throw new BadRequestException('Missing value for requestBody');
-      list.push({
-        ...requestBody,
-        name: 'Request Body',
-        content: this._formatMediaType(requestBody.content),
-      }); // TODO format
-    }
   }
 
   private _responses30x(responses: any) {
@@ -175,6 +169,6 @@ export class EmailAdaptor extends EndpointAdaptor {
       pre += schema.pattern ? `pattern: ${schema.pattern}, ` : '';
       pre += schema.enum ? `enums: ${JSON.stringify(schema.enum)}, ` : '';
       return pre + (schema.description || 'string');
-    } else return schema;
+    } else return schema; // TODO: similar to string
   }
 }

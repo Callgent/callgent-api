@@ -16,8 +16,6 @@ export class ClientRequestEvent extends EventObject {
     /** empty to create new task */
     taskId: string,
     dataType: string,
-    /** raw request, temp prop, will not be persisted */
-    public rawReq: any,
     callback: string,
     public readonly data: {
       callgentId: string;

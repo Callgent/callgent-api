@@ -15,7 +15,12 @@ export abstract class EndpointAdaptor {
     this.agentsService = agentsService;
   }
 
+  /** preprocess request */
   abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
+
+  /** postprocess response */
+  abstract postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto);
+
   /** Endpoint config. */
   abstract getConfig(): EndpointConfig;
 
@@ -34,7 +39,6 @@ export abstract class EndpointAdaptor {
   /** get callback param */
   abstract getCallback(
     callback: string,
-    rawReq: unknown,
     reqEndpoint?: EndpointDto,
   ): Promise<string>;
 

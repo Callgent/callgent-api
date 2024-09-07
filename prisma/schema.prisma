@@ -422,8 +422,8 @@ model LlmCache {
   pk BigInt @id @default(autoincrement())
 
   name   String @db.VarChar(32)
-  prompt String @db.VarChar(4096)
-  result String @db.VarChar(4096)
+  prompt String @db.VarChar(8192)
+  result String @db.VarChar(8192)
 
   createdAt DateTime @default(now())
 

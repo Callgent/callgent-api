@@ -13,7 +13,7 @@
 <hr/>
 
 <div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
-    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Calling:</span>
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Calling Function:</span>
     <div>
         <span style="display: inline-block; width: 8em;font-weight: bold">Name:</span>
         <span>{{=it.fun.name}}</span>
