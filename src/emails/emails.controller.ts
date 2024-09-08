@@ -27,13 +27,18 @@ export class EmailsController {
     @Headers('Authorization') authorization: string,
     @Body() relays: EmailRelayObject[],
   ) {
-    const { sub } = this.jwtAuthService.verify(authorization?.substring(7));
-    if (sub !== this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID'))
-      throw new BadRequestException('Invalid Client ID');
+    // test hosts don't need to be authenticated
+    if (this.configService.get('EMAIL_RELAY_HOST').indexOf('test') < 0) {
+      const { sub } = this.jwtAuthService.verify(authorization?.substring(7));
+      if (sub !== this.configService.get('EMAIL_SPARKPOST_RELAY_CLIENT_ID'))
+        throw new BadRequestException('Invalid Client ID');
+    }
 
     // handle relay event
-    relays?.forEach((relay) =>
-      this.emailsService.handleRelayMessage(relay.msys.relay_message),
+    relays?.forEach(
+      (relay) =>
+        relay?.msys?.relay_message &&
+        this.emailsService.handleRelayEmail(relay.msys.relay_message),
     );
     return; // return 200 to consume the event
   }

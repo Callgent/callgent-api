@@ -23,7 +23,9 @@ export class CallgentFunctionsService {
   protected readonly defSelect: Prisma.CallgentFunctionSelect = {
     pk: false,
     tenantPk: false,
-    signature: false,
+    rawJson: false,
+    params: false,
+    responses: false,
     callgentId: false,
     createdBy: false,
     deletedAt: false,
@@ -32,12 +34,17 @@ export class CallgentFunctionsService {
   @Transactional()
   async loadFunctions(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; callbackName?: string }> {
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const { funName, callgentId } = reqEvent.data;
 
     // TODO if too many functions, use summary first
     const { data: funcs } = await this.findAll({
-      select: { createdAt: false, updatedAt: false, signature: null },
+      select: {
+        createdAt: false,
+        updatedAt: false,
+        params: null,
+        responses: null,
+      },
       where: { callgentId: callgentId, name: funName },
       perPage: Number.MAX_SAFE_INTEGER,
     });

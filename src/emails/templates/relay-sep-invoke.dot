@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- relay email title always ends with #relayId -->
+<title>[Callgent] Function calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. #{{=it.relayId}}</title>
+<!-- { relayId, fun, sep, args[], responses[], to, sender, configs } -->
+</head>
+<body>
+<p>Hello {{=it.to[0].name }}!</p>
+
+<p>Somebody is calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. Below is the detailed request information:</p>
+<hr/>
+
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Calling Function:</span>
+    <div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Name:</span>
+        <span>{{=it.fun.name}}</span>
+    </div>
+    {{ if (it.fun.summary) { }}
+    <div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Summary:</span>
+        <span>{{=it.fun.summary}}</span>
+    </div>
+    {{ } }}
+    {{ if (it.fun.description) { }}
+    <div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Description:</span>
+        <span>{{=it.fun.description}}</span>
+    </div>
+    {{ } }}
+</div>
+
+{{ if (it.args.length) { }}
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Arguments:</span>
+    {{~it.args :arg}}
+    <div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">{{=arg.name}}{{=arg.required ? '<span style="color: red;">*</span>' : ''}}:</span>
+        <span>{{=arg.description}}</span>
+        <div style="padding-left:8em">{{=JSON.stringify(arg.value)}}</div>
+    </div>
+    {{~}}
+</div>
+{{ } }}
+
+
+{{ if (it.responses.length) { }}
+<div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
+    <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Possible Responses:</span>
+    {{~it.responses :resp}}
+    <div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">Response {{=resp.name}}:</span>
+        <span>{{=resp.description}}</span>
+        <div style="padding-left:8em">{{=resp.content ? JSON.stringify(resp.content) : ''}}</div>
+    </div>
+    {{~}}
+</div>
+{{ } }}
+<br/>
+<br/>
+<!-- TODO: TZ -->
+<small>{{=new Date().toUTCString() }}</small>
+</body>
+</html>
+

@@ -29,6 +29,7 @@ export class LLMService {
     template: string,
     args: { [key: string]: any },
     returnType?: T,
+    bizKey?: string,
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
 
@@ -44,7 +45,10 @@ export class LLMService {
         temperature: 0.5,
       });
 
-      if (!resp?.choices?.length) return;
+      if (!resp?.choices?.length)
+        throw new Error(
+          `LLM service not available: template=${template} bizKey=${bizKey}`,
+        );
 
       const choice = resp.choices[0] as NonStreamingChoice;
       result = choice.message?.content;
@@ -77,6 +81,7 @@ export class LLMService {
   }
 
   protected async _llmCache(name: string, prompt: string, result?: string) {
+    if (prompt.length > 8190) return;
     const prisma = this.txHost.tx as PrismaClient;
     if (result)
       return prisma.llmCache.upsert({

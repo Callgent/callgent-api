@@ -39,16 +39,21 @@ export class EventStoresService {
     event: EventObject,
     funName: string,
     listenerId: string,
-    status: number,
+    statusCode: number,
   ) {
+    if (statusCode === 0) {
+      // if event success, keep the latest listenerId and funName
+      funName || (funName = undefined);
+      listenerId || (listenerId = undefined);
+    }
+
     const prisma = this.txHost.tx as PrismaClient;
-    event.statusCode = status;
+    event.statusCode = statusCode;
     const data: Prisma.EventStoreCreateInput = {
       ...event,
       funName,
       listenerId,
     };
-    delete (data as any).rawReq;
     return prisma.eventStore.upsert({
       where: { id: event.id },
       create: data,

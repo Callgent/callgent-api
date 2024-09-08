@@ -146,7 +146,7 @@ export class CallgentsService {
   }
 
   @Transactional()
-  getByName(name: string, select?: Prisma.CallgentSelect) {
+  async getByName(name: string, select?: Prisma.CallgentSelect) {
     const tenantPk = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(

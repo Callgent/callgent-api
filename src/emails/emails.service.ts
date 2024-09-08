@@ -1,9 +1,12 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import axios from 'axios';
 import path from 'path';
+import { RelayEmail } from './dto/sparkpost-relay-object.interface';
 import { EmailTemplateProvider } from './email-template.provider';
-import { RelayMessage } from './dto/sparkpost-relay-object.interface';
+import { EmailRelayEvent } from './events/email-relay.event';
+import { Transactional } from '@nestjs-cls/transactional';
 
 @Injectable()
 export class EmailsService implements OnModuleInit {
@@ -11,21 +14,35 @@ export class EmailsService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private emailTemplates: EmailTemplateProvider,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async onModuleInit() {
     await this.emailTemplates.loadTemplates(path.join(__dirname, 'templates'));
   }
 
+  /**
+   * @param template - template file name
+   */
   async sendTemplateEmail(
-    to: { name: string; email: string }[],
+    to:
+      | string
+      | { name: string; email: string }
+      | (string | { name: string; email: string })[],
     template: string,
     context: { [key: string]: any } = {},
-    sender?: { name: string; email: string },
+    sender?: string | { name: string; email: string },
   ): Promise<boolean> {
+    to = this._formalizeEmails(to) as { name: string; email: string }[];
+    sender = this._formalizeEmails(sender)[0] as {
+      name: string;
+      email: string;
+    };
+
     const content = this.emailTemplates.render(template, {
       ...context,
       to,
+      sender,
       configs: this.configService,
     });
     const subject = this._extractSubject(content);
@@ -68,16 +85,22 @@ export class EmailsService implements OnModuleInit {
       'api-key': apiKey,
       'content-type': 'application/json',
     };
-    return axios.post(url, data, { headers }).then(function (resp) {
-      const sent = resp.status < 300;
-      if (!sent) {
-        this.logger.error('Failed to send email. resp: %j', {
-          ...resp,
-          request: { url, data },
-        });
-      }
-      return sent;
-    });
+    this.logger.debug('Sending email to %j. from: %j', to, sender);
+    try {
+      return axios.post(url, data, { headers }).then(function (resp) {
+        const sent = resp.status < 300;
+        if (!sent) {
+          this.logger.error('Failed to send email. resp: %j', {
+            ...resp,
+            request: { url, data },
+          });
+        }
+        return sent;
+      });
+    } catch (err) {
+      this.logger.error('Failed to send email to %j. err: %s', to, err.message);
+      throw err;
+    }
   }
   private _formalizeEmails(
     emails:
@@ -85,9 +108,11 @@ export class EmailsService implements OnModuleInit {
       | (string | { name: string; email: string })[],
   ) {
     if (!Array.isArray(emails)) emails = [emails];
-    return emails.map((d) =>
-      (d as any).email ? (d as { email: string }) : { email: d as string },
-    );
+    return emails.map((d) => {
+      const email = (d as any).email || d;
+      const name = (d as any).name || email.split('@')[0];
+      return { name, email };
+    });
   }
 
   // private _getTemplateId(template: string) {
@@ -99,7 +124,6 @@ export class EmailsService implements OnModuleInit {
   // }
 
   /**
-   *
    * @returns `${relayType}+${id}@${mailHost}`
    */
   getRelayAddress(id: string, relayType: EmailRelayKey) {
@@ -111,35 +135,36 @@ export class EmailsService implements OnModuleInit {
    * sparkpost relay message
    * @see https://developers.sparkpost.com/api/relay-webhooks/
    */
-  handleRelayMessage(msg: RelayMessage): void {
-    let mailTo = msg?.rcpt_to?.toLowerCase();
+  @Transactional()
+  handleRelayEmail(email: RelayEmail): void {
+    const mailTo = email?.rcpt_to;
     const mailHost = this.configService.get('EMAIL_RELAY_HOST');
     if (!mailTo?.endsWith(mailHost))
-      return this.logger.error('Invalid relay host, ignored message: %j', msg);
+      return this.logger.error('Invalid relay host, ignored: %j', email);
 
-    mailTo = mailTo.substring(0, mailTo.indexOf('@'));
-    const [relayKey, relayId] = mailTo.split('+');
+    const relayKey = mailTo.substring(0, mailTo.indexOf('+'));
+    const relayId = email.content.subject.substring(
+      email.content.subject.lastIndexOf('#') + 1,
+    );
     switch (relayKey) {
       case 'request':
-        this.logger.debug('relay request: %j', msg);
-        // TODO
-        break;
       case 'callgent':
-        this.logger.debug('relay callgent: %j', msg);
-        // TODO
+        // this.logger.debug('relay %j', msg);
+        // FIXME persistent emit, to prevent lost event
+        this.eventEmitter.emit(
+          EmailRelayEvent.eventPrefix + relayKey,
+          new EmailRelayEvent(relayKey as EmailRelayKey, relayId, email),
+        );
         break;
       default:
-        this.logger.error(
-          'Invalid relay key %s, ignored message: %j',
-          relayKey,
-          msg,
-        );
+        this.logger.error('Invalid relay key %s, ignored: %j', mailTo, email);
     }
   }
 }
 
-/**
- * 'request': request call from email SEP.
- * 'callgent': callgent email CEP.
- */
-export type EmailRelayKey = 'request' | 'callgent';
+export enum EmailRelayKey {
+  /** ClientRequestEvent callback from email SEP */
+  request = 'request',
+  /** callgent email CEP */
+  callgent = 'callgent',
+}

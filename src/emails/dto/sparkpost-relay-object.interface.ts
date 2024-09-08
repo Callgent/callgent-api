@@ -53,7 +53,7 @@ interface Content {
 /**
  * Represents the relay message.
  */
-export interface RelayMessage {
+export interface RelayEmail {
   /**
    * The content parsed from the incoming message.
    */
@@ -92,6 +92,6 @@ export interface RelayMessage {
 
 export interface EmailRelayObject {
   msys: {
-    relay_message: RelayMessage;
+    relay_message: RelayEmail;
   };
 }

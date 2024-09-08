@@ -16,8 +16,6 @@ export class ClientRequestEvent extends EventObject {
     /** empty to create new task */
     taskId: string,
     dataType: string,
-    /** raw request, will not be persisted */
-    public readonly rawReq: any,
     callback: string,
     public readonly data: {
       callgentId: string;
@@ -25,6 +23,7 @@ export class ClientRequestEvent extends EventObject {
       /** empty means anonymous */
       caller?: string;
       req?: JsonValue;
+      resp?: JsonValue;
       /** requested callgent function name */
       funName?: string;
       /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */

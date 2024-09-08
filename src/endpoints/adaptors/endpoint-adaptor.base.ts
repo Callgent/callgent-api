@@ -1,12 +1,13 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
+import { Prisma } from '@prisma/client';
+import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
+import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
+import { EventObject } from '../../event-listeners/event-object';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
-import yaml from 'yaml';
-import { Prisma } from '@prisma/client';
-import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
 
 export abstract class EndpointAdaptor {
   protected readonly agentsService: AgentsService;
@@ -14,7 +15,12 @@ export abstract class EndpointAdaptor {
     this.agentsService = agentsService;
   }
 
+  /** preprocess request */
   abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
+
+  /** postprocess response */
+  abstract postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto);
+
   /** Endpoint config. */
   abstract getConfig(): EndpointConfig;
 
@@ -33,14 +39,16 @@ export abstract class EndpointAdaptor {
   /** get callback param */
   abstract getCallback(
     callback: string,
-    rawReq: unknown,
     reqEndpoint?: EndpointDto,
   ): Promise<string>;
 
   /** send response back to client */
   abstract callback(resp: any): Promise<boolean>;
 
-  /** parse api to openAPI.JSON format */
+  /**
+   * parse APIs to openAPI.json format
+   * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
+   */
   async parseApis({
     text,
     format,
@@ -56,11 +64,21 @@ export abstract class EndpointAdaptor {
         json = yaml.parse(text);
       } else if (format == 'json') {
         json = JSON.parse(text);
+      } else {
+        try {
+          json = JSON.parse(text);
+        } catch (err) {
+          try {
+            json = yaml.parse(text);
+          } catch (err) {
+            // pass
+          }
+        }
       }
 
       if (!json?.openapi || !json.paths) {
         // convert text to openAPI.JSON
-        throw new Error('Not implemented.');
+        throw new Error('TODO: Not implemented.');
       }
     } catch (err) {
       throw new BadRequestException(
@@ -76,7 +94,11 @@ export abstract class EndpointAdaptor {
         'Invalid openAPI.JSON, failed to dereference.',
       );
     }
-    const { paths, components } = json; // TODO: save components onto SEP
+    const { openapi, paths } = json; // TODO: save components onto SEP
+    if (!openapi?.startsWith('3.0'))
+      throw new BadRequestException(
+        'Only openAPI `3.0.x` is supported now, openapi=' + openapi,
+      );
 
     const ps = paths && Object.entries(paths);
     if (ps?.length) {
@@ -86,17 +108,24 @@ export abstract class EndpointAdaptor {
           const summary = `${
             restApi.operationId ? restApi.operationId + ': ' : ''
           }${restApi.summary}`;
-          const description = restApi.description;
+          let description = restApi.description || '';
+          if (restApi.tags?.length)
+            description += ` Tags: ${restApi.tags.join(', ')}`;
+          const responses = restApi.responses;
+          const params = {
+            parameters: restApi.parameters,
+            requestBody: restApi.requestBody,
+          };
+          // TODO restApi.callbacks
 
-          delete restApi.summary;
-          delete restApi.description;
-          delete restApi.operationId;
           ret.apis.push({
             path: path.toLowerCase(),
             method: method.toUpperCase(),
             summary,
             description,
-            signature: restApi,
+            params,
+            responses,
+            rawJson: restApi,
           });
         }
       }
@@ -105,12 +134,12 @@ export abstract class EndpointAdaptor {
     throw new NotFoundException('No API found in the text.');
   }
 
-  abstract invoke(
+  abstract invoke<T extends EventObject>(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: ClientRequestEvent,
-  ): Promise<any>;
+    reqEvent: T,
+  ): Promise<{ data: T; resumeFunName?: string }>;
 }
 
 export interface AdaptedDataSource {}
@@ -121,7 +150,9 @@ export class ApiSpec {
     method: string;
     summary: string;
     description: string;
-    signature: Prisma.JsonObject;
+    params: Prisma.JsonObject;
+    responses: Prisma.JsonObject;
+    rawJson: Prisma.JsonObject;
   }[];
 }
 

@@ -17,7 +17,7 @@ export default (opts: PrettyOptions) => {
       }
       let resInfo: any = '';
       const statusCode = (res as any)?.statusCode;
-      if (err && (!statusCode || statusCode >= 500)) {
+      if (err && (!statusCode || statusCode > 499)) {
         resInfo = `\n\x1b[31m[ERROR ${
           statusCode || ''
         }]\x1b[0m ${JSON.stringify(

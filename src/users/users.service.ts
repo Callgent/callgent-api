@@ -32,10 +32,9 @@ export class UsersService {
     private readonly authTokensService: AuthTokensService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
-  protected readonly defSelect: Prisma.CallgentSelect = {
+  protected readonly defSelect: Prisma.UserSelect = {
     pk: false,
     tenantPk: false,
-    createdBy: false,
     deletedAt: false,
   };
 
@@ -272,7 +271,7 @@ export class UsersService {
     );
     // send email
     return this.emailsService.sendTemplateEmail(
-      [{ email, name: ui?.name || email }],
+      [{ email, name: ui?.name || email.split('@')[0] }],
       'validation-email',
       { token, resetPwd, create },
     );
