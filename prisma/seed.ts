@@ -177,7 +177,7 @@ we receive below response content:
 --- response end --->
 
 Please formalize the response content as a single-lined JSON object:
-{"response-code": "the exact response code(integer) defined in API", "data": "extracted response value with respect to the corresponding API response schema"}`,
+{"statusCode": "the exact response code(integer) defined in API", "data": "extracted response value with respect to the corresponding API response schema, or undefined if abnormal response", "error": "message": "error message if abnormal response, otherwise undefined"}`,
     },
   ];
 

@@ -134,10 +134,10 @@ export class AgentsService {
     const mapped = await this.llmService.template(
       'convert2Response',
       { args, resp, fun },
-      { 'response-code': 200, data: {} },
+      { statusCode: 200, data: {} },
       eventId,
     ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
 
-    return { statusCode: mapped['response-code'], data: mapped.data };
+    return { statusCode: mapped.statusCode, data: mapped.data };
   }
 }
