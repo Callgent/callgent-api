@@ -14,7 +14,8 @@ export const prismaTenancyUseFactory = (
         async $allOperations({ args, query }) {
           const tenantPk = store.get(PrismaTenancyService.TENANT_ID_KEY);
 
-          if (tenantPk) {
+          // may be 0
+          if (Number.isFinite(tenantPk)) {
             const existingTx = store.get(getTransactionClsKey());
 
             // 2 ops

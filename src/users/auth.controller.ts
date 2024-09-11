@@ -18,7 +18,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
 @CacheTTL(0)
-@ApiTags('authentication')
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController extends LocalAuthController {
   constructor(

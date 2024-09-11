@@ -82,7 +82,7 @@ export class TasksService {
   findAll({
     select,
     where,
-    orderBy = { id: 'desc' },
+    orderBy = { pk: 'desc' },
     page,
     perPage,
   }: {

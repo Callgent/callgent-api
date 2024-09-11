@@ -2,7 +2,7 @@
 
 <p align="center">
     <a href="https://callgent.com" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/IO-IO?logo=IO&logoColor=%20%23f5f5f5&label=Callgent&labelColor=%20%23155EEF&color=%23EAECF0"></a>
+        <img alt="Static Badge" src="https://img.shields.io/badge/COM-COM?logo=COM&logoColor=%20%23f5f5f5&label=Callgent&labelColor=%20%23155EEF&color=%23EAECF0"></a>
     <a href="https://discord.gg/V9HKBukSRp" target="_blank">
         <img src="https://img.shields.io/discord/1215998670265127102?logo=discord"
             alt="chat on Discord"></a>

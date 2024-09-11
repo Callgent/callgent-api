@@ -133,7 +133,7 @@ export class CallgentFunctionsService {
   findAll({
     select,
     where,
-    orderBy = { id: 'desc' },
+    orderBy = { pk: 'desc' },
     page,
     perPage,
   }: {
