@@ -54,7 +54,7 @@ export class CallgentsService {
   findAll({
     select,
     where,
-    orderBy = { id: 'desc' },
+    orderBy = { pk: 'desc' },
     page,
     perPage,
   }: {
@@ -164,23 +164,6 @@ export class CallgentsService {
     });
   }
 
-  @Transactional()
-  async duplicateOverTenancy(
-    dupId: string,
-    dto: CreateCallgentDto,
-    createdBy: string,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-
-    await this.tenancyService.bypassTenancy(prisma);
-    const dup = await prisma.callgent.findUnique({ where: { id: dupId } });
-    if (!dup)
-      throw new NotFoundException('callgent to duplicate not found: ' + dupId);
-
-    await this.tenancyService.bypassTenancy(prisma, false);
-    return this.create(dto, createdBy, { id: null });
-  }
-
   /**
    * Cross tenancy execution when client endpoint is provided.
    * [endpoint://]callgent.please('act', with_args)
@@ -233,5 +216,45 @@ export class CallgentsService {
     } else action = actions[0];
 
     // pre-meta, pre-routing, pre-mapping
+  }
+
+  /// hub actions
+
+  /** hub are those in tenantPk = -1 */
+  private async _onHubAction<T>(fn: () => Promise<T>): Promise<T> {
+    const tenantPk = this.tenancyService.getTenantId();
+    try {
+      this.tenancyService.setTenantId(-1);
+      return fn.apply(this);
+    } finally {
+      this.tenancyService.setTenantId(tenantPk);
+    }
+  }
+  @Transactional()
+  async findAllInHub(params: {
+    select?: Prisma.CallgentSelect;
+    where?: Prisma.CallgentWhereInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput;
+    page?: number;
+    perPage?: number;
+  }) {
+    return this._onHubAction(() => this.findAll(params));
+  }
+
+  @Transactional()
+  async duplicateOverTenancy(
+    dupId: string,
+    dto: CreateCallgentDto,
+    createdBy: string,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+
+    await this.tenancyService.bypassTenancy(prisma); // FIXME
+    const dup = await prisma.callgent.findUnique({ where: { id: dupId } });
+    if (!dup)
+      throw new NotFoundException('Callgent to duplicate not found: ' + dupId);
+
+    await this.tenancyService.bypassTenancy(prisma, false);
+    return this.create(dto, createdBy, { id: null });
   }
 }

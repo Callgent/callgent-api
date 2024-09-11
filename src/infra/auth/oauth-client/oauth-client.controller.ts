@@ -22,7 +22,7 @@ import { JwtAuthService } from '../jwt/jwt.service';
 
 /** oauth for root user */
 @CacheTTL(-1)
-@ApiTags('authentication')
+@ApiTags('Authentication')
 @Controller('auth')
 export class OAuthClientController {
   private readonly logger = new Logger(OAuthClientController.name);

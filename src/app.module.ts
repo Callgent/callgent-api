@@ -20,6 +20,7 @@ import { UsersModule } from './users/users.module';
 import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
 import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
 import { SandboxModule } from './sandbox/sandbox.module';
+import { CallgentHubModule } from './bff/callgent-hub/callgent-hub.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SandboxModule } from './sandbox/sandbox.module';
     CallgentTreeModule,
     BffCallgentFunctionsModule,
     SandboxModule,
+    CallgentHubModule,
   ],
   controllers: [AppController],
   providers: [AppService],

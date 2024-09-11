@@ -34,10 +34,9 @@ export class EmailsService implements OnModuleInit {
     sender?: string | { name: string; email: string },
   ): Promise<boolean> {
     to = this._formalizeEmails(to) as { name: string; email: string }[];
-    sender = this._formalizeEmails(sender)[0] as {
-      name: string;
-      email: string;
-    };
+    sender = sender
+      ? this._formalizeEmails(sender)[0]
+      : (sender = JSON.parse(this.configService.get('EMAIL_DEFAULT_SENDER')));
 
     const content = this.emailTemplates.render(template, {
       ...context,

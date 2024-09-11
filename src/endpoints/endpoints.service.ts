@@ -145,7 +145,7 @@ export class EndpointsService {
   findAll({
     select,
     where,
-    orderBy = { id: 'desc' },
+    orderBy = { pk: 'desc' },
   }: {
     select?: Prisma.EndpointSelect;
     where?: Prisma.EndpointWhereInput;

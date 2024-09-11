@@ -5,7 +5,7 @@ import { AuthUtils } from '../auth.utils';
 import { JwtAuthService } from '../jwt/jwt.service';
 import { LocalAuthGuard } from './local-auth.guard';
 
-// @ApiTags('authentication')
+// @ApiTags('Authentication')
 // @Controller('auth')
 export class LocalAuthController {
   constructor(
