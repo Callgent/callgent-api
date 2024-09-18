@@ -5,7 +5,11 @@ import { AgentsModule } from './agents/agents.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
+import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
+import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
+import { CallgentHubModule } from './bff/callgent-hub/callgent-hub.module';
 import { CallgentFunctionsModule } from './callgent-functions/callgent-functions.module';
+import { CallgentRealmsModule } from './callgent-realms/callgent-realms.module';
 import { CallgentsModule } from './callgents/callgents.module';
 import { EmailsModule } from './emails/emails.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
@@ -14,13 +18,10 @@ import { EventStoresModule } from './event-stores/event-stores.module';
 import { AuthModule } from './infra/auth/auth.module';
 import { LoggingModule } from './infra/logging/logging.module';
 import { ReposModule } from './infra/repo/repos.module';
+import { SandboxModule } from './sandbox/sandbox.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
-import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
-import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
-import { SandboxModule } from './sandbox/sandbox.module';
-import { CallgentHubModule } from './bff/callgent-hub/callgent-hub.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { CallgentHubModule } from './bff/callgent-hub/callgent-hub.module';
     BffCallgentFunctionsModule,
     SandboxModule,
     CallgentHubModule,
+    CallgentRealmsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

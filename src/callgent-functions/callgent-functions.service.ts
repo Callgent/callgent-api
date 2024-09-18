@@ -1,6 +1,11 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
@@ -31,7 +36,6 @@ export class CallgentFunctionsService {
     deletedAt: false,
   };
 
-  @Transactional()
   async loadFunctions(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
@@ -49,7 +53,7 @@ export class CallgentFunctionsService {
       perPage: Number.MAX_SAFE_INTEGER,
     });
     if (!funcs.length)
-      throw new BadRequestException(
+      throw new NotFoundException(
         `No function found on callgent#${callgentId}${
           funName ? ' name=' + funName : ''
         }`,
@@ -95,7 +99,7 @@ export class CallgentFunctionsService {
         'endpoint must be of type `SERVER`, id=' + endpoint.id,
       );
 
-    const { apis } = spec;
+    const { apis, securitySchemes } = spec;
     // validation
     const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>(
       (f) => ({
@@ -108,10 +112,20 @@ export class CallgentFunctionsService {
       }),
     );
 
+    // create api functions
     const prisma = this.txHost.tx as PrismaClient;
     const { count: actionsCount } = await prisma.callgentFunction.createMany({
       data: actMap,
     });
+
+    // 根据adaptor，auth type，判定可选的auth servers
+    // FIXME save securitySchemes on endpoint
+    // await this.endpointsService.saveSecuritySchemes(
+    //   endpoint.id,
+    //   securitySchemes,
+    // );
+    // FIXME add auth-listener for this sep,
+
     return actionsCount;
   }
 
@@ -126,8 +140,8 @@ export class CallgentFunctionsService {
         'Function entries can only be imported into Server Endpoint. ',
       );
 
-    const apis = await this.endpointsService.parseApis(endpoint, apiTxt);
-    return this.createBatch(endpoint, apis, createdBy);
+    const apiSpec = await this.endpointsService.parseApis(endpoint, apiTxt);
+    return this.createBatch(endpoint, apiSpec, createdBy);
   }
 
   findAll({

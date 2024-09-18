@@ -15,7 +15,7 @@ export abstract class EndpointAdaptor {
     this.agentsService = agentsService;
   }
 
-  /** preprocess request */
+  /** preprocess request, replace raw request */
   abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
 
   /** postprocess response */
@@ -94,11 +94,12 @@ export abstract class EndpointAdaptor {
         'Invalid openAPI.JSON, failed to dereference.',
       );
     }
-    const { openapi, paths } = json; // TODO: save components onto SEP
+    const { openapi, paths, components } = json; // TODO: save components onto SEP
     if (!openapi?.startsWith('3.0'))
       throw new BadRequestException(
         'Only openAPI `3.0.x` is supported now, openapi=' + openapi,
       );
+    ret.securitySchemes = components?.securitySchemes;
 
     const ps = paths && Object.entries(paths);
     if (ps?.length) {
@@ -116,6 +117,8 @@ export abstract class EndpointAdaptor {
             parameters: restApi.parameters,
             requestBody: restApi.requestBody,
           };
+          const securities = restApi.security;
+
           // TODO restApi.callbacks
 
           ret.apis.push({
@@ -123,6 +126,7 @@ export abstract class EndpointAdaptor {
             method: method.toUpperCase(),
             summary,
             description,
+            securities,
             params,
             responses,
             rawJson: restApi,
@@ -150,10 +154,12 @@ export class ApiSpec {
     method: string;
     summary: string;
     description: string;
+    securities?: Prisma.JsonObject;
     params: Prisma.JsonObject;
     responses: Prisma.JsonObject;
     rawJson: Prisma.JsonObject;
   }[];
+  securitySchemes?: Prisma.JsonObject;
 }
 
 export class EndpointParam {

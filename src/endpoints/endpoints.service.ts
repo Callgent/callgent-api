@@ -86,7 +86,6 @@ export class EndpointsService {
     );
   }
 
-  @Transactional()
   findOne(id: string, select?: Prisma.EndpointSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
@@ -96,7 +95,6 @@ export class EndpointsService {
     );
   }
 
-  @Transactional()
   findFirstByType(
     type: EndpointType,
     callgentId: string,
@@ -129,16 +127,6 @@ export class EndpointsService {
         },
       ),
     );
-  }
-
-  @Transactional()
-  findOneAuth(id: string, userKey: string) {
-    const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpointAuth.findUnique({
-      where: {
-        endpointId_userKey: { endpointId: id, userKey: userKey },
-      },
-    });
   }
 
   @Transactional()

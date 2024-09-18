@@ -7,17 +7,15 @@ import {
   Param,
   Post,
   Put,
-  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiSecurity,
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
   ApiProperty,
-  ApiQuery,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';

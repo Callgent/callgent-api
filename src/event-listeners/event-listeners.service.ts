@@ -162,15 +162,17 @@ export class EventListenersService {
   }
 
   async loadListeners(
-    data: {
+    {
+      srcId,
+      eventType,
+      dataType,
+    }: {
       srcId: string;
       eventType: string;
       dataType: string;
     },
     deleted = false,
   ) {
-    const { srcId: srcId, eventType, dataType } = data;
-
     const prisma = this.txHost.tx as PrismaClient;
     const AND: Prisma.EventListenerWhereInput[] = [
       {

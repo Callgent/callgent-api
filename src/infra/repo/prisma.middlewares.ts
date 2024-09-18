@@ -37,6 +37,7 @@ export const mainPrismaServiceOptions = (
           Endpoint: deleteHandle,
           Task: deleteHandle,
           TaskAction: deleteHandle,
+          CallgentRealm: deleteHandle,
         },
       }),
     ],

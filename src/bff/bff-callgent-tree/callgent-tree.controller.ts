@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
@@ -18,7 +18,8 @@ import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
 import { EndpointsService } from '../../endpoints/endpoints.service';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 
-@ApiTags('bff')
+@ApiTags('BFF')
+@ApiSecurity('defaultBearerAuth')
 @UseGuards(JwtGuard)
 @Controller('bff')
 export class CallgentTreeController {

@@ -87,7 +87,6 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
   async findMany(ids: string[], select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
 
@@ -131,7 +130,6 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
   findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
@@ -145,7 +143,6 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
   async getByName(name: string, select?: Prisma.CallgentSelect) {
     const tenantPk = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
@@ -169,6 +166,7 @@ export class CallgentsService {
    * [endpoint://]callgent.please('act', with_args)
    * @param act API action name
    * @param endpoint client endpoint to call API. unnecessary in internal calls
+   * @deprecated
    */
   @Transactional()
   async please(
@@ -225,12 +223,11 @@ export class CallgentsService {
     const tenantPk = this.tenancyService.getTenantId();
     try {
       this.tenancyService.setTenantId(-1);
-      return fn.apply(this);
+      return await fn.apply(this);
     } finally {
       this.tenancyService.setTenantId(tenantPk);
     }
   }
-  @Transactional()
   async findAllInHub(params: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
