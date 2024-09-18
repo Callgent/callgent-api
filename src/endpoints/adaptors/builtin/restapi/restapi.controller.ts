@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
@@ -61,6 +62,7 @@ export class RestApiController {
   @All(':id/:endpointId/invoke/api/*')
   async execute(
     @Req() req,
+    @Res() res,
     @Param('id') callgentId: string,
     @Param('endpointId') endpointId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
@@ -72,7 +74,7 @@ export class RestApiController {
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
-    const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
+    const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
     const cep = await this.endpointsService.$findFirstByType(
@@ -95,7 +97,7 @@ export class RestApiController {
       new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, {
         callgentId,
         callgentName: callgent.name,
-        caller,
+        callerId,
         progressive,
         funName,
         req,
@@ -103,10 +105,10 @@ export class RestApiController {
       parseInt(timeout) || 0, //  sync timeout
     );
     // FIXME data
-    if (0 <= statusCode && statusCode < 400)
-      return { data, statusCode, message };
-
-    throw new HttpException(message, statusCode);
+    res
+      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
+      .send({ data, statusCode, message });
+    // code cannot < 0
   }
 
   @ApiOperation({

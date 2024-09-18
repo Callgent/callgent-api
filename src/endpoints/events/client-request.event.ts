@@ -21,7 +21,7 @@ export class ClientRequestEvent extends EventObject {
       callgentId: string;
       callgentName: string;
       /** empty means anonymous */
-      caller?: string;
+      callerId?: string;
       req?: JsonValue;
       resp?: JsonValue;
       /** requested callgent function name */
