@@ -4,7 +4,6 @@ import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
 import { EventObject } from '../../event-listeners/event-object';
 import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
-import { CallgentRealmDto } from '../dto/callgent-realm.dto';
 import { RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
@@ -13,11 +12,11 @@ import { AuthProcessor } from './auth-processor.base';
 export class ApiKeyAuthProcessor extends AuthProcessor {
   protected implyProvider(
     scheme: SecuritySchemeObject,
-    endpoint: EndpointDto,
+    endpoint?: EndpointDto,
     servers?: { url: string }[],
   ) {
     let url: string;
-    if (endpoint.type != 'CLIENT') {
+    if (endpoint && endpoint.type != 'CLIENT') {
       url = endpoint.host; // whatever adaptor it is, host need to be a url
     } else if (servers?.length > 0) {
       url = servers[0].url;
@@ -45,9 +44,16 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   protected checkEnabled(
     scheme: RealmSchemeVO,
-    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
   ) {
-    return scheme.provider && !!realm.secret;
+    if (!realm.secret || !scheme.provider) return false;
+    return this.validateSecretFormat(realm);
+  }
+
+  protected validateSecretFormat(
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+  ) {
+    return typeof realm.secret == 'string';
   }
 
   protected isPerUser() {

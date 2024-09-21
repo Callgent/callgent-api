@@ -51,7 +51,7 @@ export class CallgentsService {
   }
 
   @Transactional()
-  findAll({
+  findMany({
     select,
     where,
     orderBy = { pk: 'desc' },
@@ -87,27 +87,27 @@ export class CallgentsService {
     );
   }
 
-  async findMany(ids: string[], select?: Prisma.CallgentSelect) {
-    const prisma = this.txHost.tx as PrismaClient;
+  // async findAll(ids: string[], select?: Prisma.CallgentSelect) {
+  //   const prisma = this.txHost.tx as PrismaClient;
 
-    const callgents = await selectHelper(
-      select,
-      async (select) =>
-        await prisma.callgent.findMany({
-          where: { id: { in: ids } },
-          select,
-        }),
-      this.defSelect,
-    );
+  //   const callgents = await selectHelper(
+  //     select,
+  //     async (select) =>
+  //       await prisma.callgent.findMany({
+  //         where: { id: { in: ids } },
+  //         select,
+  //       }),
+  //     this.defSelect,
+  //   );
 
-    if (callgents.length != ids.length)
-      throw new NotFoundException(
-        `Callgent not found, id=${ids
-          .filter((x) => !callgents.find((y) => y.id == x))
-          .join(', ')}`,
-      );
-    return callgents;
-  }
+  //   if (callgents.length != ids.length)
+  //     throw new NotFoundException(
+  //       `Callgent not found, id=${ids
+  //         .filter((x) => !callgents.find((y) => y.id == x))
+  //         .join(', ')}`,
+  //     );
+  //   return callgents;
+  // }
 
   @Transactional()
   delete(id: string) {
@@ -237,7 +237,7 @@ export class CallgentsService {
     page?: number;
     perPage?: number;
   }) {
-    return this._onHubAction(() => this.findAll(params));
+    return this._onHubAction(() => this.findMany(params));
   }
 
   @Transactional()

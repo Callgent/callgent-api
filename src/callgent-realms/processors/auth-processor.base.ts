@@ -7,7 +7,6 @@ import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
 import { EventObject } from '../../event-listeners/event-object';
 import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
-import { CallgentRealmDto } from '../dto/callgent-realm.dto';
 import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityVO } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
@@ -15,9 +14,9 @@ import { CallgentRealm } from '../entities/callgent-realm.entity';
 export abstract class AuthProcessor {
   /** fill in necessary realm properties */
   constructRealm(
-    endpoint: EndpointDto,
     scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
-    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+    endpoint?: EndpointDto,
     servers?: ServerObject[],
   ) {
     // imply provider
@@ -51,7 +50,7 @@ export abstract class AuthProcessor {
    */
   protected abstract implyProvider(
     scheme: Omit<SecuritySchemeObject, 'type'> & { type: AuthType },
-    endpoint: EndpointDto,
+    endpoint?: EndpointDto,
     servers?: { url: string }[],
   ): string;
 
@@ -60,12 +59,17 @@ export abstract class AuthProcessor {
 
   protected abstract checkEnabled(
     scheme: RealmSchemeVO,
-    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+  ): boolean;
+
+  protected abstract validateSecretFormat(
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+    scheme: RealmSchemeVO,
   ): boolean;
 
   protected abstract isPerUser(
     scheme: RealmSchemeVO,
-    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
   ): boolean;
 
   /**

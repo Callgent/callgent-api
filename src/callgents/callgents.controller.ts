@@ -32,7 +32,7 @@ import { UpdateCallgentDto } from './dto/update-callgent.dto';
 @UseGuards(JwtGuard)
 @Controller('callgents')
 export class CallgentsController {
-  constructor(private readonly callgentService: CallgentsService) {}
+  constructor(private readonly callgentsService: CallgentsService) {}
 
   @ApiCreatedResponse({
     schema: {
@@ -45,7 +45,7 @@ export class CallgentsController {
   @Post()
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
     return {
-      data: await this.callgentService.create(dto, req.user.sub),
+      data: await this.callgentsService.create(dto, req.user.sub),
     };
   }
 
@@ -59,7 +59,7 @@ export class CallgentsController {
   })
   @Get('/:id')
   async findOne(@Param('id') id: string) {
-    return { data: await this.callgentService.findOne(id) };
+    return { data: await this.callgentsService.findOne(id) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -67,7 +67,7 @@ export class CallgentsController {
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiOkResponse({
     schema: {
-      anyOf: [
+      allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
@@ -89,7 +89,7 @@ export class CallgentsController {
           name: { contains: query.queryString },
         }
       : undefined;
-    const list = await this.callgentService.findAll({
+    const list = await this.callgentsService.findMany({
       page: query.page,
       perPage: query.perPage,
       where,
@@ -109,7 +109,7 @@ export class CallgentsController {
   @Put('/:id')
   async update(@Param('id') id: string, @Body() dto: UpdateCallgentDto) {
     dto.id = id;
-    return { data: await this.callgentService.update(dto) };
+    return { data: await this.callgentsService.update(dto) };
   }
 
   @ApiCreatedResponse({
@@ -127,7 +127,7 @@ export class CallgentsController {
     @Body() dto: CreateCallgentDto,
   ) {
     return {
-      data: await this.callgentService.duplicateOverTenancy(
+      data: await this.callgentsService.duplicateOverTenancy(
         id,
         dto,
         req.user.sub,
@@ -149,6 +149,6 @@ export class CallgentsController {
   })
   @Delete('/:id')
   async remove(@Param('id') id: string) {
-    return { data: await this.callgentService.delete(id) };
+    return { data: await this.callgentsService.delete(id) };
   }
 }

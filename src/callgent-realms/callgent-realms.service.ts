@@ -1,6 +1,7 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
+  BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
@@ -17,6 +18,7 @@ import { UsersService } from '../users/users.service';
 import { CallgentRealmDto } from './dto/callgent-realm.dto';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
 import { RealmSecurityItem, RealmSecurityVO } from './dto/realm-security.vo';
+import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { CallgentRealm } from './entities/callgent-realm.entity';
 import { AuthProcessor } from './processors/auth-processor.base';
 
@@ -45,12 +47,12 @@ export class CallgentRealmsService {
   async upsertRealm(
     endpoint: EndpointDto,
     scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
-    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
+    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
     servers: ServerObject[],
   ) {
     const authType = scheme.type;
     const processor = this._getAuthProcessor(authType);
-    realm = processor.constructRealm(endpoint, scheme, realm, servers);
+    realm = processor.constructRealm(scheme, realm, endpoint, servers);
     const realmKey = realm.realmKey;
     const callgentId = endpoint.callgentId;
     const prisma = this.txHost.tx as PrismaClient;
@@ -220,7 +222,7 @@ export class CallgentRealmsService {
    * @param noError if false, throw error if realm not enabled
    */
   protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this.findOne(security.realmPk, {});
+    const realm = await this._findOne(security.realmPk, {});
     if (!realm?.enabled) {
       if (noError) return { realm };
       throw new UnauthorizedException(
@@ -249,7 +251,15 @@ export class CallgentRealmsService {
       return this.usersService.$findFirstUserIdentity(userId, '' + realm.pk);
   }
 
-  findOne(pk: number, select?: Prisma.CallgentRealmSelect) {
+  /**
+   * @param authType @see AuthType
+   */
+  protected _getAuthProcessor(authType: string): AuthProcessor {
+    return this.moduleRef.get(authType + '-authProcessor');
+  }
+
+  @Transactional()
+  protected _findOne(pk: number, select?: Prisma.CallgentRealmSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
@@ -262,10 +272,75 @@ export class CallgentRealmsService {
     ) as unknown as Promise<CallgentRealm>;
   }
 
+  @Transactional()
+  findOne(
+    callgentId: string,
+    realmKey: string,
+    select?: Prisma.CallgentRealmSelect,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.callgentRealm.findUnique({
+          select,
+          where: { callgentId_realmKey: { callgentId, realmKey } },
+        }),
+      this.defSelect,
+    ) as unknown as Promise<CallgentRealm>;
+  }
+
+  @Transactional()
+  findAll({
+    select,
+    where,
+    orderBy = { pk: 'desc' },
+  }: {
+    select?: Prisma.CallgentRealmSelect;
+    where?: Prisma.CallgentRealmWhereInput;
+    orderBy?: Prisma.CallgentRealmOrderByWithRelationInput;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.callgentRealm.findMany({
+          where,
+          select,
+          orderBy,
+        }),
+      this.defSelect,
+    );
+  }
+
   /**
-   * @param authType @see AuthType
+   * update realm, refresh { realmKey, enabled }
    */
-  protected _getAuthProcessor(authType: string): AuthProcessor {
-    return this.moduleRef.get(authType + '-authProcessor');
+  @Transactional()
+  async update(
+    callgentId: string,
+    realmKey: string,
+    dto: UpdateCallgentRealmDto,
+    select?: Prisma.CallgentRealmSelect,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const old = await this.findOne(callgentId, realmKey);
+    dto = { ...old, ...dto }; // merge
+    if (!dto.scheme) throw new BadRequestException('realm.scheme is required');
+
+    dto.authType = dto.scheme.type;
+    const processor = this._getAuthProcessor(dto.authType);
+    dto = processor.constructRealm(dto.scheme, dto as any);
+
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.callgentRealm.update({
+          select,
+          where: { callgentId_realmKey: { callgentId, realmKey } },
+          data: { ...dto, scheme: dto.scheme as any },
+        }),
+      this.defSelect,
+    );
   }
 }

@@ -19,7 +19,7 @@ export class CallgentHubController {
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiOkResponse({
     schema: {
-      anyOf: [
+      allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {

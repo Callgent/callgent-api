@@ -228,19 +228,43 @@ model CallgentFunction {
 
 /// @description security realms for callgent
 model CallgentRealm {
-  pk Int @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  pk       Int @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
   callgentId String @db.VarChar(36)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
   realmKey   String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
 
-  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | ..etc.
-  realm    String  @default("") @db.VarChar(16) /// @description provider defined realm name, or '' for default realm
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
+  /// @description provider defined realm name, or '' for default realm
+  /// @IsOptional()
+  realm    String? @default("") @db.VarChar(16)
+  /// @DtoUpdateOptional
   /// @DtoCastType(RealmSchemeVO, ../dto/realm-scheme.vo)
-  scheme   Json?   @db.Json /// @description security scheme, with all public configs
+  scheme   Json    @db.Json /// @description security scheme, with all public configs
   secret   Json?   @db.Json /// @description security secret, with all private configs
 
-  perUser  Boolean @default(false) /// @description whether the realm is per user auth
-  enabled  Boolean @default(true) /// @description whether the realm is enabled
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  perUser Boolean @default(false) /// @description whether the realm is per user auth
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  enabled Boolean @default(true) /// @description whether the realm is enabled
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -251,6 +275,7 @@ model CallgentRealm {
 
   @@unique([callgentId, realmKey])
   @@index(callgentId)
+  @@index(tenantPk)
 }
 
 // model RealmToken merged into UserIdentity

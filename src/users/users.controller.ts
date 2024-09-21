@@ -81,7 +81,7 @@ export class UsersController {
   })
   @ApiCreatedResponse({
     schema: {
-      anyOf: [
+      allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { type: 'boolean' } } },
       ],
