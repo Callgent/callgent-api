@@ -295,7 +295,7 @@ export class EndpointsService {
 
     const endpoint = await this.findOne(reqEvent.srcId);
 
-    await adaptor.preprocess(reqEvent, endpoint);
+    await adaptor.preprocess(reqEvent, endpoint as any);
   }
 
   @Transactional()
@@ -321,7 +321,7 @@ export class EndpointsService {
 
     // may returns pending result
     return adapter
-      .invoke(func, map2Function.args, sep, reqEvent)
+      .invoke(func, map2Function.args, sep as any, reqEvent)
       .then((res) => {
         if (res?.resumeFunName) return res;
         return this.postInvokeSEP(res.data);

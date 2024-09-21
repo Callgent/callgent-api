@@ -1,25 +1,95 @@
-import { SecuritySchemeType } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { UnauthorizedException } from '@nestjs/common';
+import {
+  SecuritySchemeObject,
+  ServerObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
 import { EventObject } from '../../event-listeners/event-object';
 import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
+import { CallgentRealmDto } from '../dto/callgent-realm.dto';
+import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { RealmSecurityItem, RealmSecurityVO } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
-import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
-
-export type AuthType = SecuritySchemeType; // | '';
 
 export abstract class AuthProcessor {
+  /** fill in necessary realm properties */
+  constructRealm(
+    endpoint: EndpointDto,
+    scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
+    realm: Partial<CallgentRealmDto>,
+    servers?: ServerObject[],
+  ) {
+    // imply provider
+    if (!realm.scheme.provider)
+      realm.scheme.provider = this.implyProvider(
+        realm.scheme,
+        endpoint,
+        servers,
+      );
+    realm.realmKey = this.getRealmKey(realm.scheme, realm.realm);
+    realm.perUser = this.isPerUser(scheme as any, realm);
+    realm.enabled = this.checkEnabled(scheme as any, realm);
+
+    return realm;
+  }
+
+  /** construct a security guard on endpoint */
+  constructSecurity(endpoint: EndpointDto, realm: CallgentRealm) {
+    let attach: boolean;
+    if (endpoint.type != 'CLIENT') {
+      try {
+        const provider = this.implyProvider(realm.scheme, endpoint);
+        if (provider == realm.scheme.provider) attach = true;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return { realmPk: realm.pk, attach };
+  }
+
   /**
-   * validate token via realm.scheme.validationUrl; if url empty, just attach token to req if allowed.
+   * imply auth service provider
+   * @returns provider domain, must not be empty
+   * @throws Error if fail to imply
+   */
+  protected abstract implyProvider(
+    scheme: Omit<SecuritySchemeObject, 'type'> & { type: AuthType },
+    endpoint: EndpointDto,
+    servers?: { url: string }[],
+  ): string;
+
+  /** @returns realm key to identify the same realms */
+  protected abstract getRealmKey(scheme: RealmSchemeVO, realm?: string): string;
+
+  protected abstract checkEnabled(
+    scheme: RealmSchemeVO,
+    realm: Partial<CallgentRealmDto>,
+  ): boolean;
+
+  protected abstract isPerUser(
+    scheme: RealmSchemeVO,
+    realm: Partial<CallgentRealmDto>,
+  ): boolean;
+
+  /**
+   * validate auth token
    * this may be persistent-async
    * @returns true if valid/attached, false invalid, void if async
+   * @throws Error if not allowed to attach and validationUrl empty
    */
   async validateToken(
     token: UserIdentity,
     reqEvent: EventObject,
     realm: CallgentRealm,
   ): Promise<void | boolean> {
-    if (realm.scheme.validationUrl) return this._validateToken(token, realm);
+    const security: RealmSecurityVO = reqEvent.context.security;
 
-    return this._attachToken(token, reqEvent, realm);
+    if (security?.attach) return this._attachToken(token, reqEvent, realm);
+    if (realm.scheme.validationUrl) return this._validateToken(token, realm);
+    throw new UnauthorizedException(
+      'Cannot validate auth token, validationUrl must not empty.',
+    );
   }
 
   /**

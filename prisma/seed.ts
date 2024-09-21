@@ -52,7 +52,8 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'CallgentRealmsService',
       funName: 'checkCepAuth',
-      description: 'Auth-check before cep invocation.',
+      description:
+        'Auth-check before cep invocation. current security: reqEvent.context.security: RealmSecurityVO[]',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -111,7 +112,8 @@ function initEventListeners() {
       serviceType: 'SERVICE',
       serviceName: 'CallgentRealmsService',
       funName: 'checkSepAuth',
-      description: 'Auth-check before sep invocation.',
+      description:
+        'Auth-check before sep invocation. current security: reqEvent.context.security: RealmSecurityVO[]',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },

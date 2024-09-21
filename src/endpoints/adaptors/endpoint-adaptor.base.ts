@@ -1,6 +1,11 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  SecurityRequirementObject,
+  SecuritySchemeObject,
+  ServerObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
@@ -94,12 +99,14 @@ export abstract class EndpointAdaptor {
         'Invalid openAPI.JSON, failed to dereference.',
       );
     }
-    const { openapi, paths, components } = json; // TODO: save components onto SEP
+    const { openapi, paths, components, security, servers } = json; // TODO: save components onto SEP
     if (!openapi?.startsWith('3.0'))
       throw new BadRequestException(
         'Only openAPI `3.0.x` is supported now, openapi=' + openapi,
       );
     ret.securitySchemes = components?.securitySchemes;
+    ret.servers = servers;
+    ret.securities = security;
 
     const ps = paths && Object.entries(paths);
     if (ps?.length) {
@@ -154,12 +161,18 @@ export class ApiSpec {
     method: string;
     summary: string;
     description: string;
-    securities?: Prisma.JsonObject;
+    /** array with or-relation, SecurityRequirementObject with and-relation */
+    securities?: SecurityRequirementObject[];
     params: Prisma.JsonObject;
     responses: Prisma.JsonObject;
     rawJson: Prisma.JsonObject;
   }[];
-  securitySchemes?: Prisma.JsonObject;
+  securitySchemes?: {
+    [name: string]: SecuritySchemeObject & { provider?: string };
+  };
+  servers?: ServerObject[];
+  /** array with or-relation, SecurityRequirementObject with and-relation */
+  securities?: SecurityRequirementObject[];
 }
 
 export class EndpointParam {

@@ -10,5 +10,6 @@ import { ApiKeyAuthProcessor } from './processors/api-key-auth.processor';
     { provide: 'CallgentRealmsService', useClass: CallgentRealmsService },
     { provide: 'apiKey-authProcessor', useClass: ApiKeyAuthProcessor },
   ],
+  exports: ['CallgentRealmsService'],
 })
 export class CallgentRealmsModule {}

@@ -1,12 +1,57 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
 import { EventObject } from '../../event-listeners/event-object';
 import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
+import { CallgentRealmDto } from '../dto/callgent-realm.dto';
+import { RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
 
 @Injectable()
 export class ApiKeyAuthProcessor extends AuthProcessor {
+  protected implyProvider(
+    scheme: SecuritySchemeObject,
+    endpoint: EndpointDto,
+    servers?: { url: string }[],
+  ) {
+    let url;
+    if (endpoint.type != 'CLIENT') {
+      url = endpoint.host; // whatever adaptor it is, host need to be a url
+    } else if (servers?.length > 0) {
+      url = servers[0].url;
+    }
+    if (!url)
+      throw new BadRequestException(
+        'Cannot imply security provider, please specify it manually',
+      );
+
+    try {
+      return new URL(url).hostname;
+    } catch (e) {
+      throw new BadRequestException('Invalid security provider: must be url.');
+    }
+  }
+
+  /** @returns ApiKey:in:name:provider:realm */
+  protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
+    return `${scheme.type}:${scheme.in || ''}:${scheme.name || ''}:${
+      scheme.provider
+    }:${realm || ''}`;
+  }
+
+  protected checkEnabled(
+    scheme: RealmSchemeVO,
+    realm: Partial<CallgentRealmDto>,
+  ) {
+    return realm.scheme.provider && !!realm.secret;
+  }
+
+  protected isPerUser() {
+    return false;
+  }
+
   _validateToken(
     token: UserIdentity,
     realm: CallgentRealm,

@@ -6,10 +6,10 @@
 */
 
 -- AlterTable
-ALTER TABLE "CallgentFunction" ADD COLUMN     "securities" JSON;
+ALTER TABLE "CallgentFunction" ADD COLUMN     "securities" JSON[];
 
 -- AlterTable
-ALTER TABLE "Endpoint" ADD COLUMN     "securities" JSON;
+ALTER TABLE "Endpoint" ADD COLUMN     "securities" JSON[];
 
 -- DropTable
 DROP TABLE "EndpointAuth";
@@ -21,8 +21,8 @@ DROP TYPE "EndpointAuthType";
 CREATE TABLE "CallgentRealm" (
     "pk" SERIAL NOT NULL,
     "callgentId" VARCHAR(36) NOT NULL,
+    "realmKey" VARCHAR(256) NOT NULL,
     "authType" VARCHAR(16) NOT NULL,
-    "provider" VARCHAR(64) NOT NULL,
     "realm" VARCHAR(16) NOT NULL DEFAULT '',
     "scheme" JSON,
     "secret" JSON,
@@ -37,3 +37,4 @@ CREATE TABLE "CallgentRealm" (
 
 -- CreateIndex
 CREATE INDEX "CallgentRealm_callgentId_idx" ON "CallgentRealm"("callgentId");
+CREATE UNIQUE INDEX "CallgentRealm_callgentId_realmKey_key" ON "CallgentRealm"("callgentId", "realmKey");

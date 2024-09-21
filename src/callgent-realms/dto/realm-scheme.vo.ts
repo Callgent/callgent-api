@@ -1,17 +1,20 @@
 import {
   OAuthFlowsObject,
-  SecuritySchemeObject,
   SecuritySchemeType,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
-export class RealmSchemeVO implements SecuritySchemeObject {
+export type AuthType = SecuritySchemeType | 'password'; // | '';
+
+export class RealmSchemeVO {
   /** whether issuing tokens per user */
   perUser?: boolean;
 
+  /** service provider url */
+  provider: string;
   /** token validation url, empty means attaching to request to validate */
   validationUrl?: string;
 
-  type: SecuritySchemeType;
+  type: AuthType;
   description?: string;
   name?: string;
   in?: string;
