@@ -5,7 +5,7 @@ import { AgentsModule } from './agents/agents.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
-import { CallgentTreeModule } from './bff/bff-callgent-tree/callgent-tree.module';
+import { CallgentTreeModule } from './bff/callgent-tree/callgent-tree.module';
 import { BffCallgentFunctionsModule } from './bff/callgent-functions/bff-callgent-functions.module';
 import { CallgentHubModule } from './bff/callgent-hub/callgent-hub.module';
 import { CallgentFunctionsModule } from './callgent-functions/callgent-functions.module';
