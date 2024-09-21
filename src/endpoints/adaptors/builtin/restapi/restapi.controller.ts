@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Headers,
-  HttpException,
   Inject,
   NotFoundException,
   Param,
@@ -11,7 +10,13 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiHeader,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { EndpointType } from '@prisma/client';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
@@ -38,7 +43,7 @@ export class RestApiController {
   @ApiParam({
     name: 'id',
     required: true,
-    description: "comma separated callgent ids, eg: 'id1,id2,id3'. ",
+    description: 'Callgent id',
   })
   @ApiParam({
     name: 'endpointId',
@@ -60,6 +65,7 @@ export class RestApiController {
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @All(':id/:endpointId/invoke/api/*')
+  @ApiUnauthorizedResponse()
   async execute(
     @Req() req,
     @Res() res,

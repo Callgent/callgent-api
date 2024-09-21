@@ -11,25 +11,6 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 
-class RequestJson {
-  url: string;
-  method: string;
-  headers?: { [key: string]: string };
-  query?: { [key: string]: string };
-  params?: { [key: string]: string };
-  files?: { [key: string]: any };
-  body?: any;
-  form?: any;
-}
-
-class ResponseJson {
-  data: any;
-  dataType: string;
-  headers?: { [key: string]: string };
-  status?: number;
-  statusText?: string;
-}
-
 @EndpointAdaptorName('restAPI', 'both')
 export class RestAPIAdaptor extends EndpointAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {

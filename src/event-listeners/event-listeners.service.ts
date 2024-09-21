@@ -55,7 +55,7 @@ export class EventListenersService {
           result,
           Utils.sleep(timeout).then(() => ({
             data,
-            statusCode: data.statusCode,
+            statusCode: 1,
             message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
           })),
         ])
@@ -121,44 +121,49 @@ export class EventListenersService {
     funName?: string,
   ): Promise<{ data: T; statusCode?: number; message?: string }> {
     // invoke listeners, supports persisted-async
-    let statusCode = 1;
-    for (let idx = 0; idx < listeners.length; ) {
-      const listener = listeners[idx++];
-      try {
-        const result = await this._invokeListener(listener, event, funName);
-        // if no result, reuse event
-        result?.data && (event = result.data);
-        // if no result, empty funName
-        funName = result?.resumeFunName;
+    let [statusCode, idx] = [1, 0];
+    try {
+      for (; idx < listeners.length; ) {
+        const listener = listeners[idx++];
+        try {
+          const result = await this._invokeListener(listener, event, funName);
+          // if no result, reuse event
+          result?.data && (event = result.data);
+          // if no result, empty funName
+          funName = result?.resumeFunName;
 
-        statusCode = funName
-          ? 2 // pending
-          : event.stopPropagation || idx >= listeners.length
-          ? 0 // done
-          : 1; // processing
-        if (funName || event.stopPropagation) break;
-      } catch (e) {
-        statusCode = e.status || -1; // error
-        const message = (event.message = `[ERROR] ${e.name}: ${e.message}`);
-        e.status < 500 || this.logger.error(e);
-        return { data: event, statusCode, message };
-      } finally {
-        const nextListener =
-          statusCode == 1
-            ? listeners[idx] // processing: next
-            : statusCode == 0 || (statusCode > 2 && statusCode < 399)
-            ? null // success: null
-            : listener; // error/pending: current
-
-        await this.eventStoresService.upsertEvent(
-          event,
-          funName || null,
-          nextListener?.id || null,
-          statusCode,
-        );
+          statusCode = funName
+            ? 2 // pending
+            : event.stopPropagation || idx >= listeners.length
+            ? 0 // done
+            : 1; // processing
+          if (funName || event.stopPropagation) break;
+        } catch (e) {
+          statusCode = e.status || -1; // error
+          const message = `[ERROR] ${e.name}: ${e.message}`;
+          e.status < 500 || this.logger.error(e);
+          return {
+            data: { ...event, context: undefined },
+            statusCode,
+            message,
+          };
+        }
       }
+      return { data: { ...event, context: undefined }, statusCode };
+    } finally {
+      const nextListener =
+        statusCode == 1
+          ? listeners[idx] // processing: next
+          : statusCode == 0 || (statusCode > 2 && statusCode < 399)
+          ? null // success: null
+          : listeners[idx - 1]; // error/pending: current
+      await this.eventStoresService.upsertEvent(
+        event,
+        funName || null,
+        nextListener?.id || null,
+        statusCode,
+      );
     }
-    return { data: event, statusCode };
   }
 
   async loadListeners(

@@ -16,7 +16,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     endpoint: EndpointDto,
     servers?: { url: string }[],
   ) {
-    let url;
+    let url: string;
     if (endpoint.type != 'CLIENT') {
       url = endpoint.host; // whatever adaptor it is, host need to be a url
     } else if (servers?.length > 0) {
@@ -30,7 +30,9 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     try {
       return new URL(url).hostname;
     } catch (e) {
-      throw new BadRequestException('Invalid security provider: must be url.');
+      throw new BadRequestException(
+        'Invalid security provider, must be url: ' + url,
+      );
     }
   }
 
@@ -43,9 +45,9 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   protected checkEnabled(
     scheme: RealmSchemeVO,
-    realm: Partial<CallgentRealmDto>,
+    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
   ) {
-    return realm.scheme.provider && !!realm.secret;
+    return scheme.provider && !!realm.secret;
   }
 
   protected isPerUser() {

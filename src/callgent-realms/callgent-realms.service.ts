@@ -45,10 +45,10 @@ export class CallgentRealmsService {
   async upsertRealm(
     endpoint: EndpointDto,
     scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
-    realm: Partial<CallgentRealmDto>,
+    realm: Partial<Omit<CallgentRealmDto, 'scheme'>>,
     servers: ServerObject[],
   ) {
-    const authType = realm.scheme.type;
+    const authType = scheme.type;
     const processor = this._getAuthProcessor(authType);
     realm = processor.constructRealm(endpoint, scheme, realm, servers);
     const realmKey = realm.realmKey;
@@ -66,7 +66,7 @@ export class CallgentRealmsService {
           ...realm,
           authType,
           realmKey,
-          scheme: realm.scheme as any,
+          scheme: scheme as any,
         },
       });
 
@@ -76,7 +76,7 @@ export class CallgentRealmsService {
         callgentId,
         realmKey,
         authType,
-        scheme: realm.scheme as any,
+        scheme: scheme as any,
       },
     });
   }

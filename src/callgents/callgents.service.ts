@@ -218,6 +218,7 @@ export class CallgentsService {
 
   /// hub actions
 
+  @Transactional()
   /** hub are those in tenantPk = -1 */
   private async _onHubAction<T>(fn: () => Promise<T>): Promise<T> {
     const tenantPk = this.tenancyService.getTenantId();
@@ -228,6 +229,7 @@ export class CallgentsService {
       this.tenancyService.setTenantId(tenantPk);
     }
   }
+
   async findAllInHub(params: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;

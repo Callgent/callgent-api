@@ -158,9 +158,6 @@ model Callgent {
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name    String  @db.VarChar(255)
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
   summary String? @db.VarChar(4095)
 
   /// @DtoReadOnly
@@ -201,7 +198,7 @@ model CallgentFunction {
   summary     String @default("") @db.VarChar(511)
   description String @default("") @db.VarChar(1023)
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
-  securities  Json[] @db.Json /// @description { realmPK: ["scopes"] }
+  securities  Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?  @db.Json /// @description declaration of API params
   responses   Json?  @db.Json /// @description declaration of API responses
   rawJson     Json   @db.Json
@@ -386,7 +383,7 @@ model Endpoint {
   /// @DtoReadOnly
   /// @DtoPlainApiResponse
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
-  securities Json[] @db.Json /// @description { realmPK: ["scopes"] }
+  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse

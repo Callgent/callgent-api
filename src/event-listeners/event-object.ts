@@ -16,9 +16,7 @@ export class EventObject {
     this.id = Utils.uuid();
   }
   public readonly id: string;
-  public statusCode = 1; // readonly, for response
   public readonly context: { [key: string]: any } = {};
-  public message: string;
   public stopPropagation = false;
   public defaultPrevented = false;
 }
