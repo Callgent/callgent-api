@@ -62,9 +62,10 @@ export class CallgentRealmsController {
     @Param('callgentId') callgentId: string,
     @Param('realmKey') realmKey: string,
   ) {
+    // TODO realmKey may be in body
     const data = await this.callgentRealmsService
       .findOne(callgentId, realmKey, { pk: false })
-      .then((r) => ({ ...r, secret: r.secret ? true : false }));
+      .then((r) => r && { ...r, secret: r.secret ? true : false });
     return { data };
   }
 
@@ -105,7 +106,7 @@ export class CallgentRealmsController {
         select: { pk: false },
         where: { callgentId },
       })
-      .then((r) => r.map((d) => ({ ...d, secret: d.secret ? true : false })));
+      .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
     return { data };
   }
 
@@ -114,6 +115,18 @@ export class CallgentRealmsController {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
+        {
+          properties: {
+            data: {
+              properties: {
+                secret: {
+                  type: 'boolean',
+                  description: 'secret is masked, true means set',
+                },
+              },
+            },
+          },
+        },
       ],
     },
   })
@@ -123,12 +136,11 @@ export class CallgentRealmsController {
     @Param('realmKey') realmKey: string,
     @Body() dto: UpdateCallgentRealmDto,
   ) {
-    const data = await this.callgentRealmsService.update(
-      callgentId,
-      realmKey,
-      dto,
-      { pk: false },
-    );
+    // TODO realmKey may be in body
+    const data = await this.callgentRealmsService
+      .update(callgentId, realmKey, dto, { pk: false })
+      .then((r) => r && { ...r, secret: r.secret ? true : false });
+
     return { data };
   }
 }

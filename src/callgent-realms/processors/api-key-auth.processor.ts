@@ -1,10 +1,13 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
-import { EventObject } from '../../event-listeners/event-object';
-import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
-import { RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
 
@@ -60,46 +63,80 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     return false;
   }
 
-  _validateToken(
-    token: UserIdentity,
+  /** api-key is the token, needn't exchange process */
+  async authProcess(
     realm: CallgentRealm,
-  ): Promise<boolean | void> {
-    throw new Error('Method not implemented.');
-  }
-
-  _attachToken(
-    token: UserIdentity,
-    reqEvent: EventObject,
-    realm: CallgentRealm,
-  ): Promise<true> {
-    throw new Error('Method not implemented.');
-  }
-
-  providerCallback(): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
-
-  authProcess(
+    item: RealmSecurityItem,
     reqEvent: ClientRequestEvent,
-    realm: CallgentRealm,
   ): Promise<void | {
     data: ClientRequestEvent;
-    resumeFunName?: 'postAcquireSecret' | 'postExchangeToken' | 'postAuthCheck';
+    resumeFunName?: 'postValidateToken';
   }> {
-    throw new Error('Method not implemented.');
+    const result = await this.validateToken(
+      realm.secret as string,
+      reqEvent,
+      realm,
+    );
+    if (result) return result;
+
+    throw new UnauthorizedException(
+      'Invalid api-key token, callgentId=' + realm.callgentId,
+    );
   }
 
-  postAcquireSecret(
+  /** attach to validationUrl */
+  async _validateTokenByUrl(
+    token: string,
+    realm: CallgentRealm,
+  ): Promise<boolean | void> {
+    // get validationUrl with token
+  }
+
+  async _attachToken(
+    token: string,
+    reqEvent: ClientRequestEvent,
+    realm: CallgentRealm,
+  ): Promise<true> {
+    // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"api.callgent.com"}
+    const scheme: APIKeySecurityScheme = realm.scheme as any;
+    const req = reqEvent.data.req as any;
+
+    const [name, value] = [scheme.name, realm.secret as string];
+    let in0 = scheme.in;
+    switch (in0) {
+      case 'cookie':
+        if (!req.headers) req.headers = {};
+        req.headers.cookie = `${req.headers.cookie || ''}${
+          req.headers.cookie ? ';' : ''
+        }${name}=${encodeURIComponent(value)}`;
+        break;
+      case 'header':
+        in0 += 's';
+      case 'query':
+        if (!req[in0]) req[in0] = {};
+        req[in0][name] = realm.secret;
+        break;
+    }
+    return true;
+  }
+
+  /** check response from validationUrl */
+  postValidateToken(
     reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     throw new Error('Method not implemented.');
   }
 
-  postExchangeToken(
-    reqEvent: ClientRequestEvent,
-    realm: CallgentRealm,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    throw new Error('Method not implemented.');
+  async providerCallback() {
+    throw new Error('Not applicable.');
+  }
+
+  async postAcquireSecret() {
+    throw new Error('Not applicable.');
+  }
+
+  async postExchangeToken() {
+    throw new Error('Not applicable.');
   }
 }

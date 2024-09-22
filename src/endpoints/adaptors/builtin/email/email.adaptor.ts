@@ -12,7 +12,6 @@ import {
   EmailRelayKey,
   EmailsService,
 } from '../../../../emails/emails.service';
-import { EventObject } from '../../../../event-listeners/event-object';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
@@ -88,11 +87,11 @@ export class EmailAdaptor extends EndpointAdaptor {
    * @param sep - server endpoint
    * @param reqEvent - client request event
    */
-  async invoke<T extends EventObject>(
+  async invoke(
     fun: CallgentFunctionDto,
     args: object,
     sep: Endpoint,
-    reqEvent: T,
+    reqEvent: ClientRequestEvent,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
       reqEvent.id,

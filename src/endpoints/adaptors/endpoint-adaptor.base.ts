@@ -10,7 +10,6 @@ import { Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
-import { EventObject } from '../../event-listeners/event-object';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 
@@ -145,15 +144,13 @@ export abstract class EndpointAdaptor {
     throw new NotFoundException('No API found in the text.');
   }
 
-  abstract invoke<T extends EventObject>(
+  abstract invoke(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: T,
-  ): Promise<{ data: T; resumeFunName?: string }>;
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 }
-
-export interface AdaptedDataSource {}
 
 export class ApiSpec {
   apis: {

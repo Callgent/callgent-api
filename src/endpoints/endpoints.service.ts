@@ -323,8 +323,8 @@ export class EndpointsService {
     return adapter
       .invoke(func, map2Function.args, sep as any, reqEvent)
       .then((res) => {
-        if (res?.resumeFunName) return res;
-        return this.postInvokeSEP(res.data);
+        if (res && res.resumeFunName) return res;
+        return this.postInvokeSEP((res && res.data) || reqEvent);
       });
   }
 

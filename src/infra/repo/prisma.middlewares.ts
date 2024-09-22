@@ -37,7 +37,10 @@ export const mainPrismaServiceOptions = (
           Endpoint: deleteHandle,
           Task: deleteHandle,
           TaskAction: deleteHandle,
-          CallgentRealm: deleteHandle,
+          CallgentRealm: {
+            ...deleteHandle,
+            allowCompoundUniqueIndexWhere: true,
+          },
         },
       }),
     ],

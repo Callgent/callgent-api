@@ -15,7 +15,6 @@ import { EndpointsService } from '../endpoints/endpoints.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UsersService } from '../users/users.service';
-import { CallgentRealmDto } from './dto/callgent-realm.dto';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
 import { RealmSecurityItem, RealmSecurityVO } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
@@ -33,6 +32,7 @@ export class CallgentRealmsService {
     private readonly moduleRef: ModuleRef,
   ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
+    tenantPk: false,
     createdAt: false,
     updatedAt: false,
     deletedAt: false,
@@ -176,29 +176,25 @@ export class CallgentRealmsService {
     if (!realm?.enabled) return false;
 
     // read existing from token store
-    const token = await this.findUserToken(realm, reqEvent.data.callerId);
-    if (token) {
+    const userToken = await this.findUserToken(realm, reqEvent.data.callerId);
+    if (userToken) {
       // invoke validation url. TODO security as arg
-      const result = await processor.validateToken(token, reqEvent, realm);
-      if (result) return { data: reqEvent }; // valid/attached token
-      // async
-      if (result !== false)
-        return { data: reqEvent, resumeFunName: 'postValidateToken' };
+      const result = await processor.validateToken(
+        userToken.credentials,
+        reqEvent,
+        realm,
+      );
+      if (result) return result; // valid/attach or async
       // else invalid, continue to refresh token process
     }
 
     // if not valid, start auth process
-    const ret = await processor.authProcess(reqEvent, realm);
+    const ret = await processor.authProcess(realm, item, reqEvent);
     if (ret) return ret; // async
 
     // self provider same as third
     return this.postAuthProcess(reqEvent);
   }
-
-  /** if valid, goon, if not start process, if unsure re-validate */
-  async postValidateToken(
-    reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {}
 
   /** delegate to auth processor  */
   async postAcquireSecret(
@@ -216,6 +212,18 @@ export class CallgentRealmsService {
     const item: RealmSecurityItem = reqEvent.context.securityItem;
     const { realm, processor } = await this._loadRealm(item);
     return processor.postExchangeToken(reqEvent, realm);
+  }
+
+  /**
+   * delegate to auth processor,
+   * if valid, goon, if not start process, if unsure re-validate
+   */
+  async postValidateToken(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+    const item: RealmSecurityItem = reqEvent.context.securityItem;
+    const { realm, processor } = await this._loadRealm(item);
+    return processor.postValidateToken(reqEvent, realm);
   }
 
   /**

@@ -23,3 +23,15 @@ export class RealmSchemeVO {
   flows?: OAuthFlowsObject;
   openIdConnectUrl?: string;
 }
+
+/**
+ * #/definitions/APIKeySecurityScheme
+ * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
+ */
+export interface APIKeySecurityScheme {
+  type: 'apiKey';
+  name: string;
+  in: 'header' | 'query' | 'cookie';
+  description?: string;
+  [key: `x-${string}`]: any;
+}

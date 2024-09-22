@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
-import { EventObject } from '../../../../event-listeners/event-object';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import axios, { AxiosResponse } from 'axios';
 
 @EndpointAdaptorName('restAPI', 'both')
 export class RestAPIAdaptor extends EndpointAdaptor {
@@ -172,11 +172,12 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
     const type = request.isFormSubmission ? 'form' : 'body';
 
-    // filter all x-callgent- args
+    // filter all x-callgent-* args
     const headers = {};
     Object.keys(rawHeaders)
       .sort()
       .forEach((key) => {
+        key = key.toLowerCase();
         if (!key.startsWith('x-callgent-')) headers[key] = rawHeaders[key];
       });
 
@@ -191,18 +192,26 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     };
   }
 
+  resp2json(resp: AxiosResponse) {
+    const {} = resp;
+    return {};
+  }
+
   async readData(name: string, hints?: { [key: string]: any }) {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  async invoke<T extends EventObject>(
+  async invoke(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: T,
-  ): Promise<{ data: T; resumeFunName?: string }> {
-    //
-    throw new NotImplementedException('Method not implemented.');
+    reqEvent: ClientRequestEvent,
+  ) {
+    const resp = await axios.request({
+      ...(reqEvent.data.req as any),
+      baseURL: sep.host,
+    });
+    reqEvent.data.resp = this.resp2json(resp);
   }
 
   callback(resp: any): Promise<boolean> {

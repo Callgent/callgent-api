@@ -5,10 +5,8 @@ import {
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
-import { EventObject } from '../../event-listeners/event-object';
-import { UserIdentity } from '../../user-identities/entities/user-identity.entity';
 import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
-import { RealmSecurityVO } from '../dto/realm-security.vo';
+import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 
 export abstract class AuthProcessor {
@@ -73,41 +71,67 @@ export abstract class AuthProcessor {
   ): boolean;
 
   /**
-   * validate auth token
+   * validate auth token.
    * this may be persistent-async
-   * @returns true if valid/attached, false invalid, void if async
+   * @returns void if invalid; { data: event; resumeFunName?: 'postValidateToken' } if valid/or async
    * @throws Error if not allowed to attach and validationUrl empty
    */
   async validateToken(
-    token: UserIdentity,
-    reqEvent: EventObject,
+    token: string,
+    reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
-  ): Promise<void | boolean> {
-    const security: RealmSecurityVO = reqEvent.context.security;
+  ): Promise<void | {
+    data: ClientRequestEvent;
+    resumeFunName?: 'postValidateToken';
+  }> {
+    const security: RealmSecurityItem = reqEvent.context.securityItem;
 
-    if (security?.attach) return this._attachToken(token, reqEvent, realm);
-    if (realm.scheme.validationUrl) return this._validateToken(token, realm);
-    throw new UnauthorizedException(
-      'Cannot validate auth token, validationUrl must not empty.',
-    );
+    // true valid/attached, false invalid, else async
+    let result: boolean | void;
+
+    if (security?.attach)
+      result = await this._attachToken(token, reqEvent, realm);
+    else if (realm.scheme.validationUrl)
+      result = await this._validateTokenByUrl(token, realm);
+    else
+      throw new UnauthorizedException(
+        'Cannot validate auth token, validationUrl must not empty. callgentId=' +
+          realm.callgentId,
+      );
+
+    if (result) return { data: reqEvent }; // valid/attached token
+    // void, async
+    if (result !== false)
+      return { data: reqEvent, resumeFunName: 'postValidateToken' };
+    // else invalid, continue to refresh token process
   }
 
   /**
+   * start to exchange secret to token from provider
+   * @returns secret string
+   */
+  abstract postValidateToken(
+    reqEvent: ClientRequestEvent,
+    realm: CallgentRealm,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
+
+  /**
+   * validate token from realm.scheme.validationUrl
    * @returns boolean if valid/invalid, void if async
    */
-  abstract _validateToken(
-    token: UserIdentity,
+  protected abstract _validateTokenByUrl(
+    token: string,
     realm: CallgentRealm,
   ): Promise<boolean | void>;
 
   /**
-   * attach token to request, independent of sep?
+   * attach token to request
    * @returns true if attached
    * @throws Error if not allowed to attach
    */
   abstract _attachToken(
-    token: UserIdentity,
-    reqEvent: EventObject,
+    token: string,
+    reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
   ): Promise<true>;
 
@@ -116,18 +140,24 @@ export abstract class AuthProcessor {
 
   /**
    * common steps for auth process:
-   * 1. [request client, redirect to provider, acquire secret]
+   * 1. [request client, redirect to provider, try acquire secret]
    * 2. acquire secret from caller, [may async]
    * 3. send secret to provider, to exchange token
    * 4. [redirect back to client to get provider token, then send token to caller]
-   * @returns void if done; {data: reqEvent, resumeFunName?: 'postAcquireSecret' | 'postExchangeToken'} if async, CallgentRealmsService will call resumeFunName which delegate to current processor
+   * 5. [attach token to req if needed]
+   * @returns void or { data } if done; {data: reqEvent, resumeFunName?: 'postAcquireSecret' | 'postExchangeToken'} if async, CallgentRealmsService will call resumeFunName which delegate to current processor
    */
   abstract authProcess(
-    reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
+    item: RealmSecurityItem,
+    reqEvent: ClientRequestEvent,
   ): Promise<void | {
     data: ClientRequestEvent;
-    resumeFunName?: 'postAcquireSecret' | 'postExchangeToken' | 'postAuthCheck';
+    resumeFunName?:
+      | 'postAcquireSecret'
+      | 'postExchangeToken'
+      | 'postAuthCheck'
+      | 'postValidateToken';
   }>;
 
   /**
