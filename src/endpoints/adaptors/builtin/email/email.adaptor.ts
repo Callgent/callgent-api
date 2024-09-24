@@ -52,14 +52,14 @@ export class EmailAdaptor extends EndpointAdaptor {
 
   @Transactional()
   async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
-    const resp = reqEvent?.data?.resp as unknown as RelayEmail;
+    const resp = reqEvent?.context?.resp as unknown as RelayEmail;
     if (!resp?.content?.html)
       throw new BadRequestException(
         'Missing response for reqEvent#' + reqEvent.id,
       );
 
     // convert resp to api format
-    reqEvent.data.resp = await this.agentsService.convert2Response(
+    reqEvent.context.resp = await this.agentsService.convert2Response(
       reqEvent?.context?.map2Function?.args,
       resp.content.text || resp.content.html,
       fun,

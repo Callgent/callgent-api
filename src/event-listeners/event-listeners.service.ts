@@ -140,7 +140,8 @@ export class EventListenersService {
           if (funName || event.stopPropagation) break;
         } catch (e) {
           statusCode = e.status || -1; // error
-          const message = `[ERROR] ${e.name}: ${e.message}`;
+          const message =
+            e.response?.data?.message || `[${e.name}] ${e.message}`;
           e.status < 500 || this.logger.error(e);
           return {
             data: { ...event, context: undefined },
@@ -149,7 +150,10 @@ export class EventListenersService {
           };
         }
       }
-      return { data: { ...event, context: undefined }, statusCode };
+      return {
+        data: { ...event, context: undefined },
+        statusCode,
+      };
     } finally {
       const nextListener =
         statusCode == 1

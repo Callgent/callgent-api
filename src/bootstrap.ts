@@ -2,6 +2,7 @@ import compression from '@fastify/compress';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import fastifyMultipart from '@fastify/multipart';
 import {
   Logger as ConsoleLogger,
   ValidationPipe,
@@ -32,6 +33,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
 
   app.register(helmet);
   app.register(fastifyIp);
+  app.register(fastifyMultipart);
   app.register(compression, { encodings: ['gzip', 'deflate'] });
 
   // express compatibility

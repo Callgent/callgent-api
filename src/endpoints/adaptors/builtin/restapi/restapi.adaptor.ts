@@ -3,13 +3,13 @@ import {
   Inject,
   NotImplementedException,
 } from '@nestjs/common';
+import axios, { AxiosResponse } from 'axios';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
-import axios, { AxiosResponse } from 'axios';
 
 @EndpointAdaptorName('restAPI', 'both')
 export class RestAPIAdaptor extends EndpointAdaptor {
@@ -122,7 +122,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     reqEvent: ClientRequestEvent,
     // endpoint: EndpointDto,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const req = reqEvent?.data.req;
+    const req = reqEvent?.context.req;
     if (!req)
       throw new BadRequestException(
         'Missing request object for ClientRequestEvent#' + reqEvent.id,
@@ -139,7 +139,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     if (!progressive) {
     }
 
-    reqEvent.data.req = this.req2Json(req);
+    reqEvent.context.req = this.req2Json(req);
   }
 
   async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
@@ -161,16 +161,18 @@ export class RestAPIAdaptor extends EndpointAdaptor {
       );
     const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
 
-    let files: Record<string, any> = {};
-    if (request.file) {
-      files[request.file.fieldname] = request.file;
-    } else if (raw.files) {
-      for (const [key, value] of Object.entries(raw.files)) {
-        files[key] = value;
-      }
-    } else files = undefined;
+    // FIXME https://www.npmjs.com/package/@fastify/multipart
+    // request.file()
+    // let files: Record<string, any> = {};
+    // if (request.file) {
+    //   files[request.file.fieldname] = request.file;
+    // } else if (raw.files) {
+    //   for (const [key, value] of Object.entries(raw.files)) {
+    //     files[key] = value;
+    //   }
+    // } else files = undefined;
 
-    const type = request.isFormSubmission ? 'form' : 'body';
+    // const type = request.isFormSubmission ? 'form' : 'body';
 
     // filter all x-callgent-* args
     const headers = {};
@@ -178,7 +180,12 @@ export class RestAPIAdaptor extends EndpointAdaptor {
       .sort()
       .forEach((key) => {
         key = key.toLowerCase();
-        if (!key.startsWith('x-callgent-')) headers[key] = rawHeaders[key];
+        if (
+          !key.startsWith('x-callgent-') &&
+          key !== 'content-length' &&
+          key !== 'host'
+        )
+          headers[key] = rawHeaders[key];
       });
 
     // FIXME change authorization to x-callgent-authorization
@@ -186,9 +193,9 @@ export class RestAPIAdaptor extends EndpointAdaptor {
       url,
       method,
       headers: { ...headers }, // filter callgent authorization
-      query,
-      files,
-      [type]: body,
+      params: query, // axios
+      // files,
+      data: body, // TODO axios FormData, URLSearchParams, Blob..
     };
   }
 
@@ -208,10 +215,14 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     reqEvent: ClientRequestEvent,
   ) {
     const resp = await axios.request({
-      ...(reqEvent.data.req as any),
+      ...reqEvent.context.req,
       baseURL: sep.host,
+      withCredentials: !!reqEvent.context.securityItem,
+      // httpsAgent: new https.Agent({
+      //   rejectUnauthorized: false,
+      // }),
     });
-    reqEvent.data.resp = this.resp2json(resp);
+    reqEvent.context.resp = this.resp2json(resp);
   }
 
   callback(resp: any): Promise<boolean> {

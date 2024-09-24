@@ -80,27 +80,30 @@ npx prisma migrate dev --name init
 ```
 
 ### multi-tenancy
+
 1. write default value for `tenancy.tenantPk` in db
+
   ```text
   tenantPk Int  @default(dbgenerated("(current_setting('tenancy.tenantPk'))::int"))
   ```
 
-2. enable postgres row level security(RLS), so that we can filter data by `tenantPk` automatically:
+1. enable postgres row level security(RLS), so that we can filter data by `tenantPk` automatically:
    config in prisma/migrations/01_row_level_security/migration.sql,
    @see <https://github.com/prisma/prisma-client-extensions/tree/main/row-level-security>
 
-3. set `tenantPk` into `cls` context:
+2. set `tenantPk` into `cls` context:
+
    ```ts
    cls.set('TENANT_ID', ..
    ```
 
-4. extend `PrismaClient` to set `tenantPk` before any query
+3. extend `PrismaClient` to set `tenantPk` before any query
 
    ```sql
    SELECT set_config('tenancy.tenantPk', cls.get('TENANT_ID') ...
    ```
 
-5. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
+4. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
 
    ```sql
    CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
@@ -188,9 +191,9 @@ login with email and password, TODO: email verification is required.
 
 need NOT scope to get user email:
 
-- google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
-- github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
-- facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
+* google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
+* github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
+* facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
 
 ##### to add a new oauth client
 

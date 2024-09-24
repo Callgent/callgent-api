@@ -28,7 +28,7 @@ export class TaskActionsService {
   // @Transactional()
   // async createTaskAction(reqEvent: ClientRequestEvent) {
   //   const { taskId, caller, progressive, callback, funName } = reqEvent.data;
-  //   const req = (reqEvent.processed.req || reqEvent.data.req) as any;
+  //   const req = (reqEvent.processed.req || reqEvent.context.req) as any;
 
   //   // new task
   //   const task = taskId

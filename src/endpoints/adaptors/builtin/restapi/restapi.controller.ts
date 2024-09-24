@@ -100,13 +100,12 @@ export class RestApiController {
       throw new NotFoundException('callgent not found: ' + callgentId);
 
     const { data, statusCode, message } = await this.eventListenersService.emit(
-      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, {
+      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, req, {
         callgentId,
         callgentName: callgent.name,
         callerId,
         progressive,
         funName,
-        req,
       }),
       parseInt(timeout) || 0, //  sync timeout
     );

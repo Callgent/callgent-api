@@ -38,8 +38,8 @@ export class AgentsService {
       id,
       srcId,
       dataType: cepAdaptor,
-      data: { callgentName, req, funName, progressive },
-      context: { tgtEvents },
+      data: { callgentName, funName, progressive },
+      context: { tgtEvents, req },
     } = reqEvent;
     const callgentFunctions = reqEvent.context
       .functions as unknown as CallgentFunctionDto[];

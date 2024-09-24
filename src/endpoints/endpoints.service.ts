@@ -332,8 +332,7 @@ export class EndpointsService {
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
     const {
-      data: { resp },
-      context: { functions },
+      context: { functions, resp },
     } = reqEvent;
     if (!functions?.length)
       throw new Error('Failed to invoke, No mapping function found');
