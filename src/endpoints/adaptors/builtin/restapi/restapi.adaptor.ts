@@ -180,12 +180,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
       .sort()
       .forEach((key) => {
         key = key.toLowerCase();
-        if (
-          !key.startsWith('x-callgent-') &&
-          key !== 'content-length' &&
-          key !== 'host'
-        )
-          headers[key] = rawHeaders[key];
+        if (!key.startsWith('x-callgent-')) headers[key] = rawHeaders[key];
       });
 
     // FIXME change authorization to x-callgent-authorization
@@ -200,8 +195,12 @@ export class RestAPIAdaptor extends EndpointAdaptor {
   }
 
   resp2json(resp: AxiosResponse) {
-    const {} = resp;
-    return {};
+    const { data, headers: rawHeaders, status, statusText } = resp;
+    const headers = {};
+    Object.entries(rawHeaders).forEach(
+      ([name, val]) => (headers[name.toLowerCase()] = val),
+    );
+    return { data, headers, status, statusText };
   }
 
   async readData(name: string, hints?: { [key: string]: any }) {
@@ -216,6 +215,11 @@ export class RestAPIAdaptor extends EndpointAdaptor {
   ) {
     const resp = await axios.request({
       ...reqEvent.context.req,
+      headers: {
+        ...reqEvent.context.req.headers,
+        host: undefined,
+        'content-length': undefined,
+      },
       baseURL: sep.host,
       withCredentials: !!reqEvent.context.securityItem,
       // httpsAgent: new https.Agent({

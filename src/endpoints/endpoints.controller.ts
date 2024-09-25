@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiOkResponse,
   ApiSecurity,
   ApiTags,
@@ -26,6 +27,7 @@ import { EndpointsService } from './endpoints.service';
 
 @ApiTags('Endpoints')
 @ApiSecurity('defaultBearerAuth')
+@ApiExtraModels(EndpointDto)
 @UseGuards(JwtGuard)
 @Controller('endpoints')
 export class EndpointsController {

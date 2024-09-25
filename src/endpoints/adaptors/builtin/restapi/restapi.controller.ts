@@ -48,13 +48,13 @@ export class RestApiController {
   @ApiParam({
     name: 'endpointId',
     required: false,
-    description: 'endpoint id, optional: "/callgents/the-id`//`invoke/api/"',
+    description: 'endpoint id, optional: "/callgents/the-id`//`invoke/"',
   })
   @ApiParam({
     name: 'NOTE: swagger does not support wildcard param. Just document here',
     required: false,
     description:
-      '../invoke/api/`resource-path-here`. the wildcard path, optional: "../invoke/api/"',
+      '../invoke/`resource-path-here`. the wildcard path, optional: "../invoke/"',
   })
   @ApiHeader({ name: 'x-callgent-taskId', required: false })
   @ApiHeader({
@@ -64,7 +64,7 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
-  @All(':id/:endpointId/invoke/api/*')
+  @All(':id/:endpointId/invoke/*')
   @ApiUnauthorizedResponse()
   async execute(
     @Req() req,
@@ -76,7 +76,7 @@ export class RestApiController {
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
-    const basePath = `${callgentId}/${endpointId}/invoke/api/`;
+    const basePath = `${callgentId}/${endpointId}/invoke/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
