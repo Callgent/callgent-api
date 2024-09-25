@@ -14,6 +14,7 @@ export const mainPrismaServiceOptions = (
   const logLevels = config.get('LOG_LEVELS_PRISMA');
   return {
     prismaOptions: {
+      errorFormat: 'pretty',
       log: logLevels ? JSON.parse(logLevels) : [],
       transactionOptions: {
         timeout: parseInt(config.get('PRISMA_TRANSACTION_TIMEOUT', '5000')),
