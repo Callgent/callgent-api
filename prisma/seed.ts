@@ -1,34 +1,32 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
-});
-
 async function main() {
-  return await Promise.all(initData());
+  const prisma = new PrismaClient({
+    log: ['query', 'info', 'warn', 'error'],
+  });
+
+  return await Promise.all(initData(prisma))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      // close Prisma Client at the end
+      await prisma.$disconnect();
+    });
 }
 
 // execute the main function
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    // close Prisma Client at the end
-    await prisma.$disconnect();
-  });
+main();
 
-function initData() {
-  return [...initEventListeners(), initLlmTemplates()];
+function initData(prisma: PrismaClient) {
+  return [...initEventListeners(prisma), initLlmTemplates(prisma)];
 }
 
-function initEventListeners() {
-  let elId = 1,
-    priority = -100;
+function initEventListeners(prisma: PrismaClient) {
+  let priority = -100;
   const els: Prisma.EventListenerUncheckedCreateInput[] = [
     {
-      pk: elId++,
       id: 'CR-ADAPTOR-PREPROCESS',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -43,7 +41,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-CEP-AUTH',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -58,7 +55,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-LOAD-FUNCTIONS',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -73,7 +69,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-LOAD-TARGET',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -88,7 +83,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-MAP-2-FUNCTION',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -103,7 +97,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-SEP-AUTH',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -118,7 +111,6 @@ function initEventListeners() {
       priority: (priority += 100),
     },
     {
-      pk: elId++,
       id: 'CR-INVOKE-SEP',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -149,7 +141,7 @@ function initEventListeners() {
   return els.map((el) =>
     prisma.eventListener
       .upsert({
-        where: { pk: el.pk },
+        where: { id: el.id },
         update: el,
         create: el,
       })
@@ -157,10 +149,9 @@ function initEventListeners() {
   );
 }
 
-async function initLlmTemplates() {
+async function initLlmTemplates(prisma: PrismaClient) {
   const llmTemplates: Prisma.LlmTemplateUncheckedCreateInput[] = [
     {
-      pk: 1,
       name: 'api2Function',
       prompt: `Please convert below API doc of format {{=it.format}}:
 { "{{=it.apiName}}": {{=it.apiContent}} }
@@ -173,7 +164,6 @@ please generate the js function with **full implementation and error handling**!
 {"funName":"function name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
     },
     {
-      pk: 2,
       name: 'map2Function',
       prompt: `given below service APIs:
 service {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
@@ -192,7 +182,6 @@ output a single-line json object:
 { "endpoint": "the chosen API endpoint to be invoked", "args":"params/body/headers/..., with same structure as the 'params' JSON object(no more args than it) with additional 'value' prop, or null if no args needed", "mapping": "if the the request_object is structured (or null if unstructured), generate the js function (request_object)=>{...;return API_signature_args;}, full implementation to return the **real** args from request_object to invoke the API. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
     },
     {
-      pk: 3,
       name: 'convert2Response',
       prompt: `Given the openAPI endpoint:
 {"endpoint": "{{=it.fun.name}}", "summary":"{{=it.fun.summary}}", {{=it.fun.description ? '"description":"'+it.fun.description+'", ':''}}"params":{{=JSON.stringify(it.fun.params)}}, "responses":{{=JSON.stringify(it.fun.responses)}} }
@@ -215,7 +204,7 @@ Please formalize the response content as a single-lined JSON object:
   return llmTemplates.map((llmTpl) =>
     prisma.llmTemplate
       .upsert({
-        where: { pk: llmTpl.pk },
+        where: { name: llmTpl.name },
         update: llmTpl,
         create: llmTpl,
       })
