@@ -95,7 +95,7 @@ export abstract class EndpointAdaptor {
       json = await $RefParser.dereference(json);
     } catch (err) {
       throw new BadRequestException(
-        'Invalid openAPI.JSON, failed to dereference.',
+        'Invalid openAPI.JSON, failed to dereference, ' + err.message,
       );
     }
     const { openapi, paths, components, security, servers } = json; // TODO: save components onto SEP

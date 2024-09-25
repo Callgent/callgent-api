@@ -105,7 +105,11 @@ export class UsersController {
     },
   })
   @ApiConsumes('text/plain')
-  @ApiBody({ required: false, description: 'pwd if reset', type: 'string' })
+  @ApiBody({
+    required: false,
+    description: 'pwd if reset',
+    schema: { type: 'string' },
+  })
   @Patch('confirm-email/:token')
   async confirmEmail(
     @Res() res,

@@ -69,6 +69,14 @@ function initTestData() {
     createdBy: userId,
   };
 
+  const callgentHubDto: Prisma.CallgentUncheckedCreateInput = {
+    pk: 2,
+    id: 'TEST_HUB_CALLGENT_ID',
+    name: 'hub-callgent',
+    tenantPk: -1,
+    createdBy: userId,
+  };
+
   const cepDto: Prisma.EndpointUncheckedCreateInput = {
     pk: 1,
     id: 'TEST_CEP_ID',
@@ -114,6 +122,13 @@ function initTestData() {
         create: authTokenDto,
       })
       .then((authToken) => console.log({ authToken })),
+    prisma.callgent
+      .upsert({
+        where: { pk: 2 },
+        update: callgentHubDto,
+        create: callgentHubDto,
+      })
+      .then((callgent) => console.log({ callgent })),
     prisma.callgent
       .upsert({
         where: { pk: 1 },
