@@ -402,7 +402,7 @@ model Endpoint {
   adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
   priority   Int          @default(0) /// @description priority in the callgent
 
-  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/api/', where `{id}` will be replaced with current endpoint id
+  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/', where `{id}` will be replaced with current endpoint id
   initParams Json?  @db.Json /// @description initializing parameters
   content    Json?  @db.Json /// @description generated content/code by init method
   /// @DtoReadOnly

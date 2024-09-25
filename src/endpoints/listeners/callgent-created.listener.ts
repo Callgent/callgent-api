@@ -30,7 +30,7 @@ export class CallgentCreatedListener {
           callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: `/api/callgents/${callgent.id}/{id}/invoke/api/`,
+          host: `/api/callgents/${callgent.id}/{id}/invoke-api/`,
           createdBy: callgent.createdBy,
         })
         .then((endpoint) => {

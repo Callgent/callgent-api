@@ -155,11 +155,11 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   req2Json(request) {
     const { method, headers: rawHeaders, query, body, raw } = request;
-    if (request.url.indexOf('/invoke/api/') < 0)
+    if (request.url.indexOf('/invoke-api/') < 0)
       throw new Error(
-        'Unsupported URL, should be /callgents/:ids/:endpoint/invoke/api/*',
+        'Unsupported URL, should be /callgents/:ids/:endpoint/invoke-api/*',
       );
-    const url = request.url.substr(request.url.indexOf('/invoke/api/') + 11);
+    const url = request.url.substr(request.url.indexOf('/invoke-api/') + 11);
 
     // FIXME https://www.npmjs.com/package/@fastify/multipart
     // request.file()

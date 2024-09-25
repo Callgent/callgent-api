@@ -98,7 +98,7 @@ export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
 export const invokeCallgentByApi = (callgentId, body?: any) => {
   return pactum
     .spec()
-    .post(`/api/callgents/${callgentId}//invoke/api/boards/list`)
+    .post(`/api/callgents/${callgentId}//invoke-api/boards/list`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(body)
     .expectStatus(200);
