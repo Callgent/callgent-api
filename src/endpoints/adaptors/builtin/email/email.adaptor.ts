@@ -12,7 +12,6 @@ import {
   EmailRelayKey,
   EmailsService,
 } from '../../../../emails/emails.service';
-import { EventObject } from '../../../../event-listeners/event-object';
 import { EndpointDto } from '../../../dto/endpoint.dto';
 import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
@@ -53,14 +52,14 @@ export class EmailAdaptor extends EndpointAdaptor {
 
   @Transactional()
   async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
-    const resp = reqEvent?.data?.resp as unknown as RelayEmail;
+    const resp = reqEvent?.context?.resp as unknown as RelayEmail;
     if (!resp?.content?.html)
       throw new BadRequestException(
         'Missing response for reqEvent#' + reqEvent.id,
       );
 
     // convert resp to api format
-    reqEvent.data.resp = await this.agentsService.convert2Response(
+    reqEvent.context.resp = await this.agentsService.convert2Response(
       reqEvent?.context?.map2Function?.args,
       resp.content.text || resp.content.html,
       fun,
@@ -88,11 +87,11 @@ export class EmailAdaptor extends EndpointAdaptor {
    * @param sep - server endpoint
    * @param reqEvent - client request event
    */
-  async invoke<T extends EventObject>(
+  async invoke(
     fun: CallgentFunctionDto,
     args: object,
     sep: Endpoint,
-    reqEvent: T,
+    reqEvent: ClientRequestEvent,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
       reqEvent.id,

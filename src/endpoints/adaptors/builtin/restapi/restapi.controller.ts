@@ -3,14 +3,20 @@ import {
   Controller,
   Get,
   Headers,
-  HttpException,
   Inject,
   NotFoundException,
   Param,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiHeader,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { EndpointType } from '@prisma/client';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
@@ -37,7 +43,7 @@ export class RestApiController {
   @ApiParam({
     name: 'id',
     required: true,
-    description: "comma separated callgent ids, eg: 'id1,id2,id3'. ",
+    description: 'Callgent id',
   })
   @ApiParam({
     name: 'endpointId',
@@ -59,8 +65,10 @@ export class RestApiController {
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @All(':id/:endpointId/invoke/api/*')
+  @ApiUnauthorizedResponse()
   async execute(
     @Req() req,
+    @Res() res,
     @Param('id') callgentId: string,
     @Param('endpointId') endpointId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
@@ -72,7 +80,7 @@ export class RestApiController {
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
-    const caller = req.user?.sub || req.ip || req.socket.remoteAddress;
+    const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
     const cep = await this.endpointsService.$findFirstByType(
@@ -92,21 +100,20 @@ export class RestApiController {
       throw new NotFoundException('callgent not found: ' + callgentId);
 
     const { data, statusCode, message } = await this.eventListenersService.emit(
-      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, {
+      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, req, {
         callgentId,
         callgentName: callgent.name,
-        caller,
+        callerId,
         progressive,
         funName,
-        req,
       }),
       parseInt(timeout) || 0, //  sync timeout
     );
     // FIXME data
-    if (0 <= statusCode && statusCode < 400)
-      return { data, statusCode, message };
-
-    throw new HttpException(message, statusCode);
+    res
+      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
+      .send({ data, statusCode, message });
+    // code cannot < 0
   }
 
   @ApiOperation({

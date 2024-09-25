@@ -22,12 +22,14 @@ generator nestjsDto {
 datasource db {
   provider     = "postgres"
   url          = env("DATABASE_URL")
-  relationMode = "prisma"
+  relationMode = "prisma" // no foreign constraints in db, pls add @@index on manually
 }
 
-// db sharding base on tenantPk: 
+// # foreign key using pk, instead of id, for better performance
+
+// # db sharding base on tenantPk: 
 // 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
-// 2.chard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
+// 2. shard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
 
 //////////////////// Authentication and Account ////////////////////////////
 
@@ -96,7 +98,7 @@ model UserIdentity {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   uid            String  @db.VarChar(255) /// @description userId from provider.
-  credentials    String  @db.VarChar(2048) /// @description user cridentials
+  credentials    String  @db.VarChar(2048) /// @description auth secret or token
   name           String? @db.VarChar(255)
   /// @MinLength(6)
   /// @IsEmail
@@ -117,6 +119,7 @@ model UserIdentity {
   /// @DtoEntityHidden
   userId String @db.VarChar(36)
 
+  // expiresAt DateTime? @db.Timestamp(0) // @description TODO: token expiration time
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -155,9 +158,6 @@ model Callgent {
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name    String  @db.VarChar(255)
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
   summary String? @db.VarChar(4095)
 
   /// @DtoReadOnly
@@ -197,6 +197,8 @@ model CallgentFunction {
   method      String @db.VarChar(15) /// @description openAPI method
   summary     String @default("") @db.VarChar(511)
   description String @default("") @db.VarChar(1023)
+  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
+  securities  Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?  @db.Json /// @description declaration of API params
   responses   Json?  @db.Json /// @description declaration of API responses
   rawJson     Json   @db.Json
@@ -223,6 +225,60 @@ model CallgentFunction {
   @@index([callgentId])
   @@index([endpointId])
 }
+
+/// @description security realms for callgent
+model CallgentRealm {
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  pk       Int @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  callgentId String @db.VarChar(36)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  realmKey   String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
+  /// @description provider defined realm name, or '' for default realm
+  /// @IsOptional()
+  realm    String? @default("") @db.VarChar(16)
+  /// @DtoUpdateOptional
+  /// @DtoCastType(RealmSchemeVO, ../dto/realm-scheme.vo)
+  scheme   Json    @db.Json /// @description security scheme, with all public configs
+  secret   Json?   @db.Json /// @description security secret, with all private configs
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  perUser Boolean @default(false) /// @description whether the realm is per user auth
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  enabled Boolean @default(true) /// @description whether the realm is enabled
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([callgentId, realmKey])
+  @@index(callgentId)
+  @@index(tenantPk)
+}
+
+// model RealmToken merged into UserIdentity
 
 model Task {
   /// @DtoEntityHidden
@@ -300,6 +356,7 @@ model TaskAction {
   @@index([taskId])
 }
 
+/// @description Platform auth tokens
 /// @DtoIgnoreModel
 model AuthToken {
   /// @DtoEntityHidden
@@ -348,6 +405,10 @@ model Endpoint {
   host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/api/', where `{id}` will be replaced with current endpoint id
   initParams Json?  @db.Json /// @description initializing parameters
   content    Json?  @db.Json /// @description generated content/code by init method
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
+  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -368,38 +429,6 @@ model Endpoint {
 
   @@index([tenantPk])
   @@index([callgentId])
-}
-
-enum EndpointAuthType {
-  NONE /// @description no auth, or treat auth as normal progressive params
-  APP /// @description all task same auth
-  USER /// @description auth each task owner/assignee
-}
-
-/// @description endpoint app or user auth credentials
-model EndpointAuth {
-  /// @DtoEntityHidden
-  pk       Int @id @default(autoincrement())
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
-
-  /// @CustomValidator(EntityIdExists, 'endpoint', 'id', ../../infra/repo/validators/entity-exists.validator)
-  endpointId String  @db.VarChar(36) /// @description endpoint id.
-  userKey    String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
-
-  credentials Json @db.Json /// @description auth credentials
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String   @db.VarChar(36)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  @@unique([endpointId, userKey])
-  @@index([tenantPk])
-  @@index([endpointId])
 }
 
 /// @DtoIgnoreModel

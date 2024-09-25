@@ -72,25 +72,43 @@ export class UsersService {
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     if (options?.noTenant) await this.tenancyService.bypassTenancy(prisma);
+    try {
+      // find user identity
+      const where = options?.evenInvalid
+        ? {
+            AND: {
+              uid,
+              provider,
+              OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
+            },
+          }
+        : {
+            AND: { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } },
+          };
+      const ui = await prisma.userIdentity.findFirst({
+        where,
+        include: {
+          user: { include: { tenant: true } },
+        },
+      });
+      return ui;
+    } finally {
+      if (options?.noTenant)
+        await this.tenancyService.bypassTenancy(prisma, false);
+    }
+  }
 
-    // find user identity
-    const where = options?.evenInvalid
-      ? {
-          AND: {
-            uid,
-            provider,
-            OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
-          },
-        }
-      : { AND: { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } } };
-    const ui = await prisma.userIdentity.findFirst({
-      where,
-      include: {
-        user: { include: { tenant: true } },
-      },
-    });
-
-    return ui;
+  /** for CallgentRealm, there is at most 1 identity per user per realm */
+  async $findFirstUserIdentity(userId: string, provider: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    await this.tenancyService.bypassTenancy(prisma);
+    try {
+      return prisma.userIdentity.findFirst({
+        where: { userId, provider },
+      });
+    } finally {
+      await this.tenancyService.bypassTenancy(prisma, false);
+    }
   }
 
   /**

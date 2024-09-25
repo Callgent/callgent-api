@@ -24,6 +24,7 @@ export const prismaTenancyUseFactory = (
             if (existingTx) {
               await op;
             } else {
+              // TODO ?? store.set(getTransactionClsKey(), newTx);
               const [, result] = await newTx.$transaction([op, query(args)]);
               return result;
             }

@@ -1,8 +1,15 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
+import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
+import { CallgentRealm } from '../callgent-realms/entities/callgent-realm.entity';
 import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
@@ -10,6 +17,7 @@ import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
+import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -19,6 +27,8 @@ export class CallgentFunctionsService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
+    @Inject('CallgentRealmsService')
+    private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
   protected readonly defSelect: Prisma.CallgentFunctionSelect = {
     pk: false,
@@ -31,7 +41,6 @@ export class CallgentFunctionsService {
     deletedAt: false,
   };
 
-  @Transactional()
   async loadFunctions(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
@@ -49,7 +58,7 @@ export class CallgentFunctionsService {
       perPage: Number.MAX_SAFE_INTEGER,
     });
     if (!funcs.length)
-      throw new BadRequestException(
+      throw new NotFoundException(
         `No function found on callgent#${callgentId}${
           funName ? ' name=' + funName : ''
         }`,
@@ -94,24 +103,77 @@ export class CallgentFunctionsService {
       throw new BadRequestException(
         'endpoint must be of type `SERVER`, id=' + endpoint.id,
       );
+    const { apis, securitySchemes, servers, securities } = spec;
+    // TODO set endpoint.host from servers?
 
-    const { apis } = spec;
+    // create callgent realms from securitySchemes
+    const realmMap: { [name: string]: CallgentRealm } = {};
+    if (securitySchemes) {
+      await Promise.all(
+        Object.entries(securitySchemes).map(async ([name, scheme]) => {
+          const realm = await this.callgentRealmsService.upsertRealm(
+            endpoint,
+            scheme,
+            {},
+            servers,
+          );
+          realmMap[name] = realm as any;
+        }),
+      );
+    }
+
     // validation
     const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>(
-      (f) => ({
-        ...f,
-        id: Utils.uuid(),
-        name: Utils.formalApiName(f.method, f.path),
-        endpointId: endpoint.id,
-        callgentId: endpoint.callgentId,
-        createdBy: createdBy,
-      }),
+      (f) => {
+        const ret = {
+          ...f,
+          id: Utils.uuid(),
+          name: Utils.formalApiName(f.method, f.path),
+          endpointId: endpoint.id,
+          callgentId: endpoint.callgentId,
+          createdBy: createdBy,
+        };
+        if (securities?.length || ret.securities?.length) {
+          const securitiesMerged = [
+            ...(securities || []),
+            ...(ret.securities || []),
+          ].map((security) => {
+            const result: RealmSecurityVO = {};
+            Object.entries(security).forEach(([name, scopes]) => {
+              const realm = realmMap[name];
+              if (!Number.isFinite(realm?.pk))
+                throw new BadRequestException(
+                  'Unknown security scheme name: ' + name,
+                );
+              const item = this.callgentRealmsService.constructSecurity(
+                realm,
+                endpoint,
+              );
+
+              result[name] = { ...item, scopes };
+            });
+            return result;
+          });
+          ret.securities = securitiesMerged as any;
+        }
+        return ret;
+      },
     );
 
+    // create api functions
     const prisma = this.txHost.tx as PrismaClient;
     const { count: actionsCount } = await prisma.callgentFunction.createMany({
       data: actMap,
     });
+
+    // 根据adaptor，auth type，判定可选的auth servers
+    // FIXME save securitySchemes on endpoint
+    // await this.endpointsService.saveSecuritySchemes(
+    //   endpoint.id,
+    //   securitySchemes,
+    // );
+    // FIXME add auth-listener for this sep,
+
     return actionsCount;
   }
 
@@ -126,8 +188,8 @@ export class CallgentFunctionsService {
         'Function entries can only be imported into Server Endpoint. ',
       );
 
-    const apis = await this.endpointsService.parseApis(endpoint, apiTxt);
-    return this.createBatch(endpoint, apis, createdBy);
+    const apiSpec = await this.endpointsService.parseApis(endpoint, apiTxt);
+    return this.createBatch(endpoint, apiSpec, createdBy);
   }
 
   findAll({
@@ -200,7 +262,7 @@ export class CallgentFunctionsService {
       prisma.callgentFunction.update({
         select,
         where: { id: dto.id },
-        data: dto,
+        data: dto as any,
       }),
     );
   }

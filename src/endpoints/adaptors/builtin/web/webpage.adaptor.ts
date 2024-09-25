@@ -1,8 +1,8 @@
 import { Inject, NotImplementedException } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
-import { EventObject } from '../../../../event-listeners/event-object';
 import { EndpointDto } from '../../../dto/endpoint.dto';
+import { Endpoint } from '../../../entities/endpoint.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
@@ -93,12 +93,12 @@ export class WebpageAdaptor extends EndpointAdaptor {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  async invoke<T extends EventObject>(
+  async invoke(
     fun: CallgentFunctionDto,
     args: object,
-    sep: EndpointDto,
-    reqEvent: T,
-  ): Promise<{ data: T; resumeFunName?: string }> {
+    sep: Endpoint,
+    reqEvent: ClientRequestEvent,
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
     throw new NotImplementedException('Method not implemented.');
   }
 

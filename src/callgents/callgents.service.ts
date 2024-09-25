@@ -51,7 +51,7 @@ export class CallgentsService {
   }
 
   @Transactional()
-  findAll({
+  findMany({
     select,
     where,
     orderBy = { pk: 'desc' },
@@ -87,28 +87,27 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
-  async findMany(ids: string[], select?: Prisma.CallgentSelect) {
-    const prisma = this.txHost.tx as PrismaClient;
+  // async findAll(ids: string[], select?: Prisma.CallgentSelect) {
+  //   const prisma = this.txHost.tx as PrismaClient;
 
-    const callgents = await selectHelper(
-      select,
-      async (select) =>
-        await prisma.callgent.findMany({
-          where: { id: { in: ids } },
-          select,
-        }),
-      this.defSelect,
-    );
+  //   const callgents = await selectHelper(
+  //     select,
+  //     async (select) =>
+  //       await prisma.callgent.findMany({
+  //         where: { id: { in: ids } },
+  //         select,
+  //       }),
+  //     this.defSelect,
+  //   );
 
-    if (callgents.length != ids.length)
-      throw new NotFoundException(
-        `Callgent not found, id=${ids
-          .filter((x) => !callgents.find((y) => y.id == x))
-          .join(', ')}`,
-      );
-    return callgents;
-  }
+  //   if (callgents.length != ids.length)
+  //     throw new NotFoundException(
+  //       `Callgent not found, id=${ids
+  //         .filter((x) => !callgents.find((y) => y.id == x))
+  //         .join(', ')}`,
+  //     );
+  //   return callgents;
+  // }
 
   @Transactional()
   delete(id: string) {
@@ -131,7 +130,6 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
   findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
@@ -145,7 +143,6 @@ export class CallgentsService {
     );
   }
 
-  @Transactional()
   async getByName(name: string, select?: Prisma.CallgentSelect) {
     const tenantPk = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
@@ -169,6 +166,7 @@ export class CallgentsService {
    * [endpoint://]callgent.please('act', with_args)
    * @param act API action name
    * @param endpoint client endpoint to call API. unnecessary in internal calls
+   * @deprecated
    */
   @Transactional()
   async please(
@@ -220,17 +218,18 @@ export class CallgentsService {
 
   /// hub actions
 
+  @Transactional()
   /** hub are those in tenantPk = -1 */
   private async _onHubAction<T>(fn: () => Promise<T>): Promise<T> {
     const tenantPk = this.tenancyService.getTenantId();
     try {
       this.tenancyService.setTenantId(-1);
-      return fn.apply(this);
+      return await fn.apply(this);
     } finally {
       this.tenancyService.setTenantId(tenantPk);
     }
   }
-  @Transactional()
+
   async findAllInHub(params: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
@@ -238,7 +237,7 @@ export class CallgentsService {
     page?: number;
     perPage?: number;
   }) {
-    return this._onHubAction(() => this.findAll(params));
+    return this._onHubAction(() => this.findMany(params));
   }
 
   @Transactional()

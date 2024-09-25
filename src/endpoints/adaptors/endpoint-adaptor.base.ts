@@ -1,11 +1,15 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  SecurityRequirementObject,
+  SecuritySchemeObject,
+  ServerObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
-import { EventObject } from '../../event-listeners/event-object';
 import { EndpointDto } from '../dto/endpoint.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 
@@ -15,7 +19,7 @@ export abstract class EndpointAdaptor {
     this.agentsService = agentsService;
   }
 
-  /** preprocess request */
+  /** preprocess request, replace raw request */
   abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
 
   /** postprocess response */
@@ -94,11 +98,14 @@ export abstract class EndpointAdaptor {
         'Invalid openAPI.JSON, failed to dereference.',
       );
     }
-    const { openapi, paths } = json; // TODO: save components onto SEP
+    const { openapi, paths, components, security, servers } = json; // TODO: save components onto SEP
     if (!openapi?.startsWith('3.0'))
       throw new BadRequestException(
         'Only openAPI `3.0.x` is supported now, openapi=' + openapi,
       );
+    ret.securitySchemes = components?.securitySchemes;
+    ret.servers = servers;
+    ret.securities = security;
 
     const ps = paths && Object.entries(paths);
     if (ps?.length) {
@@ -116,6 +123,8 @@ export abstract class EndpointAdaptor {
             parameters: restApi.parameters,
             requestBody: restApi.requestBody,
           };
+          const securities = restApi.security;
+
           // TODO restApi.callbacks
 
           ret.apis.push({
@@ -123,6 +132,7 @@ export abstract class EndpointAdaptor {
             method: method.toUpperCase(),
             summary,
             description,
+            securities,
             params,
             responses,
             rawJson: restApi,
@@ -134,15 +144,13 @@ export abstract class EndpointAdaptor {
     throw new NotFoundException('No API found in the text.');
   }
 
-  abstract invoke<T extends EventObject>(
+  abstract invoke(
     fun: CallgentFunctionDto,
     args: object,
     sep: EndpointDto,
-    reqEvent: T,
-  ): Promise<{ data: T; resumeFunName?: string }>;
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 }
-
-export interface AdaptedDataSource {}
 
 export class ApiSpec {
   apis: {
@@ -150,10 +158,18 @@ export class ApiSpec {
     method: string;
     summary: string;
     description: string;
+    /** array with or-relation, SecurityRequirementObject with and-relation */
+    securities?: SecurityRequirementObject[];
     params: Prisma.JsonObject;
     responses: Prisma.JsonObject;
     rawJson: Prisma.JsonObject;
   }[];
+  securitySchemes?: {
+    [name: string]: SecuritySchemeObject & { provider?: string };
+  };
+  servers?: ServerObject[];
+  /** array with or-relation, SecurityRequirementObject with and-relation */
+  securities?: SecurityRequirementObject[];
 }
 
 export class EndpointParam {

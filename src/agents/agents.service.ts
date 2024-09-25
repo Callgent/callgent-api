@@ -38,8 +38,8 @@ export class AgentsService {
       id,
       srcId,
       dataType: cepAdaptor,
-      data: { callgentName, req, funName, progressive },
-      context: { tgtEvents },
+      data: { callgentName, funName, progressive },
+      context: { tgtEvents, req },
     } = reqEvent;
     const callgentFunctions = reqEvent.context
       .functions as unknown as CallgentFunctionDto[];
@@ -67,13 +67,16 @@ export class AgentsService {
         );
 
       // emit progressive requesting event
-      const { data: prEvent, statusCode } =
-        await this.eventListenersService.emit(
-          new ProgressiveRequestEvent(srcId, id, cepAdaptor, {
-            progressive,
-            // mapped,
-          }),
-        );
+      const {
+        data: prEvent,
+        statusCode,
+        message,
+      } = await this.eventListenersService.emit(
+        new ProgressiveRequestEvent(srcId, id, cepAdaptor, {
+          progressive,
+          // mapped,
+        }),
+      );
       if (!statusCode)
         // direct return, no persistent async
         return this.map2FunctionProgressive(prEvent, reqEvent);
@@ -81,7 +84,7 @@ export class AgentsService {
       if (statusCode == 2)
         // pending
         return { data: reqEvent, resumeFunName: 'map2FunctionProgressive' };
-      throw new HttpException(prEvent.message, statusCode);
+      throw new HttpException(message, statusCode);
     } else {
       const functions = reqEvent.context.functions.filter(
         (f) => f.name == mapped.endpoint,

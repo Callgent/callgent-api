@@ -86,7 +86,6 @@ export class EndpointsService {
     );
   }
 
-  @Transactional()
   findOne(id: string, select?: Prisma.EndpointSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
@@ -96,7 +95,6 @@ export class EndpointsService {
     );
   }
 
-  @Transactional()
   findFirstByType(
     type: EndpointType,
     callgentId: string,
@@ -129,16 +127,6 @@ export class EndpointsService {
         },
       ),
     );
-  }
-
-  @Transactional()
-  findOneAuth(id: string, userKey: string) {
-    const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpointAuth.findUnique({
-      where: {
-        endpointId_userKey: { endpointId: id, userKey: userKey },
-      },
-    });
   }
 
   @Transactional()
@@ -307,7 +295,7 @@ export class EndpointsService {
 
     const endpoint = await this.findOne(reqEvent.srcId);
 
-    await adaptor.preprocess(reqEvent, endpoint);
+    await adaptor.preprocess(reqEvent, endpoint as any);
   }
 
   @Transactional()
@@ -333,10 +321,10 @@ export class EndpointsService {
 
     // may returns pending result
     return adapter
-      .invoke(func, map2Function.args, sep, reqEvent)
+      .invoke(func, map2Function.args, sep as any, reqEvent)
       .then((res) => {
-        if (res?.resumeFunName) return res;
-        return this.postInvokeSEP(res.data);
+        if (res && res.resumeFunName) return res;
+        return this.postInvokeSEP((res && res.data) || reqEvent);
       });
   }
 
@@ -344,8 +332,7 @@ export class EndpointsService {
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
     const {
-      data: { resp },
-      context: { functions },
+      context: { functions, resp },
     } = reqEvent;
     if (!functions?.length)
       throw new Error('Failed to invoke, No mapping function found');

@@ -17,13 +17,12 @@ export class ClientRequestEvent extends EventObject {
     taskId: string,
     dataType: string,
     callback: string,
+    req: object,
     public readonly data: {
       callgentId: string;
       callgentName: string;
       /** empty means anonymous */
-      caller?: string;
-      req?: JsonValue;
-      resp?: JsonValue;
+      callerId?: string;
       /** requested callgent function name */
       funName?: string;
       /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */
@@ -31,5 +30,6 @@ export class ClientRequestEvent extends EventObject {
     },
   ) {
     super(cepId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
+    this.context.req = req;
   }
 }
