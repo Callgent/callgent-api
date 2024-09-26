@@ -112,29 +112,6 @@ export class CallgentsController {
     return { data: await this.callgentsService.update(dto) };
   }
 
-  @ApiCreatedResponse({
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
-      ],
-    },
-  })
-  @Post(':id/duplicate')
-  async duplicateOverTenancy(
-    @Param('id') id: string,
-    @Req() req,
-    @Body() dto: CreateCallgentDto,
-  ) {
-    return {
-      data: await this.callgentsService.duplicateOverTenancy(
-        id,
-        dto,
-        req.user.sub,
-      ),
-    };
-  }
-
   @ApiOkResponse({
     schema: {
       allOf: [

@@ -32,7 +32,7 @@ export class BffCallgentFunctionsController {
       req.user?.sub,
     );
 
-    const data = await this.callgentFunctionService.findMany({
+    const data = await this.callgentFunctionService.findAll({
       where: { endpointId: endpoint.id },
     });
 

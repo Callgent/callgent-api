@@ -40,6 +40,14 @@ export class CallgentRealmsService {
 
   //// auth config start ////
 
+  @Transactional()
+  async create(realm: Prisma.CallgentRealmUncheckedCreateInput) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const processor = this._getAuthProcessor(realm.authType);
+    realm = processor.constructRealm(realm.scheme as any, realm as any) as any;
+    return prisma.callgentRealm.create({ data: { ...realm, pk: undefined } });
+  }
+
   /**
    * try to map to existing realm
    */

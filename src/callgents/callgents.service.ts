@@ -24,18 +24,19 @@ export class CallgentsService {
   protected readonly defSelect: Prisma.CallgentSelect = {
     pk: false,
     tenantPk: false,
+    duplicatePk: false,
     createdBy: false,
     deletedAt: false,
   };
 
   @Transactional()
   async create(
-    dto: CreateCallgentDto,
+    dto: CreateCallgentDto & { duplicatePk?: number },
     createdBy: string,
     select?: Prisma.CallgentSelect,
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
-    (data.id = Utils.uuid()), (data.createdBy = createdBy);
+    (data.id = Utils.uuid()), (data.createdBy = createdBy), delete data.pk;
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Callgent = await selectHelper(
@@ -214,46 +215,5 @@ export class CallgentsService {
     } else action = actions[0];
 
     // pre-meta, pre-routing, pre-mapping
-  }
-
-  /// hub actions
-
-  @Transactional()
-  /** hub are those in tenantPk = -1 */
-  private async _onHubAction<T>(fn: () => Promise<T>): Promise<T> {
-    const tenantPk = this.tenancyService.getTenantId();
-    try {
-      this.tenancyService.setTenantId(-1);
-      return await fn.apply(this);
-    } finally {
-      this.tenancyService.setTenantId(tenantPk);
-    }
-  }
-
-  async findAllInHub(params: {
-    select?: Prisma.CallgentSelect;
-    where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
-    page?: number;
-    perPage?: number;
-  }) {
-    return this._onHubAction(() => this.findMany(params));
-  }
-
-  @Transactional()
-  async duplicateOverTenancy(
-    dupId: string,
-    dto: CreateCallgentDto,
-    createdBy: string,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-
-    await this.tenancyService.bypassTenancy(prisma); // FIXME
-    const dup = await prisma.callgent.findUnique({ where: { id: dupId } });
-    if (!dup)
-      throw new NotFoundException('Callgent to duplicate not found: ' + dupId);
-
-    await this.tenancyService.bypassTenancy(prisma, false);
-    return this.create(dto, createdBy, { id: null });
   }
 }

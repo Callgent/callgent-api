@@ -47,7 +47,7 @@ export class CallgentFunctionsService {
     const { funName, callgentId } = reqEvent.data;
 
     // TODO if too many functions, use summary first
-    const { data: funcs } = await this.findAll({
+    const { data: funcs } = await this.findMany({
       select: {
         createdAt: false,
         updatedAt: false,
@@ -96,6 +96,13 @@ export class CallgentFunctionsService {
 
   //   // doInvoke
   // }
+
+  @Transactional()
+  async create(data: Prisma.CallgentFunctionUncheckedCreateInput) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const id = Utils.uuid();
+    return prisma.callgentFunction.create({ data: { ...data, id } });
+  }
 
   @Transactional()
   async createBatch(endpoint: EndpointDto, spec: ApiSpec, createdBy: string) {
@@ -192,7 +199,7 @@ export class CallgentFunctionsService {
     return this.createBatch(endpoint, apiSpec, createdBy);
   }
 
-  findAll({
+  findMany({
     select,
     where,
     orderBy = { pk: 'desc' },
@@ -228,7 +235,7 @@ export class CallgentFunctionsService {
     );
   }
 
-  findMany({
+  findAll({
     select,
     where,
     orderBy,

@@ -1,11 +1,16 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { DefaultArgs } from '@prisma/client/runtime/library';
 
 async function main() {
   const prisma = new PrismaClient({
     log: ['query', 'info', 'warn', 'error'],
   });
 
-  return await Promise.all(initData(prisma))
+  return await prisma
+    .$transaction(async (prisma) => {
+      await prisma.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${true})`;
+      await Promise.all(initData(prisma));
+    })
     .catch((e) => {
       console.error(e);
       process.exit(1);
@@ -19,11 +24,21 @@ async function main() {
 // execute the main function
 main();
 
-function initData(prisma: PrismaClient) {
+function initData(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
   return [...initEventListeners(prisma), initLlmTemplates(prisma)];
 }
 
-function initEventListeners(prisma: PrismaClient) {
+function initEventListeners(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
   let priority = -100;
   const els: Prisma.EventListenerUncheckedCreateInput[] = [
     {
@@ -149,7 +164,12 @@ function initEventListeners(prisma: PrismaClient) {
   );
 }
 
-async function initLlmTemplates(prisma: PrismaClient) {
+async function initLlmTemplates(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
   const llmTemplates: Prisma.LlmTemplateUncheckedCreateInput[] = [
     {
       name: 'api2Function',
