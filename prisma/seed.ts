@@ -30,7 +30,11 @@ function initData(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  return [...initEventListeners(prisma), initLlmTemplates(prisma)];
+  return [
+    ...initEventListeners(prisma),
+    initLlmTemplates(prisma),
+    ...initTags(prisma),
+  ];
 }
 
 function initEventListeners(
@@ -229,5 +233,82 @@ Please formalize the response content as a single-lined JSON object:
         create: llmTpl,
       })
       .then((llmTpl) => console.log({ llmTpl })),
+  );
+}
+function initTags(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
+  const tags: Prisma.TagCreateInput[] = [
+    {
+      name: 'App Security',
+      description:
+        'APIs to enhance the security of applications by protecting them from various cybersecurity threats',
+    },
+    {
+      name: 'Artificial Intelligence',
+      description:
+        'Ready to use APIs to add Artificial intelligence capabilities to your app such as predictive analysis, bots, and language conversions',
+    },
+    {
+      name: 'Communication',
+      description:
+        'APIs enabling the exchange of information and news via messaging, meetings, push notifications, survey forms',
+    },
+    {
+      name: 'Data Analytics',
+      description:
+        'APIs enabling seamless data generation, processing, analysis, and visualization',
+    },
+    {
+      name: 'Database',
+      description:
+        'Find database APIs on the Postman Public API Network. Discover public APIs to retrieve data and work with databases',
+    },
+    {
+      name: 'Developer Productivity',
+      description:
+        'Must-fork APIs to improve productivity during the software development lifecycle and fasten the execution process',
+    },
+    {
+      name: 'DevOps',
+      description:
+        'APIs recommended by Postman to enable quick CI/CD, build automation, containerization, config management during code deployment process',
+    },
+    {
+      name: 'E-commerce',
+      description:
+        'Ready to use APIs to streamline online shopping, logistics, catalogs, and inventory management to create exceptional e-commerce applications.',
+    },
+    {
+      name: 'eSignature',
+      description:
+        'Handpicked APIs for seamless e-signatures and document signing, empowering developers to build exceptional applications.',
+    },
+    {
+      name: 'Financial Services',
+      description:
+        'Banking and stock market APIs for managing personal finance, real-time trading and integrating with financial institutions',
+    },
+    {
+      name: 'Payments',
+      description:
+        'APIs to seamlessly integrate and manage payments in your apps',
+    },
+    {
+      name: 'Travel',
+      description:
+        'Exciting Travel APIs handpicked by Postman for seamless retrieval of real',
+    },
+  ];
+
+  return tags.map((t) =>
+    prisma.tag.upsert({
+      where: { name: t.name },
+      update: t,
+      create: t,
+    }),
   );
 }

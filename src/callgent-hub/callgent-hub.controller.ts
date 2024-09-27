@@ -12,15 +12,30 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiProperty,
   ApiQuery,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { IsInt, IsNotEmpty } from 'class-validator';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
+import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentHubService } from './callgent-hub.service';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+
+export class CreateCallgentDtoEx extends CreateCallgentDto {
+  @ApiProperty({
+    type: 'integer',
+    format: 'int32',
+    required: true,
+  })
+  @IsNotEmpty()
+  @IsInt()
+  @EntityIdExists('tag', 'id')
+  mainTagId: number;
+}
 
 @ApiTags('Hub')
 @Controller('hub')
@@ -32,7 +47,7 @@ export class CallgentHubController {
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
@@ -70,7 +85,7 @@ export class CallgentHubController {
     return list;
   }
 
-  @ApiOperation({ summary: 'Duplicate a callgent from Hub.' })
+  @ApiOperation({ summary: 'Fork a callgent from the Callgent Hub.' })
   @ApiCreatedResponse({
     schema: {
       allOf: [
@@ -80,18 +95,38 @@ export class CallgentHubController {
     },
   })
   @UseGuards(JwtGuard)
-  @Post(':id/duplicate')
-  async duplicateFromHub(
+  @Post('callgents/:id/fork')
+  async forkFromHub(
     @Param('id') id: string,
     @Req() req,
     @Body() dto: CreateCallgentDto,
   ) {
     return {
-      data: await this.callgentHubService.duplicateFromHub(
-        id,
-        dto,
-        req.user.sub,
-      ),
+      data: await this.callgentHubService.forkFromHub(id, dto, req.user.sub),
+    };
+  }
+
+  @ApiOperation({
+    summary: 'Commit a callgent to the Callgent Hub.',
+    description: 'Only original callgent can go into the hub;',
+  })
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
+      ],
+    },
+  })
+  @UseGuards(JwtGuard)
+  @Post('callgents/:id/commit')
+  async commitToHub(
+    @Param('id') id: string,
+    @Req() req,
+    @Body() dto: CreateCallgentDtoEx,
+  ) {
+    return {
+      data: await this.callgentHubService.commitToHub(id, dto, req.user.sub),
     };
   }
 }

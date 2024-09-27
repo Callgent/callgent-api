@@ -100,7 +100,7 @@ export class EndpointsController {
 
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {

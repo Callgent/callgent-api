@@ -21,7 +21,7 @@ export class CallgentCreatedListener {
     this.logger.debug('Handling event: %j', event);
 
     const callgent = event.callgent;
-    if (callgent.duplicatePk) return; // duplicated callgent
+    if (callgent.forkedPk) return; // forked callgent
 
     // add default endpoints
     const results = await Promise.all([

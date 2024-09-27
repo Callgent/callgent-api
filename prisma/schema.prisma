@@ -145,6 +145,14 @@ model PublicMailHost {
 
 //////////////////// Callgent ////////////////////////////
 
+/// @DtoIgnoreModel
+model Tag {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(30)
+  avatar      String? @db.VarChar(1023)
+  description String  @db.VarChar(1024)
+}
+
 model Callgent {
   /// @DtoEntityHidden
   pk       Int    @id @default(autoincrement())
@@ -162,7 +170,9 @@ model Callgent {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  duplicatePk Int? /// @description duplicated from
+  forkedPk  Int? /// @description forked from
+  /// @CustomValidator(EntityIdExists, 'tag', 'id', ../../infra/repo/validators/entity-exists.validator)
+  mainTagId Int?
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -178,6 +188,22 @@ model Callgent {
 
   @@unique([tenantPk, name])
   @@index([tenantPk])
+  @@index([forkedPk])
+  @@index([mainTagId])
+}
+
+/// @DtoIgnoreModel
+model CallgentTag {
+  pk Int @id @default(autoincrement())
+
+  tagId      Int
+  callgentId String @db.VarChar(36)
+
+  createdAt DateTime @default(now())
+
+  @@unique([callgentId, tagId])
+  @@index([tagId])
+  @@index([callgentId])
 }
 
 /// @description callgent function in openAPI.json format

@@ -5,6 +5,9 @@ import {
 
 export type AuthType = SecuritySchemeType | 'password'; // | '';
 
+/**
+ * @see SecuritySchemeObject
+ */
 export class RealmSchemeVO {
   /** whether issuing tokens per user */
   perUser?: boolean;

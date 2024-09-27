@@ -1,9 +1,5 @@
 -- AlterTable
-ALTER TABLE "Callgent" ADD COLUMN     "forkedPk" INTEGER,
-ADD COLUMN     "mainTagId" INTEGER;
-
--- AlterTable
-ALTER TABLE "CallgentRealm" ALTER COLUMN "realm" DROP NOT NULL;
+ALTER TABLE "Callgent" ADD COLUMN     "mainTagId" INTEGER;
 
 -- CreateTable
 CREATE TABLE "Tag" (

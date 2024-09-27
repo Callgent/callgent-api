@@ -24,14 +24,14 @@ export class CallgentsService {
   protected readonly defSelect: Prisma.CallgentSelect = {
     pk: false,
     tenantPk: false,
-    duplicatePk: false,
+    forkedPk: false,
     createdBy: false,
     deletedAt: false,
   };
 
   @Transactional()
   async create(
-    dto: CreateCallgentDto & { duplicatePk?: number },
+    dto: CreateCallgentDto & { forkedPk?: number },
     createdBy: string,
     select?: Prisma.CallgentSelect,
   ) {
@@ -44,6 +44,15 @@ export class CallgentsService {
       (select) => prisma.callgent.create({ select, data }),
       this.defSelect,
     );
+    if (dto.mainTagId) {
+      const tag = { callgentId: data.id, tagId: dto.mainTagId };
+      await prisma.callgentTag.upsert({
+        where: { callgentId_tagId: tag },
+        create: tag,
+        update: tag,
+      });
+    }
+
     await this.eventEmitter.emitAsync(
       CallgentCreatedEvent.eventName,
       new CallgentCreatedEvent({ ...data, ...ret }),
