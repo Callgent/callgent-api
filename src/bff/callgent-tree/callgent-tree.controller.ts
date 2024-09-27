@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
+import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
@@ -29,6 +30,8 @@ export class CallgentTreeController {
     private readonly endpointsService: EndpointsService,
     @Inject('CallgentFunctionsService')
     private readonly callgentFunctionsService: CallgentFunctionsService,
+    @Inject('CallgentRealmsService')
+    private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
   private readonly logger = new Logger(CallgentTreeController.name);
 
@@ -92,8 +95,15 @@ export class CallgentTreeController {
       }),
     );
 
+    const realms =
+      (await this.callgentRealmsService.findAll({
+        where: { callgentId: callgent.id },
+        select: { pk: false, callgentId: false, secret: false },
+      })) || [];
+
     const data = {
       id: callgent.id,
+      realms,
       name: callgent.name,
       createdAt: callgent.createdAt,
       updatedAt: callgent.updatedAt,

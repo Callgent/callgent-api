@@ -49,7 +49,7 @@ export class CallgentRealmsService {
   }
 
   /**
-   * try to map to existing realm
+   * try to map to existing realm. FIXME: update securities when realm changed
    */
   @Transactional()
   async upsertRealm(
