@@ -117,7 +117,7 @@ export class CallgentRealmsController {
 
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
         {
@@ -151,7 +151,7 @@ export class CallgentRealmsController {
 
   @ApiCreatedResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
       ],
