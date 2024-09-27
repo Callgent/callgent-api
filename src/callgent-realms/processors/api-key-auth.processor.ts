@@ -53,7 +53,8 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     scheme: RealmSchemeVO,
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
   ) {
-    if (!realm.secret || !scheme.provider) return false;
+    if (!realm.secret || !scheme.provider || !scheme.name || !scheme.in)
+      return false;
     return this.validateSecretFormat(realm);
   }
 
