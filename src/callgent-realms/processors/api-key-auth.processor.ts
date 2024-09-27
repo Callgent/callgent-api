@@ -18,11 +18,15 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     endpoint?: EndpointDto,
     servers?: { url: string }[],
   ) {
-    let url: string;
-    if (endpoint && endpoint.type != 'CLIENT') {
-      url = endpoint.host; // whatever adaptor it is, host need to be a url
-    } else if (servers?.length > 0) {
-      url = servers[0].url;
+    let url: string = (scheme as any).provider;
+    if (url) {
+      if (!url.toLowerCase().startsWith('http')) url = 'http://' + url;
+    } else {
+      if (endpoint && endpoint.type != 'CLIENT') {
+        url = endpoint.host; // whatever adaptor it is, host need to be a url
+      } else if (servers?.length > 0) {
+        url = servers[0].url;
+      }
     }
     if (!url)
       throw new BadRequestException(
@@ -40,9 +44,9 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   /** @returns ApiKey:in:name:provider:realm */
   protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `${scheme.type}:${scheme.in || ''}:${scheme.name || ''}:${
-      scheme.provider
-    }:${realm || ''}`;
+    return `apiKey:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
+      realm || ''
+    }`;
   }
 
   protected checkEnabled(

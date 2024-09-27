@@ -275,13 +275,12 @@ model CallgentRealm {
   /// @DtoPlainApiResponse
   realmKey   String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
 
-  /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
   /// @description provider defined realm name, or '' for default realm
   /// @IsOptional()
-  realm    String? @default("") @db.VarChar(16)
+  realm    String? @default("") @db.VarChar(36)
   /// @DtoUpdateOptional
   /// @DtoCastType(RealmSchemeVO, ../dto/realm-scheme.vo)
   scheme   Json    @db.Json /// @description security scheme, with all public configs

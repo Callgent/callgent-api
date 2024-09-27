@@ -32,6 +32,7 @@ export class CallgentRealmsService {
     private readonly moduleRef: ModuleRef,
   ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
+    pk: false,
     tenantPk: false,
     createdAt: false,
     updatedAt: false,
@@ -41,11 +42,24 @@ export class CallgentRealmsService {
   //// auth config start ////
 
   @Transactional()
-  async create(realm: Prisma.CallgentRealmUncheckedCreateInput) {
+  async create(
+    realm: Omit<Prisma.CallgentRealmUncheckedCreateInput, 'realmKey'> & {
+      realmKey?: string;
+    },
+    select?: Prisma.CallgentRealmSelect,
+  ) {
     const prisma = this.txHost.tx as PrismaClient;
     const processor = this._getAuthProcessor(realm.authType);
     realm = processor.constructRealm(realm.scheme as any, realm as any) as any;
-    return prisma.callgentRealm.create({ data: { ...realm, pk: undefined } });
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.callgentRealm.create({
+          data: { ...(realm as any), pk: undefined },
+          select,
+        }),
+      this.defSelect,
+    );
   }
 
   /**
@@ -238,7 +252,7 @@ export class CallgentRealmsService {
    * @param noError if false, throw error if realm not enabled
    */
   protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this._findOne(security.realmPk, {});
+    const realm = await this._findOne(security.realmPk, { pk: null });
     if (!realm?.enabled) {
       if (noError) return { realm };
       throw new UnauthorizedException(

@@ -4,6 +4,7 @@ ADD COLUMN     "mainTagId" INTEGER;
 
 -- AlterTable
 ALTER TABLE "CallgentRealm" ALTER COLUMN "realm" DROP NOT NULL;
+ALTER TABLE "CallgentRealm" ALTER COLUMN "realm" TYPE varchar(16);
 
 -- CreateTable
 CREATE TABLE "Tag" (

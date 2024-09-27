@@ -98,7 +98,7 @@ export class CallgentTreeController {
     const realms =
       (await this.callgentRealmsService.findAll({
         where: { callgentId: callgent.id },
-        select: { pk: false, callgentId: false, secret: false },
+        select: { callgentId: false, secret: false },
       })) || [];
 
     const data = {

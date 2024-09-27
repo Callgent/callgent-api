@@ -18,8 +18,7 @@ export abstract class AuthProcessor {
     servers?: ServerObject[],
   ) {
     // imply provider
-    if (!scheme.provider)
-      scheme.provider = this.implyProvider(scheme, endpoint, servers);
+    scheme.provider = this.implyProvider(scheme, endpoint, servers);
     realm.realmKey = this.getRealmKey(scheme as any, realm.realm);
     realm.perUser = this.isPerUser(scheme as any, realm);
     realm.enabled = this.checkEnabled(scheme as any, realm);

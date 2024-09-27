@@ -1,13 +1,17 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
   Inject,
   Param,
+  Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiSecurity,
@@ -18,7 +22,9 @@ import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentRealmsService } from './callgent-realms.service';
 import { CallgentRealmDto } from './dto/callgent-realm.dto';
+import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
+import { isAuthType } from './dto/realm-scheme.vo';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
@@ -64,7 +70,7 @@ export class CallgentRealmsController {
   ) {
     // TODO realmKey may be in body
     const data = await this.callgentRealmsService
-      .findOne(callgentId, realmKey, { pk: false })
+      .findOne(callgentId, realmKey)
       .then((r) => r && { ...r, secret: r.secret ? true : false });
     return { data };
   }
@@ -103,7 +109,6 @@ export class CallgentRealmsController {
   async findAll(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
       .findAll({
-        select: { pk: false },
         where: { callgentId },
       })
       .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
@@ -142,5 +147,25 @@ export class CallgentRealmsController {
       .then((r) => r && { ...r, secret: r.secret ? true : false });
 
     return { data };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
+      ],
+    },
+  })
+  @Post()
+  async create(@Body() dto: CreateCallgentRealmDto) {
+    if (!isAuthType(dto.authType))
+      throw new BadRequestException('Invalid authType');
+    return {
+      data: await this.callgentRealmsService.create({
+        ...dto,
+        scheme: dto.scheme as any,
+      }),
+    };
   }
 }
