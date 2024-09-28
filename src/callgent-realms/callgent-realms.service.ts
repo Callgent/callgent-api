@@ -36,7 +36,6 @@ export class CallgentRealmsService {
     tenantPk: false,
     createdAt: false,
     updatedAt: false,
-    deletedAt: false,
   };
 
   //// auth config start ////
@@ -372,5 +371,46 @@ export class CallgentRealmsService {
         }),
       this.defSelect,
     );
+  }
+
+  @Transactional()
+  async delete(callgentId: string, realmKey: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const realm = await prisma.callgentRealm.delete({
+      where: { callgentId_realmKey: { callgentId, realmKey } },
+    });
+    if (!realm) return;
+    const pk = realm.pk + '';
+
+    // clear securities
+    await Promise.all([
+      prisma.$executeRaw`UPDATE "Endpoint"
+    SET "securities" = (
+        SELECT array_agg(sec::jsonb - ${pk})
+          FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')
+        FROM unnest("securities") AS sec
+    )
+    WHERE "callgentId"=${callgentId} and EXISTS (
+        SELECT 1
+        FROM unnest("securities") AS elem
+        WHERE elem::jsonb ? ${pk}
+    )`,
+      prisma.$executeRaw`UPDATE "CallgentFunction"
+    SET "securities" = (
+        SELECT array_agg(sec::jsonb - ${pk})
+          FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')
+        FROM unnest("securities") AS sec
+    )
+    WHERE "callgentId"=${callgentId} and EXISTS (
+        SELECT 1
+        FROM unnest("securities") AS elem
+        WHERE elem::jsonb ? ${pk}
+    )`,
+    ]);
+
+    delete realm.pk;
+    delete realm.tenantPk;
+    realm.secret = !!realm.secret;
+    return realm;
   }
 }

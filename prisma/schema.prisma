@@ -297,10 +297,6 @@ model CallgentRealm {
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
 
   @@unique([callgentId, realmKey])
   @@index(callgentId)
@@ -437,7 +433,7 @@ model Endpoint {
   /// @DtoReadOnly
   /// @DtoPlainApiResponse
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
-  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
+  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmPk]: RealmSecurityItem }
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse

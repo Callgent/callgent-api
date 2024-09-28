@@ -2,12 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
   Post,
   Put,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -23,8 +23,8 @@ import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentRealmsService } from './callgent-realms.service';
 import { CallgentRealmDto } from './dto/callgent-realm.dto';
 import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
-import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { isAuthType } from './dto/realm-scheme.vo';
+import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
@@ -44,25 +44,14 @@ export class CallgentRealmsController {
         {
           properties: {
             data: {
-              $ref: getSchemaPath(CallgentRealmDto),
-            },
-          },
-        },
+              $ref: getSchemaPath(CallgentRealmDto) }}},
         {
           properties: {
             data: {
               properties: {
                 secret: {
                   type: 'boolean',
-                  description: 'secret is masked, true means set',
-                },
-              },
-            },
-          },
-        },
-      ],
-    },
-  })
+                  description: 'secret is masked, true means set'}}}}}]}})
   @Get(':callgentId/:realmKey')
   async findOne(
     @Param('callgentId') callgentId: string,
@@ -166,6 +155,28 @@ export class CallgentRealmsController {
         ...dto,
         scheme: dto.scheme as any,
       }),
+    };
+  }
+
+  @ApiOkResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: { $ref: getSchemaPath(CallgentRealmDto) },
+          },
+        },
+      ],
+    },
+  })
+  @Delete(':callgentId/:realmKey')
+  async remove(
+    @Param('callgentId') callgentId: string,
+    @Param('realmKey') realmKey: string,
+  ) {
+    return {
+      data: await this.callgentRealmsService.delete(callgentId, realmKey),
     };
   }
 }
