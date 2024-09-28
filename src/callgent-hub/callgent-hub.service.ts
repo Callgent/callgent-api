@@ -144,10 +144,13 @@ export class CallgentHubService {
       const realmMap: { [pk: number]: CallgentRealm } = {};
       await Promise.all(
         realms.map(async (r) => {
-          const realm = await this.callgentRealmsService.create({
-            ...r,
-            callgentId,
-          });
+          const realm = await this.callgentRealmsService.create(
+            {
+              ...r,
+              callgentId,
+            },
+            { pk: null },
+          );
           realmMap[r.pk] = realm;
         }),
       );
