@@ -10,11 +10,11 @@ import {
   Injectable,
   InjectionToken,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
+import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
@@ -196,7 +196,10 @@ export class EndpointsService {
 
   @Transactional()
   update(id: string, dto: UpdateEndpointDto) {
-    throw new NotImplementedException('Method not implemented.');
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(this.defSelect, (select) =>
+      prisma.endpoint.update({ select, where: { id }, data: dto }),
+    );
   }
 
   @Transactional()
@@ -354,5 +357,14 @@ export class EndpointsService {
     await adapter.postprocess(reqEvent, func);
 
     return { data: reqEvent }; // do nothing
+  }
+
+  @Transactional()
+  async updateSecurities(id: string, securities: RealmSecurityVO[]) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpoint.update({
+      where: { id },
+      data: { securities: securities as any },
+    });
   }
 }

@@ -51,7 +51,7 @@ export class CallgentsController {
 
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],

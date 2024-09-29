@@ -155,9 +155,10 @@ export class CallgentFunctionsService {
               const item = this.callgentRealmsService.constructSecurity(
                 realm,
                 endpoint,
+                scopes,
               );
 
-              result[name] = { ...item, scopes };
+              result['' + item.realmPk] = item;
             });
             return result;
           });
@@ -274,13 +275,25 @@ export class CallgentFunctionsService {
     );
   }
 
-  findOne(id: string) {
+  findOne(id: string, select?: Prisma.CallgentFunctionSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.callgentFunction.findUnique({
-        select,
-        where: { id },
-      }),
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.callgentFunction.findUnique({
+          select,
+          where: { id },
+        }),
+      this.defSelect,
     );
+  }
+
+  @Transactional()
+  async updateSecurities(id: string, securities: RealmSecurityVO[]) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.callgentFunction.update({
+      where: { id },
+      data: { securities: securities as any },
+    });
   }
 }

@@ -27,17 +27,24 @@ export abstract class AuthProcessor {
   }
 
   /** construct a security guard on endpoint */
-  constructSecurity(endpoint: EndpointDto, realm: CallgentRealm) {
+  constructSecurity(
+    endpoint: EndpointDto,
+    realm: CallgentRealm,
+    scopes?: string[],
+  ): RealmSecurityItem {
     let attach: boolean;
     if (endpoint.type != 'CLIENT') {
       try {
-        const provider = this.implyProvider(realm.scheme, endpoint);
+        const provider = this.implyProvider(
+          { ...realm.scheme, provider: undefined } as any,
+          endpoint,
+        );
         if (provider == realm.scheme.provider) attach = true;
       } catch (e) {
         // ignore
       }
     }
-    return { realmPk: realm.pk, attach };
+    return { realmPk: realm.pk, attach, scopes };
   }
 
   /**

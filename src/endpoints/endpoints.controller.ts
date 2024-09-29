@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiSecurity,
@@ -50,6 +51,14 @@ export class EndpointsController {
   //   return adaptor.getConfig();
   // }
 
+  @ApiCreatedResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(EndpointDto) } } },
+      ],
+    },
+  })
   @Post(':adaptorKey/create')
   async createEndpoint(
     @Req() req,
@@ -65,6 +74,14 @@ export class EndpointsController {
     };
   }
 
+  @ApiOkResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(EndpointDto) } } },
+      ],
+    },
+  })
   @Put(':id')
   async updateEndpoint(
     @Param('id') id: string,

@@ -11,9 +11,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBody,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
+  ApiOperation,
+  ApiParam,
   ApiSecurity,
   ApiTags,
   getSchemaPath,
@@ -24,11 +27,12 @@ import { CallgentRealmsService } from './callgent-realms.service';
 import { CallgentRealmDto } from './dto/callgent-realm.dto';
 import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
 import { isAuthType } from './dto/realm-scheme.vo';
+import { RealmSecurityItemForm } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, CallgentRealmDto)
+@ApiExtraModels(RestApiResponse, CallgentRealmDto, RealmSecurityItemForm)
 @UseGuards(JwtGuard)
 @Controller('callgent-realms')
 export class CallgentRealmsController {
@@ -44,14 +48,25 @@ export class CallgentRealmsController {
         {
           properties: {
             data: {
-              $ref: getSchemaPath(CallgentRealmDto) }}},
+              $ref: getSchemaPath(CallgentRealmDto),
+            },
+          },
+        },
         {
           properties: {
             data: {
               properties: {
                 secret: {
                   type: 'boolean',
-                  description: 'secret is masked, true means set'}}}}}]}})
+                  description: 'secret is masked, true means set',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
   @Get(':callgentId/:realmKey')
   async findOne(
     @Param('callgentId') callgentId: string,
@@ -177,6 +192,26 @@ export class CallgentRealmsController {
   ) {
     return {
       data: await this.callgentRealmsService.delete(callgentId, realmKey),
+    };
+  }
+
+  @ApiOperation({ summary: 'Update securities on endpoint/callgent function' })
+  /// securities
+  @ApiParam({ name: 'type', type: 'string', enum: ['endpoint', 'function'] })
+  @ApiBody({ isArray: true, type: RealmSecurityItemForm })
+  @Post('securities/:type/:id')
+  async updateSecurities(
+    @Param('realmKey') realmKey: string,
+    @Param('type') type: 'endpoint' | 'function',
+    @Param('id') id: string,
+    @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO
+  ) {
+    return {
+      data: await this.callgentRealmsService.updateSecurities(
+        type,
+        id,
+        securities,
+      ),
     };
   }
 }

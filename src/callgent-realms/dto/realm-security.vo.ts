@@ -1,11 +1,10 @@
-import { ApiExtraModels, ApiProperty } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiProperty,
+  ApiResponseProperty,
+} from '@nestjs/swagger';
 
 export class RealmSecurityItem {
-  @ApiProperty({
-    type: 'integer',
-    format: 'int32',
-    required: true,
-  })
   realmPk: number;
 
   /** scopes for the security operation */
@@ -13,8 +12,17 @@ export class RealmSecurityItem {
   scopes?: string[];
 
   /** whether to attach token to request, or validate token separately */
-  @ApiProperty({ type: 'boolean', required: false })
+  @ApiResponseProperty({ type: 'boolean' })
   attach?: boolean;
+}
+
+export class RealmSecurityItemForm {
+  @ApiProperty({ required: true, type: 'string' })
+  realmKey: string;
+
+  /** scopes for the security operation */
+  @ApiProperty({ isArray: true, required: false, type: 'string' })
+  scopes?: string[];
 }
 
 /**

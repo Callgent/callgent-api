@@ -10,13 +10,18 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { ClientRequestEvent } from '../endpoints/events/client-request.event';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
-import { RealmSecurityItem, RealmSecurityVO } from './dto/realm-security.vo';
+import {
+  RealmSecurityItem,
+  RealmSecurityItemForm,
+  RealmSecurityVO,
+} from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { CallgentRealm } from './entities/callgent-realm.entity';
 import { AuthProcessor } from './processors/auth-processor.base';
@@ -30,7 +35,14 @@ export class CallgentRealmsService {
     private readonly endpointsService: EndpointsService,
     private readonly usersService: UsersService,
     private readonly moduleRef: ModuleRef,
-  ) {}
+  ) {
+    // a little hack: circular relation
+    this.callgentFunctionsService = this.moduleRef.get(
+      'CallgentFunctionsService',
+      { strict: false },
+    );
+  }
+  private readonly callgentFunctionsService: CallgentFunctionsService;
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
     pk: false,
     tenantPk: false,
@@ -62,7 +74,7 @@ export class CallgentRealmsService {
   }
 
   /**
-   * try to map to existing realm. FIXME: update securities when realm changed
+   * try to map to existing realm. FIXME: update securities when realm changed, see this.delete
    */
   @Transactional()
   async upsertRealm(
@@ -105,9 +117,51 @@ export class CallgentRealmsService {
   }
 
   /** construct security guard on endpoint */
-  constructSecurity(realm: CallgentRealm, endpoint: EndpointDto) {
+  constructSecurity(
+    realm: CallgentRealm,
+    endpoint: EndpointDto,
+    scopes?: string[],
+  ) {
     const processor = this._getAuthProcessor(realm.authType);
-    return processor.constructSecurity(endpoint, realm);
+    return processor.constructSecurity(endpoint, realm, scopes);
+  }
+
+  // TODO: RealmSecurityVO
+  async updateSecurities(
+    type: 'endpoint' | 'function',
+    id: string,
+    securities: RealmSecurityItemForm[],
+  ) {
+    let endpoint, targetService: EndpointsService | CallgentFunctionsService;
+    if (type == 'endpoint') {
+      targetService = this.endpointsService;
+      endpoint = await this.endpointsService.findOne(id);
+    } else {
+      targetService = this.callgentFunctionsService;
+      const fun = await this.callgentFunctionsService.findOne(id, {
+        endpointId: true,
+      });
+      endpoint = await this.endpointsService.findOne(fun.endpointId);
+    }
+    if (!endpoint) throw new NotFoundException('Not found ' + type);
+
+    const secs = await Promise.all(
+      securities.map(async (security) => {
+        const realm = await this.findOne(
+          endpoint.callgentId,
+          security.realmKey,
+          {
+            pk: true,
+          },
+        );
+        if (!realm) throw new NotFoundException('Not found realm');
+
+        const sec = this.constructSecurity(realm, endpoint, security.scopes);
+        return { ['' + sec.realmPk]: sec };
+      }),
+    );
+
+    return targetService.updateSecurities(id, secs).then((e) => !!e);
   }
 
   //// auth check start, auth config end ////
