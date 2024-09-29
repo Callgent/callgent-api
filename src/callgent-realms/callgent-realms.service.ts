@@ -150,9 +150,7 @@ export class CallgentRealmsService {
         const realm = await this.findOne(
           endpoint.callgentId,
           security.realmKey,
-          {
-            pk: true,
-          },
+          { pk: null },
         );
         if (!realm) throw new NotFoundException('Not found realm');
 
