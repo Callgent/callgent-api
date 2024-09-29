@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CallgentRealm, Prisma } from '@prisma/client';
+import { CallgentRealm, Prisma, PrismaClient } from '@prisma/client';
 import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
 import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
@@ -112,10 +112,20 @@ export class CallgentHubService {
         },
       });
       if (!from) throw new NotFoundException();
-      if (toTenant == this.hubTenantPK && from.forkedPk)
+      if (toTenant == this.hubTenantPK && from.forkedPk) {
+        // to hub
         throw new BadRequestException(
           'Only original callgent can be committed to hub.',
         );
+      } else {
+        // from hub
+        const prisma = this.txHost.tx as PrismaClient;
+        await prisma.callgent.update({
+          where: { id: fromId },
+          select: { id: true },
+          data: { forked: { increment: 1 } },
+        });
+      }
 
       const eps = from.endpoints;
       from.endpoints = undefined;

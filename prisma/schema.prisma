@@ -166,7 +166,25 @@ model Callgent {
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name    String  @db.VarChar(255)
+  avatar  String? @db.VarChar(1023)
   summary String? @db.VarChar(4095)
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  liked     Int @default(0)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  viewed    Int @default(0)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  forked    Int @default(0)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  favorited Int @default(0)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -295,8 +313,8 @@ model CallgentRealm {
   /// @DtoPlainApiResponse
   enabled Boolean @default(true) /// @description whether the realm is enabled
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([callgentId, realmKey])
   @@index(callgentId)

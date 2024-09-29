@@ -201,7 +201,6 @@ export class CallgentRealmsController {
   @ApiBody({ isArray: true, type: RealmSecurityItemForm })
   @Post('securities/:type/:id')
   async updateSecurities(
-    @Param('realmKey') realmKey: string,
     @Param('type') type: 'endpoint' | 'function',
     @Param('id') id: string,
     @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO
