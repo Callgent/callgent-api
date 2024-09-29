@@ -184,7 +184,10 @@ model Callgent {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  favorited Int @default(0)
+  favorite Int @default(0)
+
+  official Boolean @default(false)
+  featured Boolean @default(false)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
