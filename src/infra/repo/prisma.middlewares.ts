@@ -12,18 +12,24 @@ export const mainPrismaServiceOptions = (
   config: ConfigService,
 ): PrismaServiceOptions => {
   const logLevels = config.get('LOG_LEVELS_PRISMA');
+  const slowSqlTh = parseInt(config.get('SLOW_SQL_THRESHOLD', '10000'));
+  const txTimeout = parseInt(config.get('PRISMA_TRANSACTION_TIMEOUT', '5000'));
   return {
     prismaOptions: {
       errorFormat: 'pretty',
       log: logLevels ? JSON.parse(logLevels) : [],
       transactionOptions: {
-        timeout: parseInt(config.get('PRISMA_TRANSACTION_TIMEOUT', '5000')),
+        timeout: txTimeout,
       },
     },
     middlewares: [
       loggingMiddleware({
         logger: new Logger('Prisma'),
         logLevel: config.get('LOG_LEVEL'),
+        logMessage: (query) =>
+          `${query.model || ''}.${query.action} took ${
+            query.executionTime > slowSqlTh ? '\x1b[31m' : ''
+          }${query.executionTime}ms\x1b[0m`,
       }),
       // TODO, upgrade to extension: https://github.com/olivierwilkinson/prisma-extension-soft-delete
       createSoftDeleteMiddleware({

@@ -67,7 +67,9 @@ export class ReposModule implements OnModuleInit {
         sql.startsWith('update') ||
         sql.startsWith('delete')
       )
-        this.logger.debug(`${e.query}; \x1b[34m${e.params}\x1b[0m`);
+        this.logger.debug(
+          `${e.query.replace(/\s+/g, ' ')}; \x1b[34m${e.params}\x1b[0m`,
+        );
     });
   }
 }
