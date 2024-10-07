@@ -27,9 +27,9 @@ export const mainPrismaServiceOptions = (
         logger: new Logger('Prisma'),
         logLevel: config.get('LOG_LEVEL'),
         logMessage: (query) =>
-          `${query.model || ''}.${query.action} took ${
-            query.executionTime > slowSqlTh ? '\x1b[31m' : ''
-          }${query.executionTime}ms\x1b[0m`,
+          `${query.model || ''}.${query.action} took \x1b[3${
+            query.executionTime > slowSqlTh ? '1' : '2'
+          }m${query.executionTime}ms\x1b[0m`,
       }),
       // TODO, upgrade to extension: https://github.com/olivierwilkinson/prisma-extension-soft-delete
       createSoftDeleteMiddleware({
