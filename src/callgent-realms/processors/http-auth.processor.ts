@@ -12,7 +12,7 @@ import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
 
 @Injectable()
-export class ApiKeyAuthProcessor extends AuthProcessor {
+export class HttpAuthProcessor extends AuthProcessor {
   protected implyProvider(
     scheme: SecuritySchemeObject,
     endpoint?: EndpointDto,
@@ -25,13 +25,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
       if (endpoint && endpoint.type != 'CLIENT') {
         url = endpoint.host; // whatever adaptor it is, host need to be a url
       } else if (servers?.length > 0) {
-        const server = servers.find((server) => {
-          try {
-            new URL(server.url);
-            return true;
-          } catch (e) {}
-        });
-        url = server?.url;
+        url = servers[0].url;
       }
     }
     if (!url)
@@ -48,11 +42,9 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     }
   }
 
-  /** @returns ApiKey:in:name:provider:realm */
+  /** @returns http:scheme:provider:realm */
   protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `apiKey:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
-      realm || ''
-    }`;
+    return `http:${scheme.scheme || ''}:${scheme.provider}:${realm || ''}`;
   }
 
   protected checkEnabled(

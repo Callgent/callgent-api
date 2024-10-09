@@ -20,10 +20,16 @@ export abstract class EndpointAdaptor {
   }
 
   /** preprocess request, replace raw request */
-  abstract preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto);
+  abstract preprocess(
+    reqEvent: ClientRequestEvent,
+    endpoint: EndpointDto,
+  ): Promise<void>;
 
   /** postprocess response */
-  abstract postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto);
+  abstract postprocess(
+    reqEvent: ClientRequestEvent,
+    fun: CallgentFunctionDto,
+  ): Promise<void>;
 
   /** Endpoint config. */
   abstract getConfig(): EndpointConfig;

@@ -121,7 +121,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
   async preprocess(
     reqEvent: ClientRequestEvent,
     // endpoint: EndpointDto,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+  ) {
     const req = reqEvent?.context.req;
     if (!req)
       throw new BadRequestException(
@@ -155,11 +155,14 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   req2Json(request) {
     const { method, headers: rawHeaders, query, body, raw } = request;
-    if (request.url.indexOf('/invoke-api/') < 0)
+    if (request.url.indexOf('/rest/invoke/') < 0)
       throw new Error(
-        'Unsupported URL, should be /callgents/:ids/:endpoint/invoke-api/*',
+        'Unsupported URL, should be /rest/invoke/:callgentId/:endpoint/*',
       );
-    const url = request.url.substr(request.url.indexOf('/invoke-api/') + 11);
+    let idx = request.url.indexOf('/rest/invoke/');
+    idx = request.url.indexOf('/', idx + 13);
+    idx = request.url.indexOf('/', idx + 1);
+    const url = request.url.substr(idx);
 
     // FIXME https://www.npmjs.com/package/@fastify/multipart
     // request.file()

@@ -28,7 +28,7 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
 @UseGuards(new JwtGuard(true))
-@Controller('callgents')
+@Controller('rest')
 export class RestApiController {
   constructor(
     protected readonly callgentsService: CallgentsService,
@@ -41,20 +41,21 @@ export class RestApiController {
     description: 'rest-api client endpoint entry of multiple callgents',
   })
   @ApiParam({
-    name: 'id',
+    name: 'callgentId',
     required: true,
     description: 'Callgent id',
   })
   @ApiParam({
     name: 'endpointId',
     required: false,
-    description: 'endpoint id, optional: "/callgents/the-id`//`invoke/"',
+    description:
+      'Client endpoint id, mey empty: "/rest/invoke/:callgent-id`//`.."',
   })
   @ApiParam({
     name: 'NOTE: swagger does not support wildcard param. Just document here',
     required: false,
     description:
-      '../invoke-api/`resource-path-here`. the wildcard path, optional: "../invoke-api/"',
+      'rest/invoke/:callgentId/:endpointId/`resource-path-here`. the wildcard path, may be empty',
   })
   @ApiHeader({ name: 'x-callgent-taskId', required: false })
   @ApiHeader({
@@ -64,19 +65,20 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
-  @All(':id/:endpointId/invoke-api/*')
+  @All('invoke/:callgentId/:endpointId/*')
+  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiUnauthorizedResponse()
-  async execute(
+  async invoke(
     @Req() req,
     @Res() res,
-    @Param('id') callgentId: string,
+    @Param('callgentId') callgentId: string,
     @Param('endpointId') endpointId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
-    const basePath = `${callgentId}/${endpointId}/invoke-api/`;
+    const basePath = `invoke/${callgentId}/${endpointId}/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
@@ -120,7 +122,7 @@ export class RestApiController {
     description:
       'Inquiry the result of an invocation request. TODO: Socket Mode',
   })
-  @Get('/invoke/result/:requestId')
+  @Get('/result/:requestId')
   async invokeResult(@Param('requestId') reqId: string) {
     // FIXME
     return null;

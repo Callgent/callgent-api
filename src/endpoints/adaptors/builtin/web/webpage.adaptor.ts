@@ -7,7 +7,7 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
 import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
 
-@EndpointAdaptorName('webpage', 'both')
+@EndpointAdaptorName('webpage', 'client')
 export class WebpageAdaptor extends EndpointAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
