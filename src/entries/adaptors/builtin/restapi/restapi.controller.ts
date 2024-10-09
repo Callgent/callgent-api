@@ -20,13 +20,13 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { EndpointType } from '@prisma/client';
+import { EntryType } from '@prisma/client';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
-import { EndpointsService } from '../../../endpoints.service';
+import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 
 export class Requirement {
@@ -41,15 +41,15 @@ export class Requirement {
   requirement: string;
 }
 
-/** global rest-api endpoint entry */
-@ApiTags('Client Endpoint: Rest-API')
+/** global rest-api entry entry */
+@ApiTags('Client Entry: Rest-API')
 @UseGuards(new JwtGuard(true))
 @Controller('rest')
 export class RestApiController {
   constructor(
     protected readonly callgentsService: CallgentsService,
-    @Inject('EndpointsService')
-    protected readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    protected readonly entriesService: EntriesService,
     protected readonly eventListenersService: EventListenersService,
   ) {}
 
@@ -70,16 +70,16 @@ export class RestApiController {
     description: 'Callgent id',
   })
   @ApiParam({
-    name: 'endpointId',
+    name: 'entryId',
     required: false,
     description:
-      'Client endpoint id, mey empty: "/rest/invoke/:callgent-id`//`.."',
+      'Client entry id, mey empty: "/rest/invoke/:callgent-id`//`.."',
   })
   @ApiParam({
     name: 'NOTE: swagger does not support wildcard param. Just document here',
     required: false,
     description:
-      'rest/invoke/:callgentId/:endpointId/`resource-path-here`. the wildcard path, may be empty',
+      'rest/invoke/:callgentId/:entryId/`resource-path-here`. the wildcard path, may be empty',
   })
   @ApiHeader({ name: 'x-callgent-taskId', required: false })
   @ApiHeader({
@@ -89,35 +89,35 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
-  @All('invoke/:callgentId/:endpointId/*')
+  @All('invoke/:callgentId/:entryId/*')
   @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiUnauthorizedResponse()
   async invoke(
     @Req() req,
     @Res() res,
     @Param('callgentId') callgentId: string,
-    @Param('endpointId') endpointId?: string,
+    @Param('entryId') entryId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
-    const basePath = `invoke/${callgentId}/${endpointId}/`;
+    const basePath = `invoke/${callgentId}/${entryId}/`;
     let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
 
     const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
-    const cep = await this.endpointsService.$findFirstByType(
-      EndpointType.CLIENT,
+    const cep = await this.entriesService.$findFirstByType(
+      EntryType.CLIENT,
       callgentId,
       'restAPI',
-      endpointId,
+      entryId,
     );
     if (!cep)
       throw new NotFoundException(
-        'restAPI endpoint not found for callgent: ' + callgentId,
+        'restAPI entry not found for callgent: ' + callgentId,
       );
     const callgent = await this.callgentsService.findOne(callgentId, {
       name: true,

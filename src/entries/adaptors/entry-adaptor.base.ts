@@ -10,10 +10,10 @@ import { Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
-import { EndpointDto } from '../dto/endpoint.dto';
+import { EntryDto } from '../dto/entry.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 
-export abstract class EndpointAdaptor {
+export abstract class EntryAdaptor {
   protected readonly agentsService: AgentsService;
   constructor(agentsService: AgentsService) {
     this.agentsService = agentsService;
@@ -22,7 +22,7 @@ export abstract class EndpointAdaptor {
   /** preprocess request, replace raw request */
   abstract preprocess(
     reqEvent: ClientRequestEvent,
-    endpoint: EndpointDto,
+    entry: EntryDto,
   ): Promise<void>;
 
   /** postprocess response */
@@ -31,26 +31,17 @@ export abstract class EndpointAdaptor {
     fun: CallgentFunctionDto,
   ): Promise<void>;
 
-  /** Endpoint config. */
-  abstract getConfig(): EndpointConfig;
+  /** Entry config. */
+  abstract getConfig(): EntryConfig;
 
-  /** init the endpoint. result in generated content */
-  abstract initClient(
-    initParams: object,
-    endpoint: EndpointDto,
-  ): Promise<string>;
-  abstract initServer(
-    initParams: object,
-    endpoint: EndpointDto,
-  ): Promise<string>;
+  /** init the entry. result in generated content */
+  abstract initClient(initParams: object, entry: EntryDto): Promise<string>;
+  abstract initServer(initParams: object, entry: EntryDto): Promise<string>;
 
   /** please declare hints in api-doc */
   abstract readData(name: string, hints?: { [key: string]: any }): Promise<any>;
   /** get callback param */
-  abstract getCallback(
-    callback: string,
-    reqEndpoint?: EndpointDto,
-  ): Promise<string>;
+  abstract getCallback(callback: string, reqEntry?: EntryDto): Promise<string>;
 
   /** send response back to client */
   abstract callback(resp: any): Promise<boolean>;
@@ -153,7 +144,7 @@ export abstract class EndpointAdaptor {
   abstract invoke(
     fun: CallgentFunctionDto,
     args: object,
-    sep: EndpointDto,
+    sep: EntryDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 }
@@ -178,7 +169,7 @@ export class ApiSpec {
   securities?: SecurityRequirementObject[];
 }
 
-export class EndpointParam {
+export class EntryParam {
   @ApiProperty({
     description:
       'param type. `readonly` shows some instructions in markdown format',
@@ -224,7 +215,7 @@ export class EndpointParam {
   @ApiProperty()
   optional?: boolean;
   @ApiProperty({ description: 'Default value, or select options' })
-  value?: any | { [key: string]: EndpointParam[] };
+  value?: any | { [key: string]: EntryParam[] };
   @ApiProperty()
   constraint?: string;
   @ApiProperty()
@@ -233,12 +224,12 @@ export class EndpointParam {
   // hidden?: boolean | (form: object) => boolean;
 }
 
-class EndpointHost {
+class EntryHost {
   @ApiProperty({
     description: 'host address',
     example: 'task+sdfhjw4349fe@my.callgent.com',
   })
-  address: EndpointParam;
+  address: EntryParam;
 
   @ApiProperty({
     description: 'default auth type',
@@ -247,29 +238,29 @@ class EndpointHost {
   authType?: 'NONE' | 'APP' | 'USER';
 
   @ApiProperty({ description: 'Authentication Configuration' })
-  authConfig?: EndpointParam[];
+  authConfig?: EntryParam[];
 }
 
-class Endpoint {
+class Entry {
   @ApiProperty({
-    description: 'Optional endpoint host config',
+    description: 'Optional entry host config',
   })
-  host?: EndpointHost;
-  @ApiProperty({ description: 'Endpoint requesting params template' })
-  params?: EndpointParam[];
+  host?: EntryHost;
+  @ApiProperty({ description: 'Entry requesting params template' })
+  params?: EntryParam[];
   @ApiProperty({ description: 'Whether allow additional params' })
   addParams?: boolean;
-  @ApiProperty({ description: 'Endpoint initialization params template' })
-  initParams?: EndpointParam[];
+  @ApiProperty({ description: 'Entry initialization params template' })
+  initParams?: EntryParam[];
 }
 
-export class EndpointConfig {
-  @ApiProperty({ description: 'Endpoint host' })
-  host?: EndpointHost;
+export class EntryConfig {
+  @ApiProperty({ description: 'Entry host' })
+  host?: EntryHost;
 
-  @ApiProperty({ description: 'The task client endpoint' })
-  client?: Endpoint;
+  @ApiProperty({ description: 'The task client entry' })
+  client?: Entry;
 
-  @ApiProperty({ description: 'The task server endpoint' })
-  server?: Endpoint;
+  @ApiProperty({ description: 'The task server entry' })
+  server?: Entry;
 }

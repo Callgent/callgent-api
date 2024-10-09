@@ -6,18 +6,18 @@ import {
 import axios, { AxiosResponse } from 'axios';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
-import { EndpointDto } from '../../../dto/endpoint.dto';
+import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
-import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
+import { EntryAdaptorName } from '../../entry-adaptor.decorator';
 
-@EndpointAdaptorName('restAPI', 'both')
-export class RestAPIAdaptor extends EndpointAdaptor {
+@EntryAdaptorName('restAPI', 'both')
+export class RestAPIAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
   }
 
-  getConfig(): EndpointConfig {
+  getConfig(): EntryConfig {
     return {
       server: {
         host: {
@@ -102,17 +102,17 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     };
   }
 
-  /** generate a web page endpoint */
-  initClient(params: object, endpoint: EndpointDto): Promise<string> {
+  /** generate a web page entry */
+  initClient(params: object, entry: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
   /** generate operation script based on the Chrome plugin */
-  initServer(initParams: object, endpoint: EndpointDto): Promise<string> {
+  initServer(initParams: object, entry: EntryDto): Promise<string> {
     // - scrape the web page
-    const url = endpoint.host['Page URL'];
+    const url = entry.host['Page URL'];
     // - script to fill params into the page
-    // const reqTemplate = endpoint.reqParamTemplate;
+    // const reqTemplate = entry.reqParamTemplate;
     // - script to operate the page
     // auth handler
     throw new NotImplementedException('Method not implemented.');
@@ -120,7 +120,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   async preprocess(
     reqEvent: ClientRequestEvent,
-    // endpoint: EndpointDto,
+    // entry: EntryDto,
   ) {
     const req = reqEvent?.context.req;
     if (!req)
@@ -148,7 +148,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
 
   // async invoke() {}
 
-  async getCallback(callback: string, reqEndpoint?: EndpointDto) {
+  async getCallback(callback: string, reqEntry?: EntryDto) {
     // FIXME
     return callback;
   }
@@ -157,7 +157,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
     const { method, headers: rawHeaders, query, body, raw } = request;
     if (request.url.indexOf('/rest/invoke/') < 0)
       throw new Error(
-        'Unsupported URL, should be /rest/invoke/:callgentId/:endpoint/*',
+        'Unsupported URL, should be /rest/invoke/:callgentId/:entry/*',
       );
     let idx = request.url.indexOf('/rest/invoke/');
     idx = request.url.indexOf('/', idx + 13);
@@ -213,7 +213,7 @@ export class RestAPIAdaptor extends EndpointAdaptor {
   async invoke(
     fun: CallgentFunctionDto,
     args: object,
-    sep: EndpointDto,
+    sep: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
     const resp = await axios.request({

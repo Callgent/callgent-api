@@ -12,14 +12,14 @@ import {
   EmailRelayKey,
   EmailsService,
 } from '../../../../emails/emails.service';
-import { EndpointDto } from '../../../dto/endpoint.dto';
-import { Endpoint } from '../../../entities/endpoint.entity';
+import { EntryDto } from '../../../dto/entry.dto';
+import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
-import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
+import { EntryAdaptorName } from '../../entry-adaptor.decorator';
 
-@EndpointAdaptorName('Email', 'both')
-export class EmailAdaptor extends EndpointAdaptor {
+@EntryAdaptorName('Email', 'both')
+export class EmailAdaptor extends EntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,
     private readonly emailsService: EmailsService,
@@ -27,26 +27,26 @@ export class EmailAdaptor extends EndpointAdaptor {
     super(agentsService);
   }
 
-  getCallback(callback: string, reqEndpoint?: EndpointDto): Promise<string> {
+  getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  getConfig(): EndpointConfig {
+  getConfig(): EntryConfig {
     return {};
   }
 
-  /** generate a web page endpoint */
-  async initClient(params: object, endpoint: EndpointDto) {
+  /** generate a web page entry */
+  async initClient(params: object, entry: Entry) {
     return '';
   }
 
   /** generate operation script based on the Chrome plugin */
-  async initServer(initParams: object, endpoint: EndpointDto) {
+  async initServer(initParams: object, entry: EntryDto) {
     // throw new NotImplementedException('Method not implemented.');
     return '';
   }
 
-  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+  async preprocess(reqEvent: ClientRequestEvent, entry: EntryDto) {
     //
   }
 
@@ -84,13 +84,13 @@ export class EmailAdaptor extends EndpointAdaptor {
    *
    * @param fun - callgent function
    * @param args - function arguments
-   * @param sep - server endpoint
+   * @param sep - server entry
    * @param reqEvent - client request event
    */
   async invoke(
     fun: CallgentFunctionDto,
     args: object,
-    sep: Endpoint,
+    sep: Entry,
     reqEvent: ClientRequestEvent,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(

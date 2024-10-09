@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as pactum from 'pactum';
-import { CreateEndpointAuthDto } from '../../src/endpoint-auths/dto/create-endpoint-auth.dto';
-import { CreateEndpointDto } from '../../src/endpoints/dto/create-endpoint.dto';
+import { CreateEntryAuthDto } from '../../src/entry-auths/dto/create-entry-auth.dto';
+import { CreateEntryDto } from '../../src/entries/dto/create-entry.dto';
 import {
   afterAllFn,
   afterEachFn,
@@ -14,30 +14,30 @@ import { createCallgent } from './callgents.e2e-spec';
 
 /**
  * - create a callgent,
- * - choose webpage receiver endpoint,
+ * - choose webpage receiver entry,
  * - config entry, params
  * - config init params
  * - init & test response: success, progressive, failure
  * - confirm
  * - progressive request
  */
-describe('Callgent Endpoint (e2e)', () => {
+describe('Callgent Entry (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it(`(POST): add a new canny.io rest-api server endpoint to invoke 400`, async () => {
+  it(`(POST): add a new canny.io rest-api server entry to invoke 400`, async () => {
     const callgent = await prepareCannyCallgent();
 
     // request for task by callgent api
     await invokeCallgentByApi(callgent.id).expectStatus(400);
   });
 
-  it(`(POST): add a new canny.io rest-api server endpoint to invoke 200`, async () => {
+  it(`(POST): add a new canny.io rest-api server entry to invoke 200`, async () => {
     const callgent = await prepareCannyCallgent();
 
-    // mount server endpoint auth
+    // mount server entry auth
 
     // request for task by callgent api
     await invokeCallgentByApi(callgent.id).expectStatus(400);
@@ -50,10 +50,10 @@ export const prepareCannyCallgent = async () => {
     json: { data: callgent },
   } = await createCallgent();
 
-  // add api server endpoint
+  // add api server entry
   const {
-    json: { data: serverEndpoint },
-  } = await createEndpoint('restAPI', {
+    json: { data: serverEntry },
+  } = await createEntry('restAPI', {
     callgentId: callgent.id,
     type: 'SERVER',
     host: 'https://canny.io/api/v1',
@@ -64,32 +64,32 @@ export const prepareCannyCallgent = async () => {
   const {
     json: { data: functionCount },
   } = await addCallgentFunctions({
-    endpointId: serverEndpoint.id,
+    entryId: serverEntry.id,
     text: jsonData,
     format: 'openAPI',
   });
 
-  console.log({ serverEndpoint, functionCount });
+  console.log({ serverEntryunctionCount });
 
   return callgent;
 };
 
-export const createEndpoint = (
+export const createEntry = (
   adaptorKey: string,
-  endpointDto: CreateEndpointDto,
+  endpointDto: CreateEntryDto,
 ) => {
   return pactum
     .spec()
-    .post(`/api/endpoints/${adaptorKey}/create`)
+    .post(`/api/Entries/${adaptorKey}/create`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(endpointDto)
     .expectStatus(201);
 };
 
-export const addEndpointAuth = (endpointAuthDto: CreateEndpointAuthDto) => {
+export const addEntryAuth = (endpointAuthDto: CreateEntryAuthDto) => {
   return pactum
     .spec()
-    .put(`/api/endpoints/auth`)
+    .put(`/api/Entries/auth`)
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(endpointAuthDto)
     .expectStatus(200);

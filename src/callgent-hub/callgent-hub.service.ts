@@ -12,7 +12,7 @@ import { CallgentRealmsService } from '../callgent-realms/callgent-realms.servic
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { CallgentsService } from '../callgents/callgents.service';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
-import { EndpointsService } from '../endpoints/endpoints.service';
+import { EntriesService } from '../entries/entries.service';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 
 @Injectable()
@@ -24,8 +24,8 @@ export class CallgentHubService {
     private readonly callgentsService: CallgentsService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
-    @Inject('EndpointsService')
-    private readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
     @Inject('CallgentFunctionsService')
     private readonly callgentFunctionsService: CallgentFunctionsService,
   ) {}
@@ -53,7 +53,7 @@ export class CallgentHubService {
   }
 
   /**
-   * Callgent, Endpoint, CallgentFunction, CallgentRealm.
+   * Callgent, Entry, CallgentFunction, CallgentRealm.
    */
   @Transactional()
   async forkFromHub(dupId: string, dto: CreateCallgentDto, createdBy: string) {
@@ -68,7 +68,7 @@ export class CallgentHubService {
   }
 
   /**
-   * Callgent, Endpoint, CallgentFunction, CallgentRealm.
+   * Callgent, Entry, CallgentFunction, CallgentRealm.
    */
   @Transactional()
   async commitToHub(dupId: string, dto: CreateCallgentDto, createdBy: string) {
@@ -97,7 +97,7 @@ export class CallgentHubService {
         id: true,
         name: true,
         summary: true,
-        endpoints: {
+        entries: {
           select: {
             id: true,
             name: true,
@@ -127,8 +127,8 @@ export class CallgentHubService {
         });
       }
 
-      const eps = from.endpoints;
-      from.endpoints = undefined;
+      const ens = from.entries;
+      from.entries = undefined;
       this.tenancyService.setTenantId(toTenant);
       const callgent = await this.callgentsService.create(
         { ...from, ...dto, forkedPk: from.pk },
@@ -168,9 +168,9 @@ export class CallgentHubService {
       this.tenancyService.setTenantId(fromTenant);
       const functionMap = {};
       await Promise.all(
-        eps.map(async (epOld) => {
+        ens.map(async (epOld) => {
           const functions = await this.callgentFunctionsService.findAll({
-            where: { endpointId: epOld.id },
+            where: { entryId: epOld.id },
             orderBy: { pk: 'asc' },
             select: {
               name: true,
@@ -190,10 +190,10 @@ export class CallgentHubService {
 
       this.tenancyService.setTenantId(toTenant);
       await Promise.all(
-        eps.map(async (epOld) => {
+        ens.map(async (epOld) => {
           const securities: any[] = dupSecurities(epOld.securities);
 
-          const ep = await this.endpointsService.create({
+          const ep = await this.entriesService.create({
             ...epOld,
             callgentId,
             securities,
@@ -207,7 +207,7 @@ export class CallgentHubService {
                 ...fun,
                 securities,
                 callgentId,
-                endpointId: ep.id,
+                entryId: ep.id,
                 createdBy,
               });
             }),

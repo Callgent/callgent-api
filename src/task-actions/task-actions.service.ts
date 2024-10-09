@@ -1,15 +1,9 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import {
-  Injectable,
-  NotFoundException,
-  NotImplementedException,
-} from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
-import { ClientRequestEvent } from '../endpoints/events/client-request.event';
-import { Utils } from '../infra/libs/utils';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { TasksService } from '../tasks/tasks.service';
 import { TaskActionDto } from './dto/task-action.dto';
 
@@ -57,7 +51,7 @@ export class TaskActionsService {
 
   async __createTaskAction(e: ClientRequestEvent) {
     // init task action
-    // const { taskAction, callgents, reqEndpoint, reqAdaptor } =
+    // const { taskAction, callgents, reqEntry, reqAdaptor } =
     // await this._$createTaskAction(e);
 
     // sync respond in time limit

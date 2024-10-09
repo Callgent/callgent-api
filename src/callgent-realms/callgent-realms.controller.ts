@@ -195,13 +195,13 @@ export class CallgentRealmsController {
     };
   }
 
-  @ApiOperation({ summary: 'Update securities on endpoint/callgent function' })
+  @ApiOperation({ summary: 'Update securities on entry/callgent function' })
   /// securities
-  @ApiParam({ name: 'type', type: 'string', enum: ['endpoint', 'function'] })
+  @ApiParam({ name: 'type', type: 'string', enum: ['entry', 'function'] })
   @ApiBody({ isArray: true, type: RealmSecurityItemForm })
   @Post('securities/:type/:id')
   async updateSecurities(
-    @Param('type') type: 'endpoint' | 'function',
+    @Param('type') type: 'entry' | 'function',
     @Param('id') id: string,
     @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO
   ) {

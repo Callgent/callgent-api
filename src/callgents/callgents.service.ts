@@ -178,45 +178,45 @@ export class CallgentsService {
   }
 
   /**
-   * Cross tenancy execution when client endpoint is provided.
-   * [endpoint://]callgent.please('act', with_args)
+   * Cross tenancy execution when client entry is provided.
+   * [entry://]callgent.please('act', with_args)
    * @param act API action name
-   * @param endpoint client endpoint to call API. unnecessary in internal calls
+   * @param entry client entry to call API. unnecessary in internal calls
    * @deprecated
    */
   @Transactional()
   async please(
     act: string,
     args: any[],
-    endpoint: { callgentId: string; id?: string; adaptorKey?: string },
+    entry: { callgentId: string; id?: string; adaptorKey?: string },
   ) {
-    // invoke callgent action api, through endpoint
+    // invoke callgent action api, through entry
     const prisma = this.txHost.tx as PrismaClient;
-    const withEndpoint = endpoint?.id || endpoint?.adaptorKey;
+    const withEntry = entry?.id || entry?.adaptorKey;
 
     // load targets
-    if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
+    if (withEntry) this.tenancyService.bypassTenancy(prisma);
     const [callgent, actions, epClient] = await Promise.all([
-      prisma.callgent.findUnique({ where: { id: endpoint.callgentId } }),
+      prisma.callgent.findUnique({ where: { id: entry.callgentId } }),
       prisma.callgentFunction.findMany({
-        where: { name: act, callgentId: endpoint.callgentId },
+        where: { name: act, callgentId: entry.callgentId },
       }),
-      withEndpoint &&
-        prisma.endpoint.findFirst({ where: { ...endpoint, type: 'CLIENT' } }),
+      withEntry &&
+        prisma.entry.findFirst({ where: { ...entry, type: 'CLIENT' } }),
     ]);
 
     // check targets
     if (!callgent)
-      throw new NotFoundException('callgent not found: ' + endpoint.callgentId);
+      throw new NotFoundException('callgent not found: ' + entry.callgentId);
     if (actions.length === 0)
       throw new NotFoundException(
-        `callgent=${endpoint.callgentId} API action not found: ${act}`,
+        `callgent=${entry.callgentId} API action not found: ${act}`,
       );
-    if (withEndpoint) {
+    if (withEntry) {
       if (!epClient)
         throw new NotFoundException(
-          `Client endpoint not found for callgent=${endpoint.callgentId}: ${
-            endpoint.id || endpoint.adaptorKey
+          `Client entry not found for callgent=${entry.callgentId}: ${
+            entry.id || entry.adaptorKey
           }`,
         );
       this.tenancyService.setTenantId(callgent.tenantPk);

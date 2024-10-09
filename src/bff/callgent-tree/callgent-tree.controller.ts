@@ -16,7 +16,7 @@ import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.ser
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
-import { EndpointsService } from '../../endpoints/endpoints.service';
+import { EntriesService } from '../../entries/entries.service';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 
 @ApiTags('BFF')
@@ -26,8 +26,8 @@ import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 export class CallgentTreeController {
   constructor(
     private readonly callgentsService: CallgentsService,
-    @Inject('EndpointsService')
-    private readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
     @Inject('CallgentFunctionsService')
     private readonly callgentFunctionsService: CallgentFunctionsService,
     @Inject('CallgentRealmsService')
@@ -36,9 +36,9 @@ export class CallgentTreeController {
   private readonly logger = new Logger(CallgentTreeController.name);
 
   /**
-   * @returns callgent with endpoints tree
+   * @returns callgent with entries tree
    */
-  @Get('callgent-endpoints/:id')
+  @Get('callgent-entries/:id')
   async findOne(@Param('id') id: string) {
     const callgent = await this.callgentsService.findOne(id);
     if (!callgent) throw new NotFoundException();
@@ -49,9 +49,9 @@ export class CallgentTreeController {
   }
 
   /**
-   * @returns new or existing callgent with endpoints tree
+   * @returns new or existing callgent with entries tree
    */
-  @Post('callgent-endpoints')
+  @Post('callgent-entries')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
     let callgent = (await this.callgentsService.getByName(
       dto.name,
@@ -63,14 +63,14 @@ export class CallgentTreeController {
   }
 
   private async _callgentTree(callgent: CallgentDto) {
-    const endpoints = await this.endpointsService.findAll({
+    const entries = await this.entriesService.findAll({
       select: { callgentId: false },
       where: { callgentId: callgent.id },
     });
 
     const [CEP, SEP, EEP] = [[], [], []];
     await Promise.all(
-      endpoints.map(async (ep: any) => {
+      entries.map(async (ep: any) => {
         ep = { ...ep, id: ep.id, pk: undefined };
         if (ep.type == 'CLIENT') {
           CEP.push(ep);
@@ -82,16 +82,14 @@ export class CallgentTreeController {
               responses: false,
               callgentId: false,
             },
-            where: { endpointId: ep.id },
+            where: { entryId: ep.id },
           });
           SEP.push(ep);
         } else if (ep.type == 'EVENT') {
           EEP.push(ep);
           // TODO listeners as children
         } else
-          this.logger.error(
-            `Unknown endpoint type: ${ep.type}, ep.id=${ep.id}`,
-          );
+          this.logger.error(`Unknown entry type: ${ep.type}, ep.id=${ep.id}`);
       }),
     );
 
@@ -110,19 +108,19 @@ export class CallgentTreeController {
       children: [
         {
           id: 'CLIENT',
-          name: 'Client Endpoints (CEP)',
+          name: 'Client Entries (CEN)',
           hint: 'Adaptor to accept request to the callgent',
           children: CEP,
         },
         {
           id: 'SERVER',
-          name: 'Server Endpoints (SEP)',
+          name: 'Server Entries (SEN)',
           hint: 'Adaptor to forward the request to actual service',
           children: SEP,
         },
         {
           id: 'EVENT',
-          name: 'Event Endpoints (EEP)',
+          name: 'Event Entries (EEN)',
           hint: 'To accept service events and trigger your registered listener',
           children: EEP,
         },

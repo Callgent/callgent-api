@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
-import { ClientRequestEvent } from '../endpoints/events/client-request.event';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';

@@ -12,20 +12,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
+import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { EndpointAdaptor } from './adaptors/endpoint-adaptor.base';
-import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
-import { EndpointDto } from './dto/endpoint.dto';
-import { UpdateEndpointDto } from './dto/update-endpoint.dto';
+import { EntryAdaptor } from './adaptors/entry-adaptor.base';
+import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/entry-adaptor.decorator';
+import { EntryDto } from './dto/entry.dto';
+import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
 
 @Injectable()
-export class EndpointsService {
+export class EntriesService {
   constructor(
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer)
@@ -33,7 +33,7 @@ export class EndpointsService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly tenancyService: PrismaTenancyService,
   ) {}
-  protected readonly defSelect: Prisma.EndpointSelect = {
+  protected readonly defSelect: Prisma.EntrySelect = {
     pk: false,
     tenantPk: false,
     createdBy: false,
@@ -73,7 +73,7 @@ export class EndpointsService {
     const list = client ? this.clientAdaptorsList : this.serverAdaptorsList;
     if (key in list)
       throw new Error(
-        `Conflict endpoint adaptor key ${key}:[${String(adaptorKey)}, ${
+        `Conflict entry adaptor key ${key}:[${String(adaptorKey)}, ${
           list[key]
         }]`,
       );
@@ -86,24 +86,24 @@ export class EndpointsService {
     );
   }
 
-  findOne(id: string, select?: Prisma.EndpointSelect) {
+  findOne(id: string, select?: Prisma.EntrySelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
-      (select) => prisma.endpoint.findUnique({ select, where: { id } }),
+      (select) => prisma.entry.findUnique({ select, where: { id } }),
       this.defSelect,
     );
   }
 
   findFirstByType(
-    type: EndpointType,
+    type: EntryType,
     callgentId: string,
     adaptorKey: string,
     id?: string,
   ) {
     id || (id = undefined);
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpoint.findFirst({
+    return prisma.entry.findFirst({
       where: { callgentId, adaptorKey, type, id },
       orderBy: { priority: 'desc' },
     });
@@ -112,14 +112,14 @@ export class EndpointsService {
   /** bypassTenancy before query, setTenantId after query */
   @Transactional()
   async $findFirstByType(
-    type: EndpointType,
+    type: EntryType,
     callgentId: string,
     adaptorKey: string,
-    endpointId?: string,
+    entryId?: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, callgentId, adaptorKey, endpointId).then(
+      this.findFirstByType(type, callgentId, adaptorKey, entryId).then(
         async (v) => {
           v && this.tenancyService.setTenantId(v.tenantPk);
           await this.tenancyService.bypassTenancy(prisma, false);
@@ -135,15 +135,15 @@ export class EndpointsService {
     where,
     orderBy = { pk: 'desc' },
   }: {
-    select?: Prisma.EndpointSelect;
-    where?: Prisma.EndpointWhereInput;
-    orderBy?: Prisma.EndpointOrderByWithRelationInput;
+    select?: Prisma.EntrySelect;
+    where?: Prisma.EntryWhereInput;
+    orderBy?: Prisma.EntryOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
-        prisma.endpoint.findMany({
+        prisma.entry.findMany({
           where,
           select,
           orderBy,
@@ -152,7 +152,7 @@ export class EndpointsService {
     );
   }
 
-  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
+  getAdaptor(adaptorKey: string, endpointType?: EntryType): EntryAdaptor {
     const list =
       endpointType == 'SERVER'
         ? this.serverAdaptorsList
@@ -168,14 +168,14 @@ export class EndpointsService {
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'id'>,
-    select?: Prisma.EndpointSelect,
+    dto: Omit<Prisma.EntryUncheckedCreateInput, 'id'>,
+    select?: Prisma.EntrySelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     const service = this.getAdaptor(dto.adaptorKey, dto.type);
     if (!service)
       throw new BadRequestException(
-        'Invalid endpoint adaptor key=' + dto.adaptorKey,
+        'Invalid entry adaptor key=' + dto.adaptorKey,
       );
 
     const id = Utils.uuid();
@@ -186,7 +186,7 @@ export class EndpointsService {
     return selectHelper(
       select,
       (select) =>
-        prisma.endpoint.create({
+        prisma.entry.create({
           select,
           data: { ...dto, id },
         }),
@@ -195,10 +195,10 @@ export class EndpointsService {
   }
 
   @Transactional()
-  update(id: string, dto: UpdateEndpointDto) {
+  update(id: string, dto: UpdateEntryDto) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.endpoint.update({ select, where: { id }, data: dto }),
+      prisma.entry.update({ select, where: { id }, data: dto }),
     );
   }
 
@@ -206,35 +206,35 @@ export class EndpointsService {
   delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.endpoint.delete({ select, where: { id } }),
+      prisma.entry.delete({ select, where: { id } }),
     );
   }
 
   // @Transactional()
-  // upsertEndpointAuth(
-  //   dto: Prisma.EndpointAuthUncheckedCreateInput,
-  //   endpoint: EndpointDto,
+  // upsertEntryAuth(
+  //   dto: Prisma.EntryAuthUncheckedCreateInput,
+  //   entry: EntryDto,
   // ) {
-  //   if (!endpoint) throw new BadRequestException('endpoint not found');
-  //   if (endpoint.authType == 'NONE')
+  //   if (!entry) throw new BadRequestException('entry not found');
+  //   if (entry.authType == 'NONE')
   //     throw new BadRequestException("auth type `NONE` needn't be set");
-  //   else if (endpoint.authType == 'USER') {
+  //   else if (entry.authType == 'USER') {
   //     if (!dto.userKey)
   //       throw new BadRequestException(
   //         '`userKey` is required for auth type `USER`',
   //       );
-  //   } else if (endpoint.authType == 'APP') dto.userKey = '';
+  //   } else if (entry.authType == 'APP') dto.userKey = '';
   //   // else
-  //   //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
-  //   dto.endpointId = endpoint.id;
+  //   //   throw new BadRequestException('Invalid auth type: ' + entry.authType);
+  //   dto.entryId = entry.id;
 
   //   const prisma = this.txHost.tx as PrismaClient;
-  //   return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
+  //   return selectHelper(this.defSelect as Prisma.EntryAuthSelect, (select) =>
   //     prisma.endpointAuth.upsert({
   //       select,
   //       where: {
   //         endpointId_userKey: {
-  //           endpointId: dto.endpointId,
+  //           entryId: dto.entryId,
   //           userKey: dto.userKey,
   //         },
   //       },
@@ -249,16 +249,16 @@ export class EndpointsService {
     return;
     const prisma = this.txHost.tx as PrismaClient;
 
-    const endpoint = await this.findOne(id);
-    if (endpoint) {
-      const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
+    const entry = await this.findOne(id);
+    if (entry) {
+      const adaptor = this.getAdaptor(entry.adaptorKey, entry.type);
       if (adaptor) {
         // FIXME issue client token
-        // const content = await (endpoint.type == 'SERVER'
+        // const content = await (entry.type == 'SERVER'
         //   ? adaptor.initSender
-        //   : adaptor.initReceiver)(initParams, endpoint as any);
+        //   : adaptor.initReceiver)(initParams, entry as any);
         // if (content)
-        //   prisma.endpoint.update({
+        //   prisma.entry.update({
         //     where: { id },
         //     data: { content },
         //   });
@@ -266,10 +266,10 @@ export class EndpointsService {
         return;
       }
       throw new NotFoundException(
-        `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
+        `Invalid entry adaptor, adaptorKey=${entry.adaptorKey}`,
       );
     }
-    throw new NotFoundException(`Endpoint not found, id=${id}`);
+    throw new NotFoundException(`Entry not found, id=${id}`);
   }
 
   /**
@@ -277,12 +277,12 @@ export class EndpointsService {
    * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
    */
   async parseApis(
-    endpoint: EndpointDto,
+    entry: EntryDto,
     apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
   ) {
-    const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
-    // TODO read endpoint.components
-    return adaptor.parseApis(apiTxt); //, endpoint.components);
+    const adaptor = this.getAdaptor(entry.adaptorKey, entry.type);
+    // TODO read entry.components
+    return adaptor.parseApis(apiTxt); //, entry.components);
   }
 
   /** preprocess req from cep, by adaptor */
@@ -290,15 +290,15 @@ export class EndpointsService {
   async preprocessClientRequest(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
+    const adaptor = this.getAdaptor(reqEvent.dataType, EntryType.CLIENT);
     if (!adaptor)
       throw new Error(
         `Invalid adaptor ${reqEvent.dataType} from cep ${reqEvent.srcId}`,
       );
 
-    const endpoint = await this.findOne(reqEvent.srcId);
+    const entry = await this.findOne(reqEvent.srcId);
 
-    await adaptor.preprocess(reqEvent, endpoint as any);
+    await adaptor.preprocess(reqEvent, entry as any);
   }
 
   @Transactional()
@@ -308,7 +308,7 @@ export class EndpointsService {
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId, {
+    const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,
       type: true,
@@ -319,7 +319,7 @@ export class EndpointsService {
       callgentId: true,
       callgent: { select: { id: true, name: true } },
     });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
+    const adapter = sep && this.getAdaptor(sep.adaptorKey, EntryType.SERVER);
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
 
     // may returns pending result
@@ -341,7 +341,7 @@ export class EndpointsService {
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId, {
+    const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,
       type: true,
@@ -352,7 +352,7 @@ export class EndpointsService {
       callgentId: true,
       callgent: { select: { id: true, name: true } },
     });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
+    const adapter = sep && this.getAdaptor(sep.adaptorKey, EntryType.SERVER);
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
     await adapter.postprocess(reqEvent, func);
 
@@ -362,7 +362,7 @@ export class EndpointsService {
   @Transactional()
   async updateSecurities(id: string, securities: RealmSecurityVO[]) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpoint.update({
+    return prisma.entry.update({
       where: { id },
       data: { securities: securities as any },
     });

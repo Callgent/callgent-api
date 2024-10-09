@@ -52,7 +52,7 @@ function initEventListeners(
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'EndpointsService',
+      serviceName: 'EntriesService',
       funName: 'preprocessClientRequest',
       description:
         'Find the CEP, then preprocess the request, replace raw request.',
@@ -136,7 +136,7 @@ function initEventListeners(
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'EndpointsService',
+      serviceName: 'EntriesService',
       funName: 'invokeSEP',
       description: 'Do actual invocation through the SEP adaptor',
       createdBy: 'GLOBAL',

@@ -2,7 +2,7 @@ import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CallgentApiText } from '../../callgent-functions/callgent-functions.controller';
 import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
-import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { EntryDto } from '../../entries/dto/entry.dto';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../../infra/repo/validators/entity-exists.validator';
 @ApiTags('BFF')
@@ -25,15 +25,15 @@ export class BffCallgentFunctionsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpointId');
+    const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
     await this.callgentFunctionService.importBatch(
-      endpoint,
+      entry,
       apiTxt,
       req.user?.sub,
     );
 
     const data = await this.callgentFunctionService.findAll({
-      where: { endpointId: endpoint.id },
+      where: { entryId: entry.id },
     });
 
     return { data };

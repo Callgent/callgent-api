@@ -12,7 +12,7 @@ import { CallgentHubModule } from './callgent-hub/callgent-hub.module';
 import { CallgentRealmsModule } from './callgent-realms/callgent-realms.module';
 import { CallgentsModule } from './callgents/callgents.module';
 import { EmailsModule } from './emails/emails.module';
-import { EndpointsModule } from './endpoints/endpoints.module';
+import { EntriesModule } from './entries/entries.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
 import { EventStoresModule } from './event-stores/event-stores.module';
 import { AuthModule } from './infra/auth/auth.module';
@@ -39,7 +39,7 @@ import { UsersModule } from './users/users.module';
     CallgentsModule,
     TasksModule,
     AuthTokensModule,
-    EndpointsModule,
+    EntriesModule,
     CallgentFunctionsModule,
     AgentsModule,
     TaskActionsModule,

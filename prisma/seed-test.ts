@@ -78,7 +78,7 @@ function initTestData(
     createdBy: userId,
   };
 
-  const cepDto: Prisma.EndpointUncheckedCreateInput = {
+  const cepDto: Prisma.EntryUncheckedCreateInput = {
     id: 'TEST_CEP_ID',
     callgentId: 'TEST_CALLGENT_ID',
     type: 'CLIENT',
@@ -135,7 +135,7 @@ function initTestData(
         create: callgentDto,
       })
       .then((callgent) => console.log({ callgent })),
-    prisma.endpoint
+    prisma.entry
       .upsert({
         where: { id: cepDto.id },
         update: cepDto,

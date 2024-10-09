@@ -1,23 +1,23 @@
 import { Inject, NotImplementedException } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
 import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
-import { EndpointDto } from '../../../dto/endpoint.dto';
-import { Endpoint } from '../../../entities/endpoint.entity';
+import { EntryDto } from '../../../dto/entry.dto';
+import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EndpointAdaptor, EndpointConfig } from '../../endpoint-adaptor.base';
-import { EndpointAdaptorName } from '../../endpoint-adaptor.decorator';
+import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
+import { EntryAdaptorName } from '../../entry-adaptor.decorator';
 
-@EndpointAdaptorName('webpage', 'client')
-export class WebpageAdaptor extends EndpointAdaptor {
+@EntryAdaptorName('webpage', 'client')
+export class WebpageAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
   }
 
-  getCallback(callback: string, reqEndpoint?: EndpointDto): Promise<string> {
+  getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  getConfig(): EndpointConfig {
+  getConfig(): EntryConfig {
     return {
       host: { address: { type: 'url', name: 'Page URL' } },
       server: {
@@ -63,21 +63,21 @@ export class WebpageAdaptor extends EndpointAdaptor {
     };
   }
 
-  /** generate a web page endpoint */
-  initClient(params: object, endpoint: EndpointDto): Promise<string> {
+  /** generate a web page entry */
+  initClient(params: object, entry: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
   /** generate operation script based on the Chrome plugin */
-  initServer(initParams: object, endpoint: EndpointDto): Promise<string> {
+  initServer(initParams: object, entry: EntryDto): Promise<string> {
     // - scrape the web page
-    const url = endpoint.host['Page URL'];
+    const url = entry.host['Page URL'];
     // - script to operate the page
     // auth handler
     throw new NotImplementedException('Method not implemented.');
   }
 
-  async preprocess(reqEvent: ClientRequestEvent, endpoint: EndpointDto) {
+  async preprocess(reqEvent: ClientRequestEvent, entry: EntryDto) {
     //
   }
 
@@ -96,7 +96,7 @@ export class WebpageAdaptor extends EndpointAdaptor {
   async invoke(
     fun: CallgentFunctionDto,
     args: object,
-    sep: Endpoint,
+    sep: Entry,
     reqEvent: ClientRequestEvent,
   ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
     throw new NotImplementedException('Method not implemented.');

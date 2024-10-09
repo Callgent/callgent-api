@@ -4,29 +4,29 @@ import { EmailAdaptor } from './adaptors/builtin/email/email.adaptor';
 import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
 import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
 import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
-import { EndpointsController } from './endpoints.controller';
-import { EndpointsService } from './endpoints.service';
+import { EntriesController } from './entries.controller';
+import { EntriesService } from './entries.service';
 import { CallgentCreatedListener } from './listeners/callgent-created.listener';
 
 @Module({
   imports: [CallgentsModule],
   providers: [
-    { provide: 'EndpointsService', useClass: EndpointsService },
+    { provide: 'EntriesService', useClass: EntriesService },
     CallgentCreatedListener,
     {
-      provide: 'restAPI-EndpointAdaptor',
+      provide: 'restAPI-EntryAdaptor',
       useClass: RestAPIAdaptor,
     },
     {
-      provide: 'Webpage-EndpointAdaptor',
+      provide: 'Webpage-EntryAdaptor',
       useClass: WebpageAdaptor,
     },
     {
-      provide: 'Email-EndpointAdaptor',
+      provide: 'Email-EntryAdaptor',
       useClass: EmailAdaptor,
     },
   ],
-  controllers: [EndpointsController, RestApiController],
-  exports: ['EndpointsService'],
+  controllers: [EntriesController, RestApiController],
+  exports: ['EntriesService'],
 })
-export class EndpointsModule {}
+export class EntriesModule {}

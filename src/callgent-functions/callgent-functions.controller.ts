@@ -20,8 +20,8 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional } from 'class-validator';
-import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
+import { EntryDto } from '../entries/dto/entry.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
@@ -30,18 +30,18 @@ import { CallgentFunctionDto } from './dto/callgent-function.dto';
 import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
 
 export class CallgentApis extends ApiSpec {
-  @EntityIdExists('endpoint', 'id')
-  endpointId: string;
+  @EntityIdExists('entry', 'id')
+  entryId: string;
 }
 
 export class CallgentApiText {
   @ApiProperty({
     required: true,
-    description: 'The callgent server-endpoint id',
+    description: 'The callgent server-entry id',
   })
   @IsNotEmpty()
-  @EntityIdExists('endpoint', 'id')
-  endpointId: string;
+  @EntityIdExists('entry', 'id')
+  entryId: string;
 
   @ApiProperty({
     required: true,
@@ -81,10 +81,10 @@ export class CallgentFunctionsController {
     @Body()
     apis: CallgentApis,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apis, 'endpointId');
+    const entry = EntityIdExists.entity<EntryDto>(apis, 'entryId');
     return {
       data: await this.callgentFunctionService.createBatch(
-        endpoint,
+        entry,
         apis,
         req.user?.sub,
       ),
@@ -101,10 +101,10 @@ export class CallgentFunctionsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const endpoint = EntityIdExists.entity<EndpointDto>(apiTxt, 'endpointId');
+    const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
     return {
       data: await this.callgentFunctionService.importBatch(
-        endpoint,
+        entry,
         apiTxt,
         req.user?.sub,
       ),

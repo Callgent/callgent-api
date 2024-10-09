@@ -5,15 +5,16 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { EndpointsService } from '../endpoints/endpoints.service';
-import { ClientRequestEvent } from '../endpoints/events/client-request.event';
+import { EntryDto } from '../entries/dto/entry.dto';
+import { EntriesService } from '../entries/entries.service';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
@@ -28,27 +29,29 @@ import { AuthProcessor } from './processors/auth-processor.base';
 
 /** each callgent may have several security realms */
 @Injectable()
-export class CallgentRealmsService {
+export class CallgentRealmsService implements OnModuleInit {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    @Inject('EndpointsService')
-    private readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
     private readonly usersService: UsersService,
     private readonly moduleRef: ModuleRef,
-  ) {
-    // a little hack: circular relation
-    this.callgentFunctionsService = this.moduleRef.get(
-      'CallgentFunctionsService',
-      { strict: false },
-    );
-  }
-  private readonly callgentFunctionsService: CallgentFunctionsService;
+  ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
     pk: false,
     tenantPk: false,
     createdAt: false,
     updatedAt: false,
   };
+
+  private callgentFunctionsService: CallgentFunctionsService;
+  onModuleInit() {
+    // a little hack: circular relation
+    this.callgentFunctionsService = this.moduleRef.get(
+      'CallgentFunctionsService',
+      { strict: false },
+    );
+  }
 
   //// auth config start ////
 
@@ -78,16 +81,16 @@ export class CallgentRealmsService {
    */
   @Transactional()
   async upsertRealm(
-    endpoint: EndpointDto,
+    entry: EntryDto,
     scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
     servers: ServerObject[],
   ) {
     const authType = scheme.type;
     const processor = this._getAuthProcessor(authType);
-    realm = processor.constructRealm(scheme, realm, endpoint, servers);
+    realm = processor.constructRealm(scheme, realm, entry, servers);
     const realmKey = realm.realmKey;
-    const callgentId = endpoint.callgentId;
+    const callgentId = entry.callgentId;
     const prisma = this.txHost.tx as PrismaClient;
 
     const existing = await prisma.callgentRealm.findFirst({
@@ -116,45 +119,39 @@ export class CallgentRealmsService {
     });
   }
 
-  /** construct security guard on endpoint */
-  constructSecurity(
-    realm: CallgentRealm,
-    endpoint: EndpointDto,
-    scopes?: string[],
-  ) {
+  /** construct security guard on entry */
+  constructSecurity(realm: CallgentRealm, entry: EntryDto, scopes?: string[]) {
     const processor = this._getAuthProcessor(realm.authType);
-    return processor.constructSecurity(endpoint, realm, scopes);
+    return processor.constructSecurity(entry, realm, scopes);
   }
 
   // TODO: RealmSecurityVO
   async updateSecurities(
-    type: 'endpoint' | 'function',
+    type: 'entry' | 'function',
     id: string,
     securities: RealmSecurityItemForm[],
   ) {
-    let endpoint, targetService: EndpointsService | CallgentFunctionsService;
-    if (type == 'endpoint') {
-      targetService = this.endpointsService;
-      endpoint = await this.endpointsService.findOne(id);
+    let entry, targetService: EntriesService | CallgentFunctionsService;
+    if (type == 'entry') {
+      targetService = this.entriesService;
+      entry = await this.entriesService.findOne(id);
     } else {
       targetService = this.callgentFunctionsService;
       const fun = await this.callgentFunctionsService.findOne(id, {
-        endpointId: true,
+        entryId: true,
       });
-      endpoint = await this.endpointsService.findOne(fun.endpointId);
+      entry = fun && (await this.entriesService.findOne(fun.entryId));
     }
-    if (!endpoint) throw new NotFoundException('Not found ' + type);
+    if (!entry) throw new NotFoundException('Not found ' + type);
 
     const secs = await Promise.all(
       securities.map(async (security) => {
-        const realm = await this.findOne(
-          endpoint.callgentId,
-          security.realmKey,
-          { pk: null },
-        );
+        const realm = await this.findOne(entry.callgentId, security.realmKey, {
+          pk: null,
+        });
         if (!realm) throw new NotFoundException('Not found realm');
 
-        const sec = this.constructSecurity(realm, endpoint, security.scopes);
+        const sec = this.constructSecurity(realm, entry, security.scopes);
         return { ['' + sec.realmPk]: sec };
       }),
     );
@@ -168,10 +165,10 @@ export class CallgentRealmsService {
   async checkCepAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const cep = await this.endpointsService.findOne(reqEvent.srcId);
+    const cep = await this.entriesService.findOne(reqEvent.srcId);
     if (!cep)
       throw new NotFoundException(
-        'Client endpoint not found, id: ' + reqEvent.srcId,
+        'Client entry not found, id: ' + reqEvent.srcId,
       );
 
     return this.checkSecurities(reqEvent, cep.securities as any);
@@ -186,13 +183,13 @@ export class CallgentRealmsService {
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     // functions: CallgentFunction[], @see AgentsService.map2Function
-    const { securities, endpointId: sepId } =
+    const { securities, entryId: sepId } =
       reqEvent.context.functions?.length && reqEvent.context.functions[0];
 
-    const sep = sepId && (await this.endpointsService.findOne(reqEvent.srcId));
+    const sep = sepId && (await this.entriesService.findOne(reqEvent.srcId));
     if (!sep)
       throw new NotFoundException(
-        'Server endpoint not found, id: ' + reqEvent.srcId,
+        'Server entry not found, id: ' + reqEvent.srcId,
       );
     return this.checkSecurities(reqEvent, securities, true);
   }
@@ -436,7 +433,7 @@ export class CallgentRealmsService {
 
     // clear securities
     await Promise.all([
-      prisma.$executeRaw`UPDATE "Endpoint"
+      prisma.$executeRaw`UPDATE "Entry"
     SET "securities" = (
         SELECT array_agg(sec::jsonb - ${pk})
           FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')

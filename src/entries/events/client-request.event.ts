@@ -1,8 +1,7 @@
-import { JsonValue } from '@prisma/client/runtime/library';
 import { EventObject } from '../../event-listeners/event-object';
 
 /**
- * event from client endpoint, processing:
+ * event from client entry, processing:
  * 1. adaptor preprocessing
  * 2. create task action
  * 3. function mapping
@@ -11,7 +10,7 @@ import { EventObject } from '../../event-listeners/event-object';
  */
 export class ClientRequestEvent extends EventObject {
   constructor(
-    /** client endpoint id */
+    /** client entry id */
     cepId: string,
     /** empty to create new task */
     taskId: string,

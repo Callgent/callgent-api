@@ -2,19 +2,19 @@ import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { CallgentCreatedEvent } from '../../callgents/events/callgent-created.event';
-import { EndpointsService } from '../endpoints.service';
+import { EntriesService } from '../entries.service';
 import { EmailRelayKey, EmailsService } from '../../emails/emails.service';
 
 @Injectable()
 export class CallgentCreatedListener {
   private readonly logger = new Logger(CallgentCreatedListener.name);
   constructor(
-    @Inject('EndpointsService')
-    private readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
     private readonly emailsService: EmailsService,
   ) {}
 
-  /** create a callgent with default api client endpoint, and Email client/server endpoint */
+  /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional()
   @OnEvent(CallgentCreatedEvent.eventName, { async: false })
   async handleEvent(event: CallgentCreatedEvent) {
@@ -23,10 +23,10 @@ export class CallgentCreatedListener {
     const callgent = event.callgent;
     if (callgent.forkedPk) return; // forked callgent
 
-    // add default endpoints
+    // add default entries
     const results = await Promise.all([
-      // API client endpoint
-      this.endpointsService
+      // API client entry
+      this.entriesService
         .create({
           callgentId: callgent.id,
           type: 'CLIENT',
@@ -34,16 +34,16 @@ export class CallgentCreatedListener {
           host: `/api/rest/invoke/${callgent.id}/{id}/`,
           createdBy: callgent.createdBy,
         })
-        .then((endpoint) => {
+        .then((entry) => {
           // no await init, it may be slow, init must restart a new tx
-          this.endpointsService.init(endpoint.id, []);
-          return endpoint;
+          this.entriesService.init(entry.id, []);
+          return entry;
         }),
 
-      // TODO API event endpoint
+      // TODO API event entry
 
-      // Email client endpoint
-      this.endpointsService
+      // Email client entry
+      this.entriesService
         .create({
           callgentId: callgent.id,
           type: 'CLIENT',
@@ -54,10 +54,10 @@ export class CallgentCreatedListener {
           ),
           createdBy: callgent.createdBy,
         })
-        .then((endpoint) => {
+        .then((entry) => {
           // no await init, it may be slow
-          this.endpointsService.init(endpoint.id, []);
-          return endpoint;
+          this.entriesService.init(entry.id, []);
+          return entry;
         }),
     ]);
 

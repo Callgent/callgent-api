@@ -4,8 +4,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
-import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
+import { EntryDto } from '../../entries/dto/entry.dto';
+import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
@@ -15,15 +15,15 @@ import { AuthProcessor } from './auth-processor.base';
 export class HttpAuthProcessor extends AuthProcessor {
   protected implyProvider(
     scheme: SecuritySchemeObject,
-    endpoint?: EndpointDto,
+    entry?: EntryDto,
     servers?: { url: string }[],
   ) {
     let url: string = (scheme as any).provider;
     if (url) {
       if (!url.toLowerCase().startsWith('http')) url = 'http://' + url;
     } else {
-      if (endpoint && endpoint.type != 'CLIENT') {
-        url = endpoint.host; // whatever adaptor it is, host need to be a url
+      if (entry && entry.type != 'CLIENT') {
+        url = entry.host; // whatever adaptor it is, host need to be a url
       } else if (servers?.length > 0) {
         url = servers[0].url;
       }

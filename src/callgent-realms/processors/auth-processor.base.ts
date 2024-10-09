@@ -3,8 +3,8 @@ import {
   SecuritySchemeObject,
   ServerObject,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
-import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
+import { EntryDto } from '../../entries/dto/entry.dto';
+import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
@@ -14,11 +14,11 @@ export abstract class AuthProcessor {
   constructRealm(
     scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
-    endpoint?: EndpointDto,
+    entry?: EntryDto,
     servers?: ServerObject[],
   ) {
     // imply provider
-    scheme.provider = this.implyProvider(scheme, endpoint, servers);
+    scheme.provider = this.implyProvider(scheme, entry, servers);
     realm.realmKey = this.getRealmKey(scheme as any, realm.realm);
     realm.perUser = this.isPerUser(scheme as any, realm);
     realm.enabled = this.checkEnabled(scheme as any, realm);
@@ -26,18 +26,18 @@ export abstract class AuthProcessor {
     return realm;
   }
 
-  /** construct a security guard on endpoint */
+  /** construct a security guard on entry */
   constructSecurity(
-    endpoint: EndpointDto,
+    entry: EntryDto,
     realm: CallgentRealm,
     scopes?: string[],
   ): RealmSecurityItem {
     let attach: boolean;
-    if (endpoint.type != 'CLIENT') {
+    if (entry.type != 'CLIENT') {
       try {
         const provider = this.implyProvider(
           { ...realm.scheme, provider: undefined } as any,
-          endpoint,
+          entry,
         );
         if (provider == realm.scheme.provider) attach = true;
       } catch (e) {
@@ -54,7 +54,7 @@ export abstract class AuthProcessor {
    */
   protected abstract implyProvider(
     scheme: Omit<SecuritySchemeObject, 'type'> & { type: AuthType },
-    endpoint?: EndpointDto,
+    entry?: EntryDto,
     servers?: { url: string }[],
   ): string;
 

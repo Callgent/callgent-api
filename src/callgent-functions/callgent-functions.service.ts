@@ -7,17 +7,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
-import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
+import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
+import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { CallgentRealm } from '../callgent-realms/entities/callgent-realm.entity';
-import { ApiSpec } from '../endpoints/adaptors/endpoint-adaptor.base';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { EndpointsService } from '../endpoints/endpoints.service';
-import { ClientRequestEvent } from '../endpoints/events/client-request.event';
+import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
+import { EntryDto } from '../entries/dto/entry.dto';
+import { EntriesService } from '../entries/entries.service';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
-import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -25,8 +25,8 @@ const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 export class CallgentFunctionsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    @Inject('EndpointsService')
-    private readonly endpointsService: EndpointsService,
+    @Inject('EntriesService')
+    private readonly endpointsService: EntriesService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
@@ -105,13 +105,13 @@ export class CallgentFunctionsService {
   }
 
   @Transactional()
-  async createBatch(endpoint: EndpointDto, spec: ApiSpec, createdBy: string) {
-    if (endpoint.type != 'SERVER')
+  async createBatch(entry: EntryDto, spec: ApiSpec, createdBy: string) {
+    if (entry.type != 'SERVER')
       throw new BadRequestException(
-        'endpoint must be of type `SERVER`, id=' + endpoint.id,
+        'entry must be of type `SERVER`, id=' + entry.id,
       );
     const { apis, securitySchemes, servers, securities } = spec;
-    // TODO set endpoint.host from servers?
+    // TODO set entry.host from servers?
 
     // create callgent realms from securitySchemes
     const realmMap: { [name: string]: CallgentRealm } = {};
@@ -119,7 +119,7 @@ export class CallgentFunctionsService {
       await Promise.all(
         Object.entries(securitySchemes).map(async ([name, scheme]) => {
           const realm = await this.callgentRealmsService.upsertRealm(
-            endpoint,
+            entry,
             scheme,
             {},
             servers,
@@ -136,8 +136,8 @@ export class CallgentFunctionsService {
           ...f,
           id: Utils.uuid(),
           name: Utils.formalApiName(f.method, f.path),
-          endpointId: endpoint.id,
-          callgentId: endpoint.callgentId,
+          entryId: entry.id,
+          callgentId: entry.callgentId,
           createdBy: createdBy,
         };
         if (securities?.length || ret.securities?.length) {
@@ -154,7 +154,7 @@ export class CallgentFunctionsService {
                 );
               const item = this.callgentRealmsService.constructSecurity(
                 realm,
-                endpoint,
+                entry,
                 scopes,
               );
 
@@ -175,9 +175,9 @@ export class CallgentFunctionsService {
     });
 
     // 根据adaptor，auth type，判定可选的auth servers
-    // FIXME save securitySchemes on endpoint
+    // FIXME save securitySchemes on entry
     // await this.endpointsService.saveSecuritySchemes(
-    //   endpoint.id,
+    //   entry.id,
     //   securitySchemes,
     // );
     // FIXME add auth-listener for this sep,
@@ -187,17 +187,17 @@ export class CallgentFunctionsService {
 
   @Transactional()
   async importBatch(
-    endpoint: EndpointDto,
+    entry: EntryDto,
     apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
     createdBy: string,
   ) {
-    if (endpoint?.type != EndpointType.SERVER)
+    if (entry?.type != EntryType.SERVER)
       throw new BadRequestException(
-        'Function entries can only be imported into Server Endpoint. ',
+        'Function entries can only be imported into Server Entry. ',
       );
 
-    const apiSpec = await this.endpointsService.parseApis(endpoint, apiTxt);
-    return this.createBatch(endpoint, apiSpec, createdBy);
+    const apiSpec = await this.endpointsService.parseApis(entry, apiTxt);
+    return this.createBatch(entry, apiSpec, createdBy);
   }
 
   findMany({
