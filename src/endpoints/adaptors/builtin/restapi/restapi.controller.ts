@@ -37,9 +37,6 @@ export class RestApiController {
     protected readonly eventListenersService: EventListenersService,
   ) {}
 
-  @ApiOperation({
-    description: 'rest-api client endpoint entry of multiple callgents',
-  })
   @ApiParam({
     name: 'callgentId',
     required: true,
