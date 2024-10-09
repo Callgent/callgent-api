@@ -1,11 +1,13 @@
 import {
   All,
+  Body,
   Controller,
   Get,
   Headers,
   Inject,
   NotFoundException,
   Param,
+  Post,
   Req,
   Res,
   UseGuards,
@@ -14,16 +16,30 @@ import {
   ApiHeader,
   ApiOperation,
   ApiParam,
+  ApiProperty,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { EndpointType } from '@prisma/client';
+import { IsNotEmpty, IsString } from 'class-validator';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
 import { EndpointsService } from '../../../endpoints.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
+
+export class Requirement {
+  @ApiProperty({
+    description: 'Requirement for callgent to fulfill.',
+    example:
+      'I want to apply for the Senior Algorithm Engineer based in Singapore.',
+    required: true,
+  })
+  @IsNotEmpty()
+  @IsString()
+  requirement: string;
+}
 
 /** global rest-api endpoint entry */
 @ApiTags('Client Endpoint: Rest-API')
@@ -36,6 +52,17 @@ export class RestApiController {
     protected readonly endpointsService: EndpointsService,
     protected readonly eventListenersService: EventListenersService,
   ) {}
+
+  @ApiOperation({
+    summary: 'To request the callgent with requirement description',
+    description:
+      'AI agent will generate code to invoke several functional endpoints to fulfill the requirement.',
+  })
+  @Post('request')
+  @ApiUnauthorizedResponse()
+  async request(@Body() req: Requirement) {
+    // TODO
+  }
 
   @ApiParam({
     name: 'callgentId',
