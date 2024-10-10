@@ -4,8 +4,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
-import { ClientRequestEvent } from '../../endpoints/events/client-request.event';
+import { EntryDto } from '../../entries/dto/entry.dto';
+import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
@@ -15,14 +15,24 @@ import { AuthProcessor } from './auth-processor.base';
 export class ApiKeyAuthProcessor extends AuthProcessor {
   protected implyProvider(
     scheme: SecuritySchemeObject,
-    endpoint?: EndpointDto,
+    entry?: EntryDto,
     servers?: { url: string }[],
   ) {
-    let url: string;
-    if (endpoint && endpoint.type != 'CLIENT') {
-      url = endpoint.host; // whatever adaptor it is, host need to be a url
-    } else if (servers?.length > 0) {
-      url = servers[0].url;
+    let url: string = (scheme as any).provider;
+    if (url) {
+      if (!url.toLowerCase().startsWith('http')) url = 'http://' + url;
+    } else {
+      if (entry && entry.type != 'CLIENT') {
+        url = entry.host; // whatever adaptor it is, host need to be a url
+      } else if (servers?.length > 0) {
+        const server = servers.find((server) => {
+          try {
+            new URL(server.url);
+            return true;
+          } catch (e) {}
+        });
+        url = server?.url;
+      }
     }
     if (!url)
       throw new BadRequestException(
@@ -40,16 +50,17 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   /** @returns ApiKey:in:name:provider:realm */
   protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `${scheme.type}:${scheme.in || ''}:${scheme.name || ''}:${
-      scheme.provider
-    }:${realm || ''}`;
+    return `apiKey:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
+      realm || ''
+    }`;
   }
 
   protected checkEnabled(
     scheme: RealmSchemeVO,
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
   ) {
-    if (!realm.secret || !scheme.provider) return false;
+    if (!realm.secret || !scheme.provider || !scheme.name || !scheme.in)
+      return false;
     return this.validateSecretFormat(realm);
   }
 

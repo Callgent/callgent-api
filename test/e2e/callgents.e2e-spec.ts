@@ -15,7 +15,7 @@ describe('CallgentsController (e2e)', () => {
   afterEach(afterEachFn);
 
   const endpoint = '/api/callgents';
-  
+
   it(`${endpoint} (POST): create new callgent no auth, 401`, async () => {
     await createCallgent({}, false);
   });

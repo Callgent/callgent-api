@@ -1,139 +1,245 @@
-import {
-  Propagation,
-  TransactionHost,
-  Transactional,
-} from '@nestjs-cls/transactional';
+import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
   Inject,
   Injectable,
-  InjectionToken,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
-import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { EndpointType, Prisma, PrismaClient } from '@prisma/client';
-import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
+import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
+import { EntryType, Prisma, PrismaClient } from '@prisma/client';
+import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
+import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
+import { CallgentRealm } from '../callgent-realms/entities/callgent-realm.entity';
+import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
+import { EntryDto } from '../entries/dto/entry.dto';
+import { EntriesService } from '../entries/entries.service';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { EndpointAdaptor } from './adaptors/endpoint-adaptor.base';
-import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/endpoint-adaptor.decorator';
-import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
-import { ClientRequestEvent } from './events/client-request.event';
+
+const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
 export class EndpointsService {
   constructor(
-    private readonly moduleRef: ModuleRef,
-    @Inject(ModulesContainer)
-    private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: PrismaTenancyService,
+    @Inject('EntriesService')
+    private readonly endpointsService: EntriesService,
+    @Inject('CallgentRealmsService')
+    private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     pk: false,
     tenantPk: false,
+    rawJson: false,
+    params: false,
+    responses: false,
+    callgentId: false,
     createdBy: false,
     deletedAt: false,
   };
-  private serverAdaptorsList = {};
-  private clientAdaptorsList = {};
 
-  onModuleInit() {
-    const modules = [...this.modulesContainer.values()];
+  async loadFunctions(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+    const { funName, callgentId } = reqEvent.data;
 
-    for (const nestModule of modules) {
-      for (const [serviceKey, provider] of nestModule.providers) {
-        if (!provider.metatype) continue;
-        const name = Reflect.getMetadata(
-          IS_CALLGENT_ENDPOINT_ADAPTOR,
-          provider.metatype,
-        );
-        if (name?.indexOf(':') > 0) {
-          const [key, type] = name.split(/:(?=[^:]*$)/);
-          if (type == 'server' || type == 'both') {
-            this._add2AdaptorsList(key, serviceKey, false);
-          }
-          if (type == 'client' || type == 'both') {
-            this._add2AdaptorsList(key, serviceKey, true);
-          }
-        }
-      }
-    }
-  }
-
-  private _add2AdaptorsList(
-    key: string,
-    adaptorKey: InjectionToken,
-    client: boolean,
-  ) {
-    const list = client ? this.clientAdaptorsList : this.serverAdaptorsList;
-    if (key in list)
-      throw new Error(
-        `Conflict endpoint adaptor key ${key}:[${String(adaptorKey)}, ${
-          list[key]
-        }]`,
-      );
-    list[key] = adaptorKey;
-  }
-
-  list(client: boolean) {
-    return Object.keys(
-      client ? this.clientAdaptorsList : this.serverAdaptorsList,
-    );
-  }
-
-  findOne(id: string, select?: Prisma.EndpointSelect) {
-    const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(
-      select,
-      (select) => prisma.endpoint.findUnique({ select, where: { id } }),
-      this.defSelect,
-    );
-  }
-
-  findFirstByType(
-    type: EndpointType,
-    callgentId: string,
-    adaptorKey: string,
-    id?: string,
-  ) {
-    id || (id = undefined);
-    const prisma = this.txHost.tx as PrismaClient;
-    return prisma.endpoint.findFirst({
-      where: { callgentId, adaptorKey, type, id },
-      orderBy: { priority: 'desc' },
+    // TODO if too many functions, use summary first
+    const { data: funcs } = await this.findMany({
+      select: {
+        createdAt: false,
+        updatedAt: false,
+        params: null,
+        responses: null,
+      },
+      where: { callgentId: callgentId, name: funName },
+      perPage: Number.MAX_SAFE_INTEGER,
     });
+    if (!funcs.length)
+      throw new NotFoundException(
+        `No function found on callgent#${callgentId}${
+          funName ? ' name=' + funName : ''
+        }`,
+      );
+    reqEvent.context.functions = funcs as any[];
   }
 
-  /** bypassTenancy before query, setTenantId after query */
+  /**
+   * a single function invocation. simple with no vars/flow controls/lambdas/parallels.
+   * system callgents are involved: collection functions, timer, etc.
+   */
+  // protected async _invoke(
+  //   taskAction: TaskActionDto,
+  //   callgent: CallgentDto,
+  //   endpoints: EndpointDto[],
+  // ) {
+  //   // FIXME task ctx msgs
+  //   // 生成args映射方法，
+  //   const { funName, mapping, question } = await this._mapping(
+  //     taskAction,
+  //     callgent.name,
+  //     endpoints,
+  //   );
+  //   if (question) {
+  //     // invoke event owner for more request info
+  //     // this.eventEmitter.addListener;
+  //     // this.eventEmitter.emit(
+  //     //   ProgressiveRequestEvent.eventName,
+  //     //   new ProgressiveRequestEvent(data),
+  //     // );
+  //   }
+
+  //   const fun = endpoints.find((f) => f.name === funName);
+  //   if (!fun) return; // FIXME
+
+  //   // doInvoke
+  // }
+
   @Transactional()
-  async $findFirstByType(
-    type: EndpointType,
-    callgentId: string,
-    adaptorKey: string,
-    endpointId?: string,
-  ) {
+  async create(data: Prisma.EndpointUncheckedCreateInput) {
     const prisma = this.txHost.tx as PrismaClient;
-    return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, callgentId, adaptorKey, endpointId).then(
-        async (v) => {
-          v && this.tenancyService.setTenantId(v.tenantPk);
-          await this.tenancyService.bypassTenancy(prisma, false);
-          return v;
-        },
-      ),
-    );
+    const id = Utils.uuid();
+    return prisma.endpoint.create({ data: { ...data, id } });
   }
 
   @Transactional()
-  findAll({
+  async createBatch(entry: EntryDto, spec: ApiSpec, createdBy: string) {
+    if (entry.type != 'SERVER')
+      throw new BadRequestException(
+        'entry must be of type `SERVER`, id=' + entry.id,
+      );
+    const { apis, securitySchemes, servers, securities } = spec;
+    // TODO set entry.host from servers?
+
+    // create callgent realms from securitySchemes
+    const realmMap: { [name: string]: CallgentRealm } = {};
+    if (securitySchemes) {
+      await Promise.all(
+        Object.entries(securitySchemes).map(async ([name, scheme]) => {
+          const realm = await this.callgentRealmsService.upsertRealm(
+            entry,
+            scheme,
+            {},
+            servers,
+          );
+          realmMap[name] = realm as any;
+        }),
+      );
+    }
+
+    // validation
+    const actMap = apis.map<Prisma.EndpointUncheckedCreateInput>(
+      (f) => {
+        const ret = {
+          ...f,
+          id: Utils.uuid(),
+          name: Utils.formalApiName(f.method, f.path),
+          entryId: entry.id,
+          callgentId: entry.callgentId,
+          createdBy: createdBy,
+        };
+        if (securities?.length || ret.securities?.length) {
+          const securitiesMerged = [
+            ...(securities || []),
+            ...(ret.securities || []),
+          ].map((security) => {
+            const result: RealmSecurityVO = {};
+            Object.entries(security).forEach(([name, scopes]) => {
+              const realm = realmMap[name];
+              if (!Number.isFinite(realm?.pk))
+                throw new BadRequestException(
+                  'Unknown security scheme name: ' + name,
+                );
+              const item = this.callgentRealmsService.constructSecurity(
+                realm,
+                entry,
+                scopes,
+              );
+
+              result['' + item.realmPk] = item;
+            });
+            return result;
+          });
+          ret.securities = securitiesMerged as any;
+        }
+        return ret;
+      },
+    );
+
+    // create api functions
+    const prisma = this.txHost.tx as PrismaClient;
+    const { count: actionsCount } = await prisma.endpoint.createMany({
+      data: actMap,
+    });
+
+    // 根据adaptor，auth type，判定可选的auth servers
+    // FIXME save securitySchemes on entry
+    // await this.endpointsService.saveSecuritySchemes(
+    //   entry.id,
+    //   securitySchemes,
+    // );
+    // FIXME add auth-listener for this sep,
+
+    return actionsCount;
+  }
+
+  @Transactional()
+  async importBatch(
+    entry: EntryDto,
+    apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
+    createdBy: string,
+  ) {
+    if (entry?.type != EntryType.SERVER)
+      throw new BadRequestException(
+        'Function entries can only be imported into Server Entry. ',
+      );
+
+    const apiSpec = await this.endpointsService.parseApis(entry, apiTxt);
+    return this.createBatch(entry, apiSpec, createdBy);
+  }
+
+  findMany({
     select,
     where,
     orderBy = { pk: 'desc' },
+    page,
+    perPage,
+  }: {
+    select?: Prisma.EndpointSelect;
+    where?: Prisma.EndpointWhereInput;
+    orderBy?: Prisma.EndpointOrderByWithRelationInput;
+    page?: number;
+    perPage?: number;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      async (select) => {
+        const result = paginate(
+          prisma.endpoint,
+          {
+            select,
+            where,
+            orderBy,
+          },
+          {
+            page,
+            perPage,
+          },
+        );
+        return result;
+      },
+      this.defSelect,
+      'data',
+    );
+  }
+
+  findAll({
+    select,
+    where,
+    orderBy,
   }: {
     select?: Prisma.EndpointSelect;
     where?: Prisma.EndpointWhereInput;
@@ -142,61 +248,9 @@ export class EndpointsService {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
-      (select) =>
-        prisma.endpoint.findMany({
-          where,
-          select,
-          orderBy,
-        }),
+      (select) => prisma.endpoint.findMany({ where, select, orderBy }),
       this.defSelect,
     );
-  }
-
-  getAdaptor(adaptorKey: string, endpointType?: EndpointType): EndpointAdaptor {
-    const list =
-      endpointType == 'SERVER'
-        ? this.serverAdaptorsList
-        : this.clientAdaptorsList;
-    if (adaptorKey in list)
-      return this.moduleRef.get(list[adaptorKey], { strict: false });
-
-    if (endpointType === undefined && adaptorKey in this.serverAdaptorsList)
-      return this.moduleRef.get(this.serverAdaptorsList[adaptorKey], {
-        strict: false,
-      });
-  }
-
-  @Transactional()
-  async create(
-    dto: Omit<Prisma.EndpointUncheckedCreateInput, 'id'>,
-    select?: Prisma.EndpointSelect,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-    const service = this.getAdaptor(dto.adaptorKey, dto.type);
-    if (!service)
-      throw new BadRequestException(
-        'Invalid endpoint adaptor key=' + dto.adaptorKey,
-      );
-
-    const id = Utils.uuid();
-    // init ep name
-    dto.host = dto.host.replace('{id}', id);
-    dto.name || (dto.name = dto.host);
-
-    return selectHelper(
-      select,
-      (select) =>
-        prisma.endpoint.create({
-          select,
-          data: { ...dto, id },
-        }),
-      this.defSelect,
-    );
-  }
-
-  @Transactional()
-  update(id: string, dto: UpdateEndpointDto) {
-    throw new NotImplementedException('Method not implemented.');
   }
 
   @Transactional()
@@ -207,152 +261,39 @@ export class EndpointsService {
     );
   }
 
-  // @Transactional()
-  // upsertEndpointAuth(
-  //   dto: Prisma.EndpointAuthUncheckedCreateInput,
-  //   endpoint: EndpointDto,
-  // ) {
-  //   if (!endpoint) throw new BadRequestException('endpoint not found');
-  //   if (endpoint.authType == 'NONE')
-  //     throw new BadRequestException("auth type `NONE` needn't be set");
-  //   else if (endpoint.authType == 'USER') {
-  //     if (!dto.userKey)
-  //       throw new BadRequestException(
-  //         '`userKey` is required for auth type `USER`',
-  //       );
-  //   } else if (endpoint.authType == 'APP') dto.userKey = '';
-  //   // else
-  //   //   throw new BadRequestException('Invalid auth type: ' + endpoint.authType);
-  //   dto.endpointId = endpoint.id;
-
-  //   const prisma = this.txHost.tx as PrismaClient;
-  //   return selectHelper(this.defSelect as Prisma.EndpointAuthSelect, (select) =>
-  //     prisma.endpointAuth.upsert({
-  //       select,
-  //       where: {
-  //         endpointId_userKey: {
-  //           endpointId: dto.endpointId,
-  //           userKey: dto.userKey,
-  //         },
-  //       },
-  //       create: dto,
-  //       update: dto,
-  //     }),
-  //   );
-  // }
-
-  @Transactional(Propagation.RequiresNew)
-  async init(id: string, initParams: object) {
-    return;
+  @Transactional()
+  update(dto: UpdateEndpointDto) {
+    if (!dto.id) return;
+    dto.name = Utils.formalApiName(dto.method, dto.path);
     const prisma = this.txHost.tx as PrismaClient;
-
-    const endpoint = await this.findOne(id);
-    if (endpoint) {
-      const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
-      if (adaptor) {
-        // FIXME issue client token
-        // const content = await (endpoint.type == 'SERVER'
-        //   ? adaptor.initSender
-        //   : adaptor.initReceiver)(initParams, endpoint as any);
-        // if (content)
-        //   prisma.endpoint.update({
-        //     where: { id },
-        //     data: { content },
-        //   });
-        // return content;
-        return;
-      }
-      throw new NotFoundException(
-        `Invalid endpoint adaptor, adaptorKey=${endpoint.adaptorKey}`,
-      );
-    }
-    throw new NotFoundException(`Endpoint not found, id=${id}`);
+    return selectHelper(this.defSelect, (select) =>
+      prisma.endpoint.update({
+        select,
+        where: { id: dto.id },
+        data: dto as any,
+      }),
+    );
   }
 
-  /**
-   * parse APIs to openAPI.json format
-   * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
-   */
-  async parseApis(
-    endpoint: EndpointDto,
-    apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
-  ) {
-    const adaptor = this.getAdaptor(endpoint.adaptorKey, endpoint.type);
-    // TODO read endpoint.components
-    return adaptor.parseApis(apiTxt); //, endpoint.components);
-  }
-
-  /** preprocess req from cep, by adaptor */
-  @Transactional()
-  async preprocessClientRequest(
-    reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const adaptor = this.getAdaptor(reqEvent.dataType, EndpointType.CLIENT);
-    if (!adaptor)
-      throw new Error(
-        `Invalid adaptor ${reqEvent.dataType} from cep ${reqEvent.srcId}`,
-      );
-
-    const endpoint = await this.findOne(reqEvent.srcId);
-
-    await adaptor.preprocess(reqEvent, endpoint as any);
+  findOne(id: string, select?: Prisma.EndpointSelect) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      (select) =>
+        prisma.endpoint.findUnique({
+          select,
+          where: { id },
+        }),
+      this.defSelect,
+    );
   }
 
   @Transactional()
-  async invokeSEP(reqEvent: ClientRequestEvent) {
-    const { map2Function, functions } = reqEvent.context;
-    if (!map2Function || !functions?.length)
-      throw new Error('Failed to invoke, No mapping function found');
-
-    const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId, {
-      id: true,
-      name: true,
-      type: true,
-      adaptorKey: true,
-      priority: true,
-      host: true,
-      content: true,
-      callgentId: true,
-      callgent: { select: { id: true, name: true } },
+  async updateSecurities(id: string, securities: RealmSecurityVO[]) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.endpoint.update({
+      where: { id },
+      data: { securities: securities as any },
     });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
-    if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-
-    // may returns pending result
-    return adapter
-      .invoke(func, map2Function.args, sep as any, reqEvent)
-      .then((res) => {
-        if (res && res.resumeFunName) return res;
-        return this.postInvokeSEP((res && res.data) || reqEvent);
-      });
-  }
-
-  /** called after pending invokeSEP, convert resp to formal object */
-  @Transactional()
-  async postInvokeSEP(reqEvent: ClientRequestEvent) {
-    const {
-      context: { functions, resp },
-    } = reqEvent;
-    if (!functions?.length)
-      throw new Error('Failed to invoke, No mapping function found');
-
-    const func = functions[0] as CallgentFunctionDto;
-    const sep = await this.findOne(func.endpointId, {
-      id: true,
-      name: true,
-      type: true,
-      adaptorKey: true,
-      priority: true,
-      host: true,
-      content: true,
-      callgentId: true,
-      callgent: { select: { id: true, name: true } },
-    });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EndpointType.SERVER);
-    if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-    await adapter.postprocess(reqEvent, func);
-
-    return { data: reqEvent }; // do nothing
   }
 }

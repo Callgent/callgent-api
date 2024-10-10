@@ -1,83 +1,97 @@
 # Developer Guide
+
 This is guide for developers to setup the development environment. Before you start to get prepared for the develop environment, you need to make sure your basic tools are installed correctly.
 
 * Nodejs (Notice: To build the project, the right version is needed, otherwise installation can not be corrected, see .node-version)
-* pnpm 
+* pnpm
 * docker
 
 ## Development Setup
-- copy `.env.dev` to `.env`
 
-- install dependencies
-```shell
-pnpm i
-```
+* copy `.env.dev` to `.env`
 
-- install dababase postgres with vector plugin
-```shell
-docker pull ankane/pgvector
-```
+* install dependencies
 
-- start postgres db in docker
-```shell
-docker run --name callgent-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e PG_VECTOR_EXTENSION=true -d ankane/pgvector
-```
+  ```shell
+  pnpm i
+  ```
 
-- init db
-```shell
-npx prisma generate # generate PrismaClient
-npx prisma migrate dev # init db schema
-npx prisma db seed # init db data
-```
+* install dababase postgres with vector plugin
 
-- init db test data
-```shell
-pnpm run prisma:seed-test # init db test data
-```
+  ```shell
+  docker pull ankane/pgvector
+  ```
 
-- start server
-```shell
-pnpm run start:dev
-```
+* start postgres db in docker
+
+  ```shell
+  docker run --name callgent-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e PG_VECTOR_EXTENSION=true -d ankane/pgvector
+  ```
+
+* init db
+
+  ```shell
+  npx prisma generate # generate PrismaClient
+  npx prisma migrate dev # init db schema
+  npx prisma db seed # init db data
+  ```
+
+* init db test data
+
+  ```shell
+  npx prisma migrate reset # reset db to initial state
+  pnpm run prisma:seed-test # init db test data
+  ```
+
+* start server
+
+  ```shell
+  pnpm run start:dev
+  ```
 
 If all the above steps are done, and nothing failed, you can access the API at `http://localhost:3000/api`
 
-- run tests
-```shell
-pnpm run test:e2e
-```
+* run tests
+
+  ```shell
+  pnpm run test:e2e
+  ```
 
 ## Development Logs
 
 ### init project
-- init project
-```shell
-pnpm i -g @nestjs/cli
-nest new callgent-api
-cd callgent-api
-```
+
+* init project
+
+  ```shell
+  pnpm i -g @nestjs/cli
+  nest new callgent-api
+  cd callgent-api
+  ```
 
 ### add dependencies
 
 ### integrate prisma
-- automatically setup the library, scripts and Docker files
-```shell
-nest add nestjs-prisma
-```
 
-- integrate prisma plugins
+* automatically setup the library, scripts and Docker files
 
-- ReposModule
+  ```shell
+  nest add nestjs-prisma
+  ```
 
-- init db
-```shell
-npx prisma init
-```
+* integrate prisma plugins
+* ReposModule
+* init db
 
-- create prisma schema, then init db
-```shell
-npx prisma migrate dev --name init
-```
+  ```shell
+  npx prisma init
+  ```
+
+* create prisma schema, then init db
+
+  ```shell
+  npx prisma migrate dev --name init
+  ```
 
 ### multi-tenancy
 

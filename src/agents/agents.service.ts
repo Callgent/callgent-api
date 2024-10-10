@@ -1,6 +1,6 @@
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
-import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
-import { ClientRequestEvent } from '../endpoints/events/client-request.event';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';
@@ -41,9 +41,9 @@ export class AgentsService {
       data: { callgentName, funName, progressive },
       context: { tgtEvents, req },
     } = reqEvent;
-    const callgentFunctions = reqEvent.context
-      .functions as unknown as CallgentFunctionDto[];
-    if (!callgentFunctions?.length)
+    const endpoints = reqEvent.context
+      .functions as unknown as EndpointDto[];
+    if (!endpoints?.length)
       throw new BadRequestException(
         'No functions for mapping, ClientRequestEvent#' + id,
       );
@@ -54,10 +54,10 @@ export class AgentsService {
 
     const mapped = await this.llmService.template(
       'map2Function',
-      { req, funName, callgentName, cepAdaptor, callgentFunctions },
+      { req, funName, callgentName, cepAdaptor, endpoints },
       { endpoint: '', args: {}, mapping: '', question: '' },
       id,
-    ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
+    ); // TODO check `funName` exists in endpoints, validating `mapping`
     reqEvent.context.map2Function = mapped;
 
     if (mapped.question) {
@@ -130,7 +130,7 @@ export class AgentsService {
   async convert2Response(
     args: { name: string; value: any }[],
     resp: string,
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
     eventId: string,
   ) {
     args = args?.map((a) => ({ name: a.name, value: a.value })) || [];
@@ -139,7 +139,7 @@ export class AgentsService {
       { args, resp, fun },
       { statusCode: 200, data: {} },
       eventId,
-    ); // TODO check `funName` exists in callgentFunctions, validating `mapping`
+    ); // TODO check `funName` exists in endpoints, validating `mapping`
 
     return { statusCode: mapped.statusCode, data: mapped.data };
   }

@@ -24,18 +24,19 @@ export class CallgentsService {
   protected readonly defSelect: Prisma.CallgentSelect = {
     pk: false,
     tenantPk: false,
+    forkedPk: false,
     createdBy: false,
     deletedAt: false,
   };
 
   @Transactional()
   async create(
-    dto: CreateCallgentDto,
+    dto: CreateCallgentDto & { forkedPk?: number },
     createdBy: string,
     select?: Prisma.CallgentSelect,
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
-    (data.id = Utils.uuid()), (data.createdBy = createdBy);
+    (data.id = Utils.uuid()), (data.createdBy = createdBy), delete data.pk;
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Callgent = await selectHelper(
@@ -43,6 +44,15 @@ export class CallgentsService {
       (select) => prisma.callgent.create({ select, data }),
       this.defSelect,
     );
+    if (dto.mainTagId) {
+      const tag = { callgentId: data.id, tagId: dto.mainTagId };
+      await prisma.callgentTag.upsert({
+        where: { callgentId_tagId: tag },
+        create: tag,
+        update: tag,
+      });
+    }
+
     await this.eventEmitter.emitAsync(
       CallgentCreatedEvent.eventName,
       new CallgentCreatedEvent({ ...data, ...ret }),
@@ -130,8 +140,14 @@ export class CallgentsService {
     );
   }
 
-  findOne(id: string, select?: Prisma.CallgentSelect) {
+  @Transactional()
+  async findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
+    await prisma.callgent.update({
+      where: { id },
+      select: { id: true },
+      data: { viewed: { increment: 1 } },
+    });
     return selectHelper(
       select,
       (select) =>
@@ -162,45 +178,45 @@ export class CallgentsService {
   }
 
   /**
-   * Cross tenancy execution when client endpoint is provided.
-   * [endpoint://]callgent.please('act', with_args)
+   * Cross tenancy execution when client entry is provided.
+   * [entry://]callgent.please('act', with_args)
    * @param act API action name
-   * @param endpoint client endpoint to call API. unnecessary in internal calls
+   * @param entry client entry to call API. unnecessary in internal calls
    * @deprecated
    */
   @Transactional()
   async please(
     act: string,
     args: any[],
-    endpoint: { callgentId: string; id?: string; adaptorKey?: string },
+    entry: { callgentId: string; id?: string; adaptorKey?: string },
   ) {
-    // invoke callgent action api, through endpoint
+    // invoke callgent action api, through entry
     const prisma = this.txHost.tx as PrismaClient;
-    const withEndpoint = endpoint?.id || endpoint?.adaptorKey;
+    const withEntry = entry?.id || entry?.adaptorKey;
 
     // load targets
-    if (withEndpoint) this.tenancyService.bypassTenancy(prisma);
+    if (withEntry) this.tenancyService.bypassTenancy(prisma);
     const [callgent, actions, epClient] = await Promise.all([
-      prisma.callgent.findUnique({ where: { id: endpoint.callgentId } }),
-      prisma.callgentFunction.findMany({
-        where: { name: act, callgentId: endpoint.callgentId },
+      prisma.callgent.findUnique({ where: { id: entry.callgentId } }),
+      prisma.endpoint.findMany({
+        where: { name: act, callgentId: entry.callgentId },
       }),
-      withEndpoint &&
-        prisma.endpoint.findFirst({ where: { ...endpoint, type: 'CLIENT' } }),
+      withEntry &&
+        prisma.entry.findFirst({ where: { ...entry, type: 'CLIENT' } }),
     ]);
 
     // check targets
     if (!callgent)
-      throw new NotFoundException('callgent not found: ' + endpoint.callgentId);
+      throw new NotFoundException('callgent not found: ' + entry.callgentId);
     if (actions.length === 0)
       throw new NotFoundException(
-        `callgent=${endpoint.callgentId} API action not found: ${act}`,
+        `callgent=${entry.callgentId} API action not found: ${act}`,
       );
-    if (withEndpoint) {
+    if (withEntry) {
       if (!epClient)
         throw new NotFoundException(
-          `Client endpoint not found for callgent=${endpoint.callgentId}: ${
-            endpoint.id || endpoint.adaptorKey
+          `Client entry not found for callgent=${entry.callgentId}: ${
+            entry.id || entry.adaptorKey
           }`,
         );
       this.tenancyService.setTenantId(callgent.tenantPk);
@@ -214,46 +230,5 @@ export class CallgentsService {
     } else action = actions[0];
 
     // pre-meta, pre-routing, pre-mapping
-  }
-
-  /// hub actions
-
-  @Transactional()
-  /** hub are those in tenantPk = -1 */
-  private async _onHubAction<T>(fn: () => Promise<T>): Promise<T> {
-    const tenantPk = this.tenancyService.getTenantId();
-    try {
-      this.tenancyService.setTenantId(-1);
-      return await fn.apply(this);
-    } finally {
-      this.tenancyService.setTenantId(tenantPk);
-    }
-  }
-
-  async findAllInHub(params: {
-    select?: Prisma.CallgentSelect;
-    where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
-    page?: number;
-    perPage?: number;
-  }) {
-    return this._onHubAction(() => this.findMany(params));
-  }
-
-  @Transactional()
-  async duplicateOverTenancy(
-    dupId: string,
-    dto: CreateCallgentDto,
-    createdBy: string,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-
-    await this.tenancyService.bypassTenancy(prisma); // FIXME
-    const dup = await prisma.callgent.findUnique({ where: { id: dupId } });
-    if (!dup)
-      throw new NotFoundException('Callgent to duplicate not found: ' + dupId);
-
-    await this.tenancyService.bypassTenancy(prisma, false);
-    return this.create(dto, createdBy, { id: null });
   }
 }

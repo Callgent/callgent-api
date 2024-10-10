@@ -1,15 +1,22 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
+  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBody,
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
+  ApiOperation,
+  ApiParam,
   ApiSecurity,
   ApiTags,
   getSchemaPath,
@@ -18,11 +25,14 @@ import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentRealmsService } from './callgent-realms.service';
 import { CallgentRealmDto } from './dto/callgent-realm.dto';
+import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
+import { isAuthType } from './dto/realm-scheme.vo';
+import { RealmSecurityItemForm } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, CallgentRealmDto)
+@ApiExtraModels(RestApiResponse, CallgentRealmDto, RealmSecurityItemForm)
 @UseGuards(JwtGuard)
 @Controller('callgent-realms')
 export class CallgentRealmsController {
@@ -64,7 +74,7 @@ export class CallgentRealmsController {
   ) {
     // TODO realmKey may be in body
     const data = await this.callgentRealmsService
-      .findOne(callgentId, realmKey, { pk: false })
+      .findOne(callgentId, realmKey)
       .then((r) => r && { ...r, secret: r.secret ? true : false });
     return { data };
   }
@@ -103,7 +113,6 @@ export class CallgentRealmsController {
   async findAll(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
       .findAll({
-        select: { pk: false },
         where: { callgentId },
       })
       .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
@@ -112,7 +121,7 @@ export class CallgentRealmsController {
 
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
         {
@@ -142,5 +151,66 @@ export class CallgentRealmsController {
       .then((r) => r && { ...r, secret: r.secret ? true : false });
 
     return { data };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
+      ],
+    },
+  })
+  @Post()
+  async create(@Body() dto: CreateCallgentRealmDto) {
+    if (!isAuthType(dto.authType))
+      throw new BadRequestException('Invalid authType');
+    return {
+      data: await this.callgentRealmsService.create({
+        ...dto,
+        scheme: dto.scheme as any,
+      }),
+    };
+  }
+
+  @ApiOkResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: { $ref: getSchemaPath(CallgentRealmDto) },
+          },
+        },
+      ],
+    },
+  })
+  @Delete(':callgentId/:realmKey')
+  async remove(
+    @Param('callgentId') callgentId: string,
+    @Param('realmKey') realmKey: string,
+  ) {
+    return {
+      data: await this.callgentRealmsService.delete(callgentId, realmKey),
+    };
+  }
+
+  @ApiOperation({ summary: 'Update securities on entry/endpoint' })
+  /// securities
+  @ApiParam({ name: 'type', type: 'string', enum: ['entry', 'function'] })
+  @ApiBody({ isArray: true, type: RealmSecurityItemForm })
+  @Post('securities/:type/:id')
+  async updateSecurities(
+    @Param('type') type: 'entry' | 'function',
+    @Param('id') id: string,
+    @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO
+  ) {
+    return {
+      data: await this.callgentRealmsService.updateSecurities(
+        type,
+        id,
+        securities,
+      ),
+    };
   }
 }

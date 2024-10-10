@@ -51,7 +51,7 @@ export class CallgentsController {
 
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
       ],
@@ -67,7 +67,7 @@ export class CallgentsController {
   @ApiQuery({ name: 'perPage', required: false, type: Number })
   @ApiOkResponse({
     schema: {
-      allOf: [
+      anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
@@ -110,29 +110,6 @@ export class CallgentsController {
   async update(@Param('id') id: string, @Body() dto: UpdateCallgentDto) {
     dto.id = id;
     return { data: await this.callgentsService.update(dto) };
-  }
-
-  @ApiCreatedResponse({
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
-      ],
-    },
-  })
-  @Post(':id/duplicate')
-  async duplicateOverTenancy(
-    @Param('id') id: string,
-    @Req() req,
-    @Body() dto: CreateCallgentDto,
-  ) {
-    return {
-      data: await this.callgentsService.duplicateOverTenancy(
-        id,
-        dto,
-        req.user.sub,
-      ),
-    };
   }
 
   @ApiOkResponse({
