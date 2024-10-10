@@ -25,9 +25,9 @@ import { EntryDto } from '../entries/dto/entry.dto';
 import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
-import { CallgentFunctionsService } from './callgent-functions.service';
-import { CallgentFunctionDto } from './dto/callgent-function.dto';
-import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
+import { EndpointsService } from './endpoints.service';
+import { EndpointDto } from './dto/endpoint.dto';
+import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 
 export class CallgentApis extends ApiSpec {
   @EntityIdExists('entry', 'id')
@@ -59,20 +59,20 @@ export class CallgentApiText {
   format?: 'json' | 'yaml' | 'text';
 }
 
-@ApiTags('CallgentFunctions')
+@ApiTags('Endpoints')
 @ApiSecurity('defaultBearerAuth')
-@ApiExtraModels(RestApiResponse, CallgentFunctionDto)
+@ApiExtraModels(RestApiResponse, EndpointDto)
 @UseGuards(JwtGuard)
-@Controller('callgent-functions')
-export class CallgentFunctionsController {
+@Controller('endpoints')
+export class EndpointsController {
   constructor(
-    @Inject('CallgentFunctionsService')
-    private readonly callgentFunctionService: CallgentFunctionsService,
+    @Inject('EndpointsService')
+    private readonly endpointService: EndpointsService,
   ) {}
 
   @ApiOperation({
     summary:
-      'Create batch of new CallgentFunction. Exception if existing one with same name in the same callgent',
+      'Create batch of new Endpoint. Exception if existing one with same name in the same callgent',
     description: 'return { data: imported_functions_count } on success',
   })
   @Post()
@@ -83,11 +83,7 @@ export class CallgentFunctionsController {
   ) {
     const entry = EntityIdExists.entity<EntryDto>(apis, 'entryId');
     return {
-      data: await this.callgentFunctionService.createBatch(
-        entry,
-        apis,
-        req.user?.sub,
-      ),
+      data: await this.endpointService.createBatch(entry, apis, req.user?.sub),
     };
   }
 
@@ -103,7 +99,7 @@ export class CallgentFunctionsController {
   ) {
     const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
     return {
-      data: await this.callgentFunctionService.importBatch(
+      data: await this.endpointService.importBatch(
         entry,
         apiTxt,
         req.user?.sub,
@@ -117,7 +113,7 @@ export class CallgentFunctionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(CallgentFunctionDto) },
+            data: { $ref: getSchemaPath(EndpointDto) },
           },
         },
       ],
@@ -125,7 +121,7 @@ export class CallgentFunctionsController {
   })
   @Get('/:id')
   async findOne(@Param('id') id: string) {
-    return { data: await this.callgentFunctionService.findOne(id) };
+    return { data: await this.endpointService.findOne(id) };
   }
 
   // @ApiQuery({ name: 'query', required: false, type: String })
@@ -139,7 +135,7 @@ export class CallgentFunctionsController {
   //         properties: {
   //           data: {
   //             type: 'array',
-  //             items: { $ref: getSchemaPath(CallgentFunctionDto) },
+  //             items: { $ref: getSchemaPath(EndpointDto) },
   //           },
   //         },
   //       },
@@ -155,7 +151,7 @@ export class CallgentFunctionsController {
   //         name: { contains: query.queryString },
   //       }
   //     : undefined;
-  //   return this.callgentFunctionService.findAll({
+  //   return this.endpointService.findAll({
   //     page: query.page,
   //     perPage: query.perPage,
   //     where,
@@ -166,17 +162,14 @@ export class CallgentFunctionsController {
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentFunctionDto) } } },
+        { properties: { data: { $ref: getSchemaPath(EndpointDto) } } },
       ],
     },
   })
   @Put('/:id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateCallgentFunctionDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateEndpointDto) {
     dto.id = id;
-    return { data: await this.callgentFunctionService.update(dto) };
+    return { data: await this.endpointService.update(dto) };
   }
 
   @ApiOkResponse({
@@ -185,7 +178,7 @@ export class CallgentFunctionsController {
         { $ref: getSchemaPath(RestApiResponse) },
         {
           properties: {
-            data: { $ref: getSchemaPath(CallgentFunctionDto) },
+            data: { $ref: getSchemaPath(EndpointDto) },
           },
         },
       ],
@@ -193,6 +186,6 @@ export class CallgentFunctionsController {
   })
   @Delete('/:id')
   async delete(@Param('id') id: string) {
-    return { data: await this.callgentFunctionService.delete(id) };
+    return { data: await this.endpointService.delete(id) };
   }
 }

@@ -80,7 +80,7 @@ function initEventListeners(
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'CallgentFunctionsService',
+      serviceName: 'EndpointsService',
       funName: 'loadFunctions',
       description:
         'Load all entries of the callgent into event.context.functions',
@@ -190,7 +190,7 @@ please generate the js function with **full implementation and error handling**!
     {
       name: 'map2Function',
       prompt: `given below service APIs:
-service {{=it.callgentName}} {{{~ it.callgentFunctions :fun }}
+service {{=it.callgentName}} {{{~ it.endpoints :fun }}
   "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"params":{{=JSON.stringify(fun.params)}}, "responses":{{=JSON.stringify(fun.responses)}} },
 {{~}}}
 

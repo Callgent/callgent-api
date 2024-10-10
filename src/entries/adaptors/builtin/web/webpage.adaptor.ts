@@ -1,6 +1,6 @@
 import { Inject, NotImplementedException } from '@nestjs/common';
 import { AgentsService } from '../../../../agents/agents.service';
-import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
@@ -81,7 +81,7 @@ export class WebpageAdaptor extends EntryAdaptor {
     //
   }
 
-  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
+  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
     //
   }
 
@@ -94,7 +94,7 @@ export class WebpageAdaptor extends EntryAdaptor {
   }
 
   async invoke(
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
     args: object,
     sep: Entry,
     reqEvent: ClientRequestEvent,

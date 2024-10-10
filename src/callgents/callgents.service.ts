@@ -198,7 +198,7 @@ export class CallgentsService {
     if (withEntry) this.tenancyService.bypassTenancy(prisma);
     const [callgent, actions, epClient] = await Promise.all([
       prisma.callgent.findUnique({ where: { id: entry.callgentId } }),
-      prisma.callgentFunction.findMany({
+      prisma.endpoint.findMany({
         where: { name: act, callgentId: entry.callgentId },
       }),
       withEntry &&

@@ -40,7 +40,7 @@ export const mainPrismaServiceOptions = (
           // need to exclude soft deleted records in a compound findUnique operation
           // https://github.com/olivierwilkinson/prisma-soft-delete-middleware?tab=readme-ov-file#excluding-soft-deleted-records-in-a-findunique-operation
           Callgent: { ...deleteHandle, allowCompoundUniqueIndexWhere: true },
-          CallgentFunction: deleteHandle,
+          Endpoint: deleteHandle,
           Entry: deleteHandle,
           Task: deleteHandle,
           TaskAction: deleteHandle,

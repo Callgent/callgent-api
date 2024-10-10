@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
+import { EndpointsService } from '../../endpoints/endpoints.service';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
@@ -28,8 +28,8 @@ export class CallgentTreeController {
     private readonly callgentsService: CallgentsService,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
-    @Inject('CallgentFunctionsService')
-    private readonly callgentFunctionsService: CallgentFunctionsService,
+    @Inject('EndpointsService')
+    private readonly endpointsService: EndpointsService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
@@ -75,7 +75,7 @@ export class CallgentTreeController {
         if (ep.type == 'CLIENT') {
           CEP.push(ep);
         } else if (ep.type == 'SERVER') {
-          ep.children = await this.callgentFunctionsService.findAll({
+          ep.children = await this.endpointsService.findAll({
             select: {
               pk: false,
               params: false,

@@ -1,18 +1,18 @@
 import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { CallgentApiText } from '../../callgent-functions/callgent-functions.controller';
-import { CallgentFunctionsService } from '../../callgent-functions/callgent-functions.service';
+import { CallgentApiText } from '../../endpoints/endpoints.controller';
+import { EndpointsService } from '../../endpoints/endpoints.service';
 import { EntryDto } from '../../entries/dto/entry.dto';
 import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../../infra/repo/validators/entity-exists.validator';
 @ApiTags('BFF')
 @ApiSecurity('defaultBearerAuth')
 @UseGuards(JwtGuard)
-@Controller('bff/callgent-functions')
-export class BffCallgentFunctionsController {
+@Controller('bff/endpoints')
+export class BffEndpointsController {
   constructor(
-    @Inject('CallgentFunctionsService')
-    private readonly callgentFunctionService: CallgentFunctionsService,
+    @Inject('EndpointsService')
+    private readonly endpointService: EndpointsService,
   ) {}
 
   @ApiOperation({
@@ -26,13 +26,13 @@ export class BffCallgentFunctionsController {
     apiTxt: CallgentApiText,
   ) {
     const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
-    await this.callgentFunctionService.importBatch(
+    await this.endpointService.importBatch(
       entry,
       apiTxt,
       req.user?.sub,
     );
 
-    const data = await this.callgentFunctionService.findAll({
+    const data = await this.endpointService.findAll({
       where: { entryId: entry.id },
     });
 

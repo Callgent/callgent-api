@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CallgentRealm, Prisma, PrismaClient } from '@prisma/client';
-import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
+import { EndpointsService } from '../endpoints/endpoints.service';
 import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { CallgentsService } from '../callgents/callgents.service';
@@ -26,8 +26,8 @@ export class CallgentHubService {
     private readonly callgentRealmsService: CallgentRealmsService,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
-    @Inject('CallgentFunctionsService')
-    private readonly callgentFunctionsService: CallgentFunctionsService,
+    @Inject('EndpointsService')
+    private readonly endpointsService: EndpointsService,
   ) {}
 
   @Transactional()
@@ -53,7 +53,7 @@ export class CallgentHubService {
   }
 
   /**
-   * Callgent, Entry, CallgentFunction, CallgentRealm.
+   * Callgent, Entry, Endpoint, CallgentRealm.
    */
   @Transactional()
   async forkFromHub(dupId: string, dto: CreateCallgentDto, createdBy: string) {
@@ -68,7 +68,7 @@ export class CallgentHubService {
   }
 
   /**
-   * Callgent, Entry, CallgentFunction, CallgentRealm.
+   * Callgent, Entry, Endpoint, CallgentRealm.
    */
   @Transactional()
   async commitToHub(dupId: string, dto: CreateCallgentDto, createdBy: string) {
@@ -169,7 +169,7 @@ export class CallgentHubService {
       const functionMap = {};
       await Promise.all(
         ens.map(async (epOld) => {
-          const functions = await this.callgentFunctionsService.findAll({
+          const functions = await this.endpointsService.findAll({
             where: { entryId: epOld.id },
             orderBy: { pk: 'asc' },
             select: {
@@ -203,7 +203,7 @@ export class CallgentHubService {
           return Promise.all(
             functionMap[epOld.id].map((fun) => {
               const securities: any[] = dupSecurities(fun.securities);
-              return this.callgentFunctionsService.create({
+              return this.endpointsService.create({
                 ...fun,
                 securities,
                 callgentId,

@@ -22,7 +22,7 @@ export class ClientRequestEvent extends EventObject {
       callgentName: string;
       /** empty means anonymous */
       callerId?: string;
-      /** requested callgent function name */
+      /** requested endpoint name */
       funName?: string;
       /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */
       progressive?: string;

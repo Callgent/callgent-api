@@ -1,7 +1,7 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { TasksService } from '../tasks/tasks.service';
@@ -92,13 +92,13 @@ export class TaskActionsService {
     const taskVars = {};
 
     // may get sync response
-    // return this._interpret(taskAction, callgents, callgentFunctions, taskVars);
+    // return this._interpret(taskAction, callgents, endpoints, taskVars);
   }
 
   protected async _interpret(
     taskAction: TaskActionDto,
     callgents: CallgentDto[],
-    callgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
+    endpoints: { [callgentName: string]: EndpointDto[] },
     taskVars: { [name: string]: any },
   ) {
     let resp,
@@ -106,7 +106,7 @@ export class TaskActionsService {
     // interpret request, execute step by step
     for (;;) {
       const { funName, mapping, progressive, vars } = await this._routing(
-        callgentFunctions,
+        endpoints,
         taskAction,
         resp,
         { ...taskVars, ...reqVars },
@@ -125,14 +125,14 @@ export class TaskActionsService {
   }
 
   protected async _routing(
-    CallgentFunctions: { [callgentName: string]: CallgentFunctionDto[] },
+    Endpoints: { [callgentName: string]: EndpointDto[] },
     taskAction: TaskActionDto,
     resp: any,
     vars: { [name: string]: any },
   ): Promise<{ funName; mapping; progressive; vars }> {
-    // const botNames = Object.keys(CallgentFunctions);
-    // if (botNames.length == 1 && CallgentFunctions[botNames[0]].length == 1)
-    //   return CallgentFunctions[botNames[0]];
+    // const botNames = Object.keys(Endpoints);
+    // if (botNames.length == 1 && Endpoints[botNames[0]].length == 1)
+    //   return Endpoints[botNames[0]];
 
     // 根据req请求，在给定的方法集中，匹配需要用到的方法子集
     // 可能用到多个，

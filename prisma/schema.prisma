@@ -227,8 +227,8 @@ model CallgentTag {
   @@index([callgentId])
 }
 
-/// @description callgent function in openAPI.json format
-model CallgentFunction {
+/// @description endpoint in openAPI.json format
+model Endpoint {
   /// @DtoEntityHidden
   pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
@@ -371,10 +371,10 @@ model TaskAction {
   // client side information
   /// @description action owner callgent id, responsible for progressive response
   ceId        String? @db.VarChar(36) /// @description client entry id
-  funName     String? @db.VarChar(255) /// @description optional callgent function name
+  funName     String? @db.VarChar(255) /// @description optional endpoint name
   cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
-  callback    Json?   @db.Json /// @description callback url template or callgent function
-  progressive String? @db.VarChar(36) /// @description progressive requesting url template or callgent function
+  callback    Json?   @db.Json /// @description callback url template or endpoint
+  progressive String? @db.VarChar(36) /// @description progressive requesting url template or endpoint
 
   // processing
   returns    Boolean @default(false) /// @description whether action has response object

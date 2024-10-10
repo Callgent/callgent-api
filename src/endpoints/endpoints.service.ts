@@ -17,12 +17,12 @@ import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
-import { UpdateCallgentFunctionDto } from './dto/update-callgent-function.dto';
+import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
-export class CallgentFunctionsService {
+export class EndpointsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
@@ -30,7 +30,7 @@ export class CallgentFunctionsService {
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
   ) {}
-  protected readonly defSelect: Prisma.CallgentFunctionSelect = {
+  protected readonly defSelect: Prisma.EndpointSelect = {
     pk: false,
     tenantPk: false,
     rawJson: false,
@@ -73,14 +73,14 @@ export class CallgentFunctionsService {
   // protected async _invoke(
   //   taskAction: TaskActionDto,
   //   callgent: CallgentDto,
-  //   callgentFunctions: CallgentFunctionDto[],
+  //   endpoints: EndpointDto[],
   // ) {
   //   // FIXME task ctx msgs
   //   // 生成args映射方法，
   //   const { funName, mapping, question } = await this._mapping(
   //     taskAction,
   //     callgent.name,
-  //     callgentFunctions,
+  //     endpoints,
   //   );
   //   if (question) {
   //     // invoke event owner for more request info
@@ -91,17 +91,17 @@ export class CallgentFunctionsService {
   //     // );
   //   }
 
-  //   const fun = callgentFunctions.find((f) => f.name === funName);
+  //   const fun = endpoints.find((f) => f.name === funName);
   //   if (!fun) return; // FIXME
 
   //   // doInvoke
   // }
 
   @Transactional()
-  async create(data: Prisma.CallgentFunctionUncheckedCreateInput) {
+  async create(data: Prisma.EndpointUncheckedCreateInput) {
     const prisma = this.txHost.tx as PrismaClient;
     const id = Utils.uuid();
-    return prisma.callgentFunction.create({ data: { ...data, id } });
+    return prisma.endpoint.create({ data: { ...data, id } });
   }
 
   @Transactional()
@@ -130,7 +130,7 @@ export class CallgentFunctionsService {
     }
 
     // validation
-    const actMap = apis.map<Prisma.CallgentFunctionUncheckedCreateInput>(
+    const actMap = apis.map<Prisma.EndpointUncheckedCreateInput>(
       (f) => {
         const ret = {
           ...f,
@@ -170,7 +170,7 @@ export class CallgentFunctionsService {
 
     // create api functions
     const prisma = this.txHost.tx as PrismaClient;
-    const { count: actionsCount } = await prisma.callgentFunction.createMany({
+    const { count: actionsCount } = await prisma.endpoint.createMany({
       data: actMap,
     });
 
@@ -207,9 +207,9 @@ export class CallgentFunctionsService {
     page,
     perPage,
   }: {
-    select?: Prisma.CallgentFunctionSelect;
-    where?: Prisma.CallgentFunctionWhereInput;
-    orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
+    select?: Prisma.EndpointSelect;
+    where?: Prisma.EndpointWhereInput;
+    orderBy?: Prisma.EndpointOrderByWithRelationInput;
     page?: number;
     perPage?: number;
   }) {
@@ -218,7 +218,7 @@ export class CallgentFunctionsService {
       select,
       async (select) => {
         const result = paginate(
-          prisma.callgentFunction,
+          prisma.endpoint,
           {
             select,
             where,
@@ -241,14 +241,14 @@ export class CallgentFunctionsService {
     where,
     orderBy,
   }: {
-    select?: Prisma.CallgentFunctionSelect;
-    where?: Prisma.CallgentFunctionWhereInput;
-    orderBy?: Prisma.CallgentFunctionOrderByWithRelationInput;
+    select?: Prisma.EndpointSelect;
+    where?: Prisma.EndpointWhereInput;
+    orderBy?: Prisma.EndpointOrderByWithRelationInput;
   }) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
-      (select) => prisma.callgentFunction.findMany({ where, select, orderBy }),
+      (select) => prisma.endpoint.findMany({ where, select, orderBy }),
       this.defSelect,
     );
   }
@@ -257,17 +257,17 @@ export class CallgentFunctionsService {
   delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.callgentFunction.delete({ select, where: { id } }),
+      prisma.endpoint.delete({ select, where: { id } }),
     );
   }
 
   @Transactional()
-  update(dto: UpdateCallgentFunctionDto) {
+  update(dto: UpdateEndpointDto) {
     if (!dto.id) return;
     dto.name = Utils.formalApiName(dto.method, dto.path);
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
-      prisma.callgentFunction.update({
+      prisma.endpoint.update({
         select,
         where: { id: dto.id },
         data: dto as any,
@@ -275,12 +275,12 @@ export class CallgentFunctionsService {
     );
   }
 
-  findOne(id: string, select?: Prisma.CallgentFunctionSelect) {
+  findOne(id: string, select?: Prisma.EndpointSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
-        prisma.callgentFunction.findUnique({
+        prisma.endpoint.findUnique({
           select,
           where: { id },
         }),
@@ -291,7 +291,7 @@ export class CallgentFunctionsService {
   @Transactional()
   async updateSecurities(id: string, securities: RealmSecurityVO[]) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.callgentFunction.update({
+    return prisma.endpoint.update({
       where: { id },
       data: { securities: securities as any },
     });

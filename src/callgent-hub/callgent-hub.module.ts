@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CallgentFunctionsModule } from '../callgent-functions/callgent-functions.module';
+import { EndpointsModule } from '../endpoints/endpoints.module';
 import { CallgentRealmsModule } from '../callgent-realms/callgent-realms.module';
 import { CallgentsModule } from '../callgents/callgents.module';
 import { EntriesModule } from '../entries/entries.module';
@@ -11,7 +11,7 @@ import { CallgentHubService } from './callgent-hub.service';
     CallgentsModule,
     CallgentRealmsModule,
     EntriesModule,
-    CallgentFunctionsModule,
+    EndpointsModule,
   ],
   controllers: [CallgentHubController],
   providers: [CallgentHubService],

@@ -195,7 +195,7 @@ export class CallgentRealmsController {
     };
   }
 
-  @ApiOperation({ summary: 'Update securities on entry/callgent function' })
+  @ApiOperation({ summary: 'Update securities on entry/endpoint' })
   /// securities
   @ApiParam({ name: 'type', type: 'string', enum: ['entry', 'function'] })
   @ApiBody({ isArray: true, type: RealmSecurityItemForm })

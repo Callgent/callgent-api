@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CallgentFunctionsModule } from '../callgent-functions/callgent-functions.module';
+import { EndpointsModule } from '../endpoints/endpoints.module';
 import { CallgentsModule } from '../callgents/callgents.module';
 import { EntriesModule } from '../entries/entries.module';
 import { TasksModule } from '../tasks/tasks.module';
@@ -10,7 +10,7 @@ import { TaskActionsService } from './task-actions.service';
   imports: [
     CallgentsModule,
     EntriesModule,
-    CallgentFunctionsModule,
+    EndpointsModule,
     TasksModule,
   ],
   exports: ['TaskActionsService'],

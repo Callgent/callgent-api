@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
-import { CallgentFunctionDto } from '../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
@@ -307,7 +307,7 @@ export class EntriesService {
     if (!map2Function || !functions?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as CallgentFunctionDto;
+    const func = functions[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,
@@ -340,7 +340,7 @@ export class EntriesService {
     if (!functions?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as CallgentFunctionDto;
+    const func = functions[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,

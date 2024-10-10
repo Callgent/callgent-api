@@ -9,7 +9,7 @@ import {
   beforeEachFnTenanted,
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
-import { addCallgentFunctions } from './callgent-functions.e2e-spec';
+import { addEndpoints } from './endpoints.e2e-spec';
 import { createCallgent } from './callgents.e2e-spec';
 
 /**
@@ -63,7 +63,7 @@ export const prepareCannyCallgent = async () => {
   const jsonData = await fs.readFile('./test/e2e/data/canny-apis.json', 'utf8');
   const {
     json: { data: functionCount },
-  } = await addCallgentFunctions({
+  } = await addEndpoints({
     entryId: serverEntry.id,
     text: jsonData,
     format: 'openAPI',

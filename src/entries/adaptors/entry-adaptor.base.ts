@@ -9,7 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
-import { CallgentFunctionDto } from '../../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../dto/entry.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 
@@ -28,7 +28,7 @@ export abstract class EntryAdaptor {
   /** postprocess response */
   abstract postprocess(
     reqEvent: ClientRequestEvent,
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
   ): Promise<void>;
 
   /** Entry config. */
@@ -142,7 +142,7 @@ export abstract class EntryAdaptor {
   }
 
   abstract invoke(
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
     args: object,
     sep: EntryDto,
     reqEvent: ClientRequestEvent,

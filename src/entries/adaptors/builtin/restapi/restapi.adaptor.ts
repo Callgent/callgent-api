@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
 import { AgentsService } from '../../../../agents/agents.service';
-import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
@@ -142,7 +142,7 @@ export class RestAPIAdaptor extends EntryAdaptor {
     reqEvent.context.req = this.req2Json(req);
   }
 
-  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
+  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
     //
   }
 
@@ -211,7 +211,7 @@ export class RestAPIAdaptor extends EntryAdaptor {
   }
 
   async invoke(
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
     args: object,
     sep: EntryDto,
     reqEvent: ClientRequestEvent,

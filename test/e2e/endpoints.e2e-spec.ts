@@ -1,5 +1,5 @@
 import * as pactum from 'pactum';
-import { CallgentApiText } from '../../src/callgent-functions/callgent-functions.controller';
+import { CallgentApiText } from '../../src/endpoints/endpoints.controller';
 import {
   afterAllFn,
   afterEachFn,
@@ -8,19 +8,19 @@ import {
 } from '../app-init.e2e';
 import { TestConstant } from '../test-constants';
 
-describe('CallgentFunctionsController (e2e)', () => {
+describe('EndpointsController (e2e)', () => {
   beforeAll(beforeAllFn);
   afterAll(afterAllFn);
   beforeEach(beforeEachFnTenanted);
   afterEach(afterEachFn);
 
-  it('should add callgent functions', () => {});
+  it('should add endpoints', () => {});
 });
 
-export const addCallgentFunctions = (apiTxt: CallgentApiText) => {
+export const addEndpoints = (apiTxt: CallgentApiText) => {
   return pactum
     .spec()
-    .post('/api/callgent-functions/import')
+    .post('/api/endpoints/import')
     .withHeaders('x-callgent-authorization', TestConstant.authToken)
     .withBody(apiTxt)
     .expectStatus(201);

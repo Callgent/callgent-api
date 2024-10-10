@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import * as httpStatus from 'http-status';
 import { AgentsService } from '../../../../agents/agents.service';
-import { CallgentFunctionDto } from '../../../../callgent-functions/dto/callgent-function.dto';
+import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { RelayEmail } from '../../../../emails/dto/sparkpost-relay-object.interface';
 import {
   EmailRelayKey,
@@ -51,7 +51,7 @@ export class EmailAdaptor extends EntryAdaptor {
   }
 
   @Transactional()
-  async postprocess(reqEvent: ClientRequestEvent, fun: CallgentFunctionDto) {
+  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
     const resp = reqEvent?.context?.resp as unknown as RelayEmail;
     if (!resp?.content?.html)
       throw new BadRequestException(
@@ -82,13 +82,13 @@ export class EmailAdaptor extends EntryAdaptor {
   /**
    * constructs an email sent to sep.host
    *
-   * @param fun - callgent function
+   * @param fun - endpoint
    * @param args - function arguments
    * @param sep - server entry
    * @param reqEvent - client request event
    */
   async invoke(
-    fun: CallgentFunctionDto,
+    fun: EndpointDto,
     args: object,
     sep: Entry,
     reqEvent: ClientRequestEvent,

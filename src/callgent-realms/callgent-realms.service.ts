@@ -11,7 +11,7 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
-import { CallgentFunctionsService } from '../callgent-functions/callgent-functions.service';
+import { EndpointsService } from '../endpoints/endpoints.service';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
@@ -44,11 +44,11 @@ export class CallgentRealmsService implements OnModuleInit {
     updatedAt: false,
   };
 
-  private callgentFunctionsService: CallgentFunctionsService;
+  private endpointsService: EndpointsService;
   onModuleInit() {
     // a little hack: circular relation
-    this.callgentFunctionsService = this.moduleRef.get(
-      'CallgentFunctionsService',
+    this.endpointsService = this.moduleRef.get(
+      'EndpointsService',
       { strict: false },
     );
   }
@@ -131,13 +131,13 @@ export class CallgentRealmsService implements OnModuleInit {
     id: string,
     securities: RealmSecurityItemForm[],
   ) {
-    let entry, targetService: EntriesService | CallgentFunctionsService;
+    let entry, targetService: EntriesService | EndpointsService;
     if (type == 'entry') {
       targetService = this.entriesService;
       entry = await this.entriesService.findOne(id);
     } else {
-      targetService = this.callgentFunctionsService;
-      const fun = await this.callgentFunctionsService.findOne(id, {
+      targetService = this.endpointsService;
+      const fun = await this.endpointsService.findOne(id, {
         entryId: true,
       });
       entry = fun && (await this.entriesService.findOne(fun.entryId));
@@ -175,14 +175,14 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   /**
-   * check auth on the chosen callgent function.
+   * check auth on the chosen endpoint.
    * automatically starts auth process to retrieve token.
    * may callback to cep for user credentials.
    */
   async checkSepAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // functions: CallgentFunction[], @see AgentsService.map2Function
+    // functions: Endpoint[], @see AgentsService.map2Function
     const { securities, entryId: sepId } =
       reqEvent.context.functions?.length && reqEvent.context.functions[0];
 
@@ -444,7 +444,7 @@ export class CallgentRealmsService implements OnModuleInit {
         FROM unnest("securities") AS elem
         WHERE elem::jsonb ? ${pk}
     )`,
-      prisma.$executeRaw`UPDATE "CallgentFunction"
+      prisma.$executeRaw`UPDATE "Endpoint"
     SET "securities" = (
         SELECT array_agg(sec::jsonb - ${pk})
           FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')
