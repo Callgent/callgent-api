@@ -124,6 +124,12 @@ export class EventListenersService {
     let [statusCode, idx] = [1, 0];
     try {
       for (; idx < listeners.length; ) {
+        if (event.stopPropagation) break;
+        if (event.preventDefault) {
+          event.preventDefault = false;
+          continue;
+        }
+
         const listener = listeners[idx++];
         try {
           const result = await this._invokeListener(listener, event, funName);

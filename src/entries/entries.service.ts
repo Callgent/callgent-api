@@ -10,11 +10,12 @@ import {
   Injectable,
   InjectionToken,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
@@ -25,7 +26,7 @@ import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
 
 @Injectable()
-export class EntriesService {
+export class EntriesService implements OnModuleInit {
   constructor(
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer)

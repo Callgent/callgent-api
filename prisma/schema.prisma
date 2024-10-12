@@ -371,7 +371,7 @@ model TaskAction {
   // client side information
   /// @description action owner callgent id, responsible for progressive response
   ceId        String? @db.VarChar(36) /// @description client entry id
-  funName     String? @db.VarChar(255) /// @description optional endpoint name
+  epName      String? @db.VarChar(255) /// @description optional endpoint name
   cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
   callback    Json?   @db.Json /// @description callback url template or endpoint
   progressive String? @db.VarChar(36) /// @description progressive requesting url template or endpoint
@@ -594,12 +594,12 @@ model EventStore {
   context Json? @db.Json
 
   /// @description statusCode, 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume calling current-listener.funName, <0: error
-  statusCode       Int     @default(1)
-  message          String? @db.VarChar(255)
-  stopPropagation  Boolean
-  defaultPrevented Boolean
-  listenerId       String? @db.VarChar(36)
-  funName          String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
+  statusCode      Int     @default(1)
+  message         String? @db.VarChar(255)
+  stopPropagation Boolean /// @description stop propagation to next listeners
+  preventDefault  Boolean /// @description prevent default action, going to next listeners
+  listenerId      String? @db.VarChar(36)
+  funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt

@@ -41,7 +41,7 @@ export class EndpointsService {
     deletedAt: false,
   };
 
-  async loadFunctions(
+  async loadEndpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const { epName, callgentId } = reqEvent.data;
@@ -59,7 +59,7 @@ export class EndpointsService {
     });
     if (!eps.length)
       throw new NotFoundException(
-        `No function found on callgent#${callgentId}${
+        `No service endpoints found on callgent#${callgentId}${
           epName ? ' name=' + epName : ''
         }`,
       );

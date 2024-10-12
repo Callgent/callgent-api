@@ -7,10 +7,31 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
 import { EntryAdaptorName } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorName('webpage', 'client')
+@EntryAdaptorName('Webpage', 'client')
 export class WebpageAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
+  }
+
+  async preprocess(reqEvent: ClientRequestEvent, entry: EntryDto) {
+    //
+  }
+
+  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
+    //
+  }
+
+  req2Json(req: object) {
+    throw new NotImplementedException('Method not implemented.');
+  }
+
+  async invoke(
+    fun: EndpointDto,
+    args: object,
+    sep: Entry,
+    reqEvent: ClientRequestEvent,
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
+    throw new NotImplementedException('Method not implemented.');
   }
 
   getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {
@@ -77,28 +98,7 @@ export class WebpageAdaptor extends EntryAdaptor {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  async preprocess(reqEvent: ClientRequestEvent, entry: EntryDto) {
-    //
-  }
-
-  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
-    //
-  }
-
   readData(name: string, hints?: { [key: string]: any }): Promise<any> {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  req2Json(req: object) {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  async invoke(
-    fun: EndpointDto,
-    args: object,
-    sep: Entry,
-    reqEvent: ClientRequestEvent,
-  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
     throw new NotImplementedException('Method not implemented.');
   }
 

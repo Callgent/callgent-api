@@ -18,5 +18,5 @@ export class EventObject {
   public readonly id: string;
   public readonly context: { [key: string]: any } = {};
   public stopPropagation = false;
-  public defaultPrevented = false;
+  public preventDefault = false;
 }
