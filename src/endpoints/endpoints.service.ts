@@ -44,31 +44,31 @@ export class EndpointsService {
   async loadFunctions(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const { funName, callgentId } = reqEvent.data;
+    const { epName, callgentId } = reqEvent.data;
 
-    // TODO if too many functions, use summary first
-    const { data: funcs } = await this.findMany({
+    // TODO if too many endpoints, use summary first
+    const { data: eps } = await this.findMany({
       select: {
         createdAt: false,
         updatedAt: false,
         params: null,
         responses: null,
       },
-      where: { callgentId: callgentId, name: funName },
+      where: { callgentId: callgentId, name: epName },
       perPage: Number.MAX_SAFE_INTEGER,
     });
-    if (!funcs.length)
+    if (!eps.length)
       throw new NotFoundException(
         `No function found on callgent#${callgentId}${
-          funName ? ' name=' + funName : ''
+          epName ? ' name=' + epName : ''
         }`,
       );
-    reqEvent.context.functions = funcs as any[];
+    reqEvent.context.endpoints = eps as any[];
   }
 
   /**
    * a single function invocation. simple with no vars/flow controls/lambdas/parallels.
-   * system callgents are involved: collection functions, timer, etc.
+   * system callgents are involved: collection endpoints, timer, etc.
    */
   // protected async _invoke(
   //   taskAction: TaskActionDto,
@@ -77,7 +77,7 @@ export class EndpointsService {
   // ) {
   //   // FIXME task ctx msgs
   //   // 生成args映射方法，
-  //   const { funName, mapping, question } = await this._mapping(
+  //   const { epName, mapping, question } = await this._mapping(
   //     taskAction,
   //     callgent.name,
   //     endpoints,
@@ -91,7 +91,7 @@ export class EndpointsService {
   //     // );
   //   }
 
-  //   const fun = endpoints.find((f) => f.name === funName);
+  //   const fun = endpoints.find((f) => f.name === epName);
   //   if (!fun) return; // FIXME
 
   //   // doInvoke
@@ -168,7 +168,7 @@ export class EndpointsService {
       },
     );
 
-    // create api functions
+    // create api endpoints
     const prisma = this.txHost.tx as PrismaClient;
     const { count: actionsCount } = await prisma.endpoint.createMany({
       data: actMap,

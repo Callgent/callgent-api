@@ -60,7 +60,7 @@ export class EmailAdaptor extends EntryAdaptor {
 
     // convert resp to api format
     reqEvent.context.resp = await this.agentsService.convert2Response(
-      reqEvent?.context?.map2Function?.args,
+      reqEvent?.context?.map2Endpoints?.args,
       resp.content.text || resp.content.html,
       fun,
       reqEvent.id,

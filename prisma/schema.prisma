@@ -25,7 +25,7 @@ datasource db {
   relationMode = "prisma" // no foreign constraints in db, pls add @@index on manually
 }
 
-// # foreign key using pk, instead of id, for better performance
+// TODO # foreign key using pk, instead of id, for better performance?
 
 // # db sharding base on tenantPk: 
 // 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;

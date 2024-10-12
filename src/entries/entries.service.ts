@@ -303,11 +303,11 @@ export class EntriesService {
 
   @Transactional()
   async invokeSEP(reqEvent: ClientRequestEvent) {
-    const { map2Function, functions } = reqEvent.context;
-    if (!map2Function || !functions?.length)
+    const { map2Endpoints, endpoints } = reqEvent.context;
+    if (!map2Endpoints || !endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as EndpointDto;
+    const func = endpoints[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,
@@ -324,7 +324,7 @@ export class EntriesService {
 
     // may returns pending result
     return adapter
-      .invoke(func, map2Function.args, sep as any, reqEvent)
+      .invoke(func, map2Endpoints.args, sep as any, reqEvent)
       .then((res) => {
         if (res && res.resumeFunName) return res;
         return this.postInvokeSEP((res && res.data) || reqEvent);
@@ -335,12 +335,12 @@ export class EntriesService {
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
     const {
-      context: { functions, resp },
+      context: { endpoints, resp },
     } = reqEvent;
-    if (!functions?.length)
+    if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as EndpointDto;
+    const func = endpoints[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,

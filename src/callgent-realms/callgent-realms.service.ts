@@ -182,9 +182,9 @@ export class CallgentRealmsService implements OnModuleInit {
   async checkSepAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // functions: Endpoint[], @see AgentsService.map2Function
+    // endpoints: Endpoint[], @see AgentsService.map2Endpoints
     const { securities, entryId: sepId } =
-      reqEvent.context.functions?.length && reqEvent.context.functions[0];
+      reqEvent.context.endpoints?.length && reqEvent.context.endpoints[0];
 
     const sep = sepId && (await this.entriesService.findOne(reqEvent.srcId));
     if (!sep)

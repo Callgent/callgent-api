@@ -24,28 +24,28 @@ export class AgentsService {
   //       handle,
   //       ...args,
   //     },
-  //     { funName: '', params: [''], documents: '', fullCode: '' },
+  //     { epName: '', params: [''], documents: '', fullCode: '' },
   //   );
   // }
 
   /**
    * map req to an API function, generate args(with vars/conversations), argsMapping function if applicable
    */
-  async map2Function(
+  async map2Endpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const {
       id,
       srcId,
       dataType: cepAdaptor,
-      data: { callgentName, funName, progressive },
+      data: { callgentName, epName, progressive },
       context: { tgtEvents, req },
     } = reqEvent;
     const endpoints = reqEvent.context
-      .functions as unknown as EndpointDto[];
+      .endpoints as unknown as EndpointDto[];
     if (!endpoints?.length)
       throw new BadRequestException(
-        'No functions for mapping, ClientRequestEvent#' + id,
+        'No endpoints for mapping, ClientRequestEvent#' + id,
       );
 
     // FIXME map from all targetId events
@@ -53,12 +53,12 @@ export class AgentsService {
     // TODO how to use mapping function: for specific req & function
 
     const mapped = await this.llmService.template(
-      'map2Function',
-      { req, funName, callgentName, cepAdaptor, endpoints },
+      'map2Endpoints',
+      { req, epName, callgentName, cepAdaptor, endpoints },
       { endpoint: '', args: {}, mapping: '', question: '' },
       id,
-    ); // TODO check `funName` exists in endpoints, validating `mapping`
-    reqEvent.context.map2Function = mapped;
+    ); // TODO check `epName` exists in endpoints, validating `mapping`
+    reqEvent.context.map2Endpoints = mapped;
 
     if (mapped.question) {
       if (!progressive)
@@ -86,12 +86,12 @@ export class AgentsService {
         return { data: reqEvent, resumeFunName: 'map2FunctionProgressive' };
       throw new HttpException(message, statusCode);
     } else {
-      const functions = reqEvent.context.functions.filter(
+      const endpoints = reqEvent.context.endpoints.filter(
         (f) => f.name == mapped.endpoint,
       );
-      if (functions?.length != 1)
+      if (endpoints?.length != 1)
         throw new BadRequestException('Failed to map to function: ' + mapped);
-      reqEvent.context.functions = functions;
+      reqEvent.context.endpoints = endpoints;
 
       mapped.args = this._args2List30x(mapped.args);
     }
@@ -139,7 +139,7 @@ export class AgentsService {
       { args, resp, fun },
       { statusCode: 200, data: {} },
       eventId,
-    ); // TODO check `funName` exists in endpoints, validating `mapping`
+    ); // TODO check `epName` exists in endpoints, validating `mapping`
 
     return { statusCode: mapped.statusCode, data: mapped.data };
   }

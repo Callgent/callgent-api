@@ -82,8 +82,7 @@ function initEventListeners(
       serviceType: 'SERVICE',
       serviceName: 'EndpointsService',
       funName: 'loadFunctions',
-      description:
-        'Load all entries of the callgent into event.context.functions',
+      description: 'Load all endpoints into event.context.endpoints',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -102,16 +101,30 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-MAP-2-FUNCTION',
+      id: 'CR-MAP-2-ENDPOINT',
       srcId: 'GLOBAL',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
       serviceName: 'AgentsService',
-      funName: 'map2Function',
+      funName: 'map2Endpoints',
       description:
-        'Map the request to a endpoint function and corresponding args, put into event.context.map2Function and event.context.functions[0]',
+        'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
+      createdBy: 'GLOBAL',
+      priority: (priority += 100),
+    },
+    {
+      id: 'CR-GENERATE-WEBPAGE',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
+      eventType: 'CLIENT_REQUEST',
+      dataType: 'Webpage',
+      serviceType: 'SERVICE',
+      serviceName: 'AgentsService',
+      funName: 'map2Endpoints',
+      description:
+        'Map the request to a endpoint function and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -185,10 +198,10 @@ into a js function, the function must be as follows:
 async (invoker: {{=it.handle}}, ...apiParams) {...; const json = await invoker(...); ...; return apiResult; }
 
 please generate the js function with **full implementation and error handling**! output a single-line json object:
-{"funName":"function name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
+{"epName":"endpoint name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
     },
     {
-      name: 'map2Function',
+      name: 'map2Endpoints',
       prompt: `given below service APIs:
 service {{=it.callgentName}} {{{~ it.endpoints :fun }}
   "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"params":{{=JSON.stringify(fun.params)}}, "responses":{{=JSON.stringify(fun.responses)}} },
@@ -196,7 +209,7 @@ service {{=it.callgentName}} {{{~ it.endpoints :fun }}
 
 Please choose one API to fulfill below request:
 {
-{{ if (it.funName) { }}"requesting endpoint": "{{=it.funName}}",
+{{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
 {{ } }}"request from": "{{=it.cepAdaptor}}",
 "request_object": {{=JSON.stringify(it.req)}},
 }
