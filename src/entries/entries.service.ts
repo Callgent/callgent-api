@@ -16,7 +16,7 @@ import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { Utils } from '../infra/libs/utils';
+import { Optional, Requires, Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { EntryAdaptor } from './adaptors/entry-adaptor.base';
@@ -169,27 +169,27 @@ export class EntriesService implements OnModuleInit {
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.EntryUncheckedCreateInput, 'id'>,
+    dto: Optional<Prisma.EntryUncheckedCreateInput, 'id' | 'host'>,
     select?: Prisma.EntrySelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const service = this.getAdaptor(dto.adaptorKey, dto.type);
-    if (!service)
+    const adaptor = this.getAdaptor(dto.adaptorKey, dto.type);
+    if (!adaptor)
       throw new BadRequestException(
         'Invalid entry adaptor key=' + dto.adaptorKey,
       );
 
-    const id = Utils.uuid();
-    // init ep name
-    dto.host = dto.host.replace('{id}', id);
-    dto.name || (dto.name = dto.host);
+    dto.id = Utils.uuid();
+    const data = dto as Prisma.EntryUncheckedCreateInput;
+
+    adaptor.preCreate(data);
 
     return selectHelper(
       select,
       (select) =>
         prisma.entry.create({
           select,
-          data: { ...dto, id },
+          data,
         }),
       this.defSelect,
     );

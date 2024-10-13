@@ -448,7 +448,8 @@ model Entry {
   adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
   priority   Int       @default(0) /// @description priority in the callgent
 
-  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/', where `{id}` will be replaced with current entry id
+  /// @DtoCreateOptional
+  host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
   initParams Json?  @db.Json /// @description initializing parameters
   content    Json?  @db.Json /// @description generated content/code by init method
   /// @DtoReadOnly

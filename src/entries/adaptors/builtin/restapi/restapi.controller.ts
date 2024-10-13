@@ -64,6 +64,8 @@ export class RestApiController {
     // TODO
   }
 
+  @All('invoke/:callgentId/:entryId/*')
+  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiParam({
     name: 'callgentId',
     required: true,
@@ -89,8 +91,6 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
-  @All('invoke/:callgentId/:entryId/*')
-  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiUnauthorizedResponse()
   async invoke(
     @Req() req,
