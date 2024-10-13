@@ -166,10 +166,10 @@ export class CallgentHubService {
       );
 
       this.tenancyService.setTenantId(fromTenant);
-      const functionMap = {};
+      const endpointMap = {};
       await Promise.all(
         ens.map(async (epOld) => {
-          const functions = await this.endpointsService.findAll({
+          const endpoints = await this.endpointsService.findAll({
             where: { entryId: epOld.id },
             orderBy: { pk: 'asc' },
             select: {
@@ -184,7 +184,7 @@ export class CallgentHubService {
               rawJson: true,
             },
           });
-          functionMap[epOld.id] = functions;
+          endpointMap[epOld.id] = endpoints;
         }),
       );
 
@@ -201,7 +201,7 @@ export class CallgentHubService {
           });
 
           return Promise.all(
-            functionMap[epOld.id].map((fun) => {
+            endpointMap[epOld.id].map((fun) => {
               const securities: any[] = dupSecurities(fun.securities);
               return this.endpointsService.create({
                 ...fun,

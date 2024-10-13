@@ -25,7 +25,7 @@ datasource db {
   relationMode = "prisma" // no foreign constraints in db, pls add @@index on manually
 }
 
-// # foreign key using pk, instead of id, for better performance
+// TODO # foreign key using pk, instead of id, for better performance?
 
 // # db sharding base on tenantPk: 
 // 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
@@ -371,7 +371,7 @@ model TaskAction {
   // client side information
   /// @description action owner callgent id, responsible for progressive response
   ceId        String? @db.VarChar(36) /// @description client entry id
-  funName     String? @db.VarChar(255) /// @description optional endpoint name
+  epName      String? @db.VarChar(255) /// @description optional endpoint name
   cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
   callback    Json?   @db.Json /// @description callback url template or endpoint
   progressive String? @db.VarChar(36) /// @description progressive requesting url template or endpoint
@@ -448,7 +448,8 @@ model Entry {
   adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
   priority   Int       @default(0) /// @description priority in the callgent
 
-  host       String @db.VarChar(2047) /// @description host address, e.g. '/api/callgents/rbhes0-w4rff/{id}/invoke/', where `{id}` will be replaced with current entry id
+  /// @DtoCreateOptional
+  host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
   initParams Json?  @db.Json /// @description initializing parameters
   content    Json?  @db.Json /// @description generated content/code by init method
   /// @DtoReadOnly
@@ -594,12 +595,12 @@ model EventStore {
   context Json? @db.Json
 
   /// @description statusCode, 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume calling current-listener.funName, <0: error
-  statusCode       Int     @default(1)
-  message          String? @db.VarChar(255)
-  stopPropagation  Boolean
-  defaultPrevented Boolean
-  listenerId       String? @db.VarChar(36)
-  funName          String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
+  statusCode      Int     @default(1)
+  message         String? @db.VarChar(255)
+  stopPropagation Boolean /// @description stop propagation to next listeners
+  preventDefault  Boolean /// @description prevent default action, going to next listeners
+  listenerId      String? @db.VarChar(36)
+  funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt

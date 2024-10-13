@@ -9,7 +9,7 @@ export class EventObject {
     public readonly dataType: string,
     /** target id to relate several events */
     public targetId: string,
-    /** url template for response callback, `callgent:funName[@callgent]` to invoke callgent */
+    /** url template for response callback, `callgent:epName[@callgent]` to invoke callgent */
     public callback?: string,
     public readonly callbackType: EventCallbackType = 'EVENT',
   ) {
@@ -18,5 +18,5 @@ export class EventObject {
   public readonly id: string;
   public readonly context: { [key: string]: any } = {};
   public stopPropagation = false;
-  public defaultPrevented = false;
+  public preventDefault = false;
 }

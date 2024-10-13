@@ -58,12 +58,14 @@ export class RestApiController {
     description:
       'AI agent will generate code to invoke several functional endpoints to fulfill the requirement.',
   })
-  @Post('request')
+  @Post('request/:callgentId/:entryId')
   @ApiUnauthorizedResponse()
   async request(@Body() req: Requirement) {
     // TODO
   }
 
+  @All('invoke/:callgentId/:entryId/*')
+  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiParam({
     name: 'callgentId',
     required: true,
@@ -89,8 +91,6 @@ export class RestApiController {
   })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
-  @All('invoke/:callgentId/:entryId/*')
-  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
   @ApiUnauthorizedResponse()
   async invoke(
     @Req() req,
@@ -103,8 +103,8 @@ export class RestApiController {
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
     const basePath = `invoke/${callgentId}/${entryId}/`;
-    let funName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
-    if (funName) funName = Utils.formalApiName(req.method, '/' + funName);
+    let epName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
+    if (epName) epName = Utils.formalApiName(req.method, '/' + epName);
 
     const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
@@ -125,21 +125,27 @@ export class RestApiController {
     if (!callgent)
       throw new NotFoundException('callgent not found: ' + callgentId);
 
-    const { data, statusCode, message } = await this.eventListenersService.emit(
-      new ClientRequestEvent(cep.id, taskId, cep.adaptorKey, callback, req, {
-        callgentId,
-        callgentName: callgent.name,
-        callerId,
-        progressive,
-        funName,
-      }),
+    const result = await this.eventListenersService.emit(
+      new ClientRequestEvent(
+        cep.id,
+        taskId,
+        cep.adaptorKey,
+        req,
+        {
+          callgentId,
+          callgentName: callgent.name,
+          callerId,
+          progressive,
+          epName,
+        },
+        callback,
+      ),
       parseInt(timeout) || 0, //  sync timeout
     );
     // FIXME data
-    res
-      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
-      .send({ data, statusCode, message });
+    const code = result.statusCode || 200;
     // code cannot < 0
+    res.status(code < 0 ? 418 : code < 200 ? 200 : code).send(result);
   }
 
   @ApiOperation({

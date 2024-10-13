@@ -8,10 +8,12 @@ import {
   Post,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthService } from '../infra/auth/jwt/jwt.service';
-import { EmailsService } from './emails.service';
 import { EmailRelayObject } from './dto/sparkpost-relay-object.interface';
+import { EmailsService } from './emails.service';
 
+@ApiTags('Callbacks')
 @Controller('emails')
 export class EmailsController {
   constructor(

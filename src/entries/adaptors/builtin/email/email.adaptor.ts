@@ -4,18 +4,19 @@ import {
   Inject,
   NotImplementedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import * as httpStatus from 'http-status';
 import { AgentsService } from '../../../../agents/agents.service';
-import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { RelayEmail } from '../../../../emails/dto/sparkpost-relay-object.interface';
 import {
   EmailRelayKey,
   EmailsService,
 } from '../../../../emails/emails.service';
+import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EntryAdaptor, EntryConfig } from '../../entry-adaptor.base';
+import { EntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorName } from '../../entry-adaptor.decorator';
 
 @EntryAdaptorName('Email', 'both')
@@ -27,13 +28,17 @@ export class EmailAdaptor extends EntryAdaptor {
     super(agentsService);
   }
 
+  protected _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
+    data.host = `invoke+${data.id}@my.callgent.com`;
+  }
+
   getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  getConfig(): EntryConfig {
-    return {};
-  }
+  // getConfig(): EntryConfig {
+  //   return {};
+  // }
 
   /** generate a web page entry */
   async initClient(params: object, entry: Entry) {
@@ -60,7 +65,7 @@ export class EmailAdaptor extends EntryAdaptor {
 
     // convert resp to api format
     reqEvent.context.resp = await this.agentsService.convert2Response(
-      reqEvent?.context?.map2Function?.args,
+      reqEvent?.context?.map2Endpoints?.args,
       resp.content.text || resp.content.html,
       fun,
       reqEvent.id,

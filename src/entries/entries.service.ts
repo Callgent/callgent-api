@@ -10,12 +10,13 @@ import {
   Injectable,
   InjectionToken,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
-import { Utils } from '../infra/libs/utils';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { Optional, Requires, Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { EntryAdaptor } from './adaptors/entry-adaptor.base';
@@ -25,7 +26,7 @@ import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
 
 @Injectable()
-export class EntriesService {
+export class EntriesService implements OnModuleInit {
   constructor(
     private readonly moduleRef: ModuleRef,
     @Inject(ModulesContainer)
@@ -168,27 +169,27 @@ export class EntriesService {
 
   @Transactional()
   async create(
-    dto: Omit<Prisma.EntryUncheckedCreateInput, 'id'>,
+    dto: Optional<Prisma.EntryUncheckedCreateInput, 'id' | 'host'>,
     select?: Prisma.EntrySelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const service = this.getAdaptor(dto.adaptorKey, dto.type);
-    if (!service)
+    const adaptor = this.getAdaptor(dto.adaptorKey, dto.type);
+    if (!adaptor)
       throw new BadRequestException(
         'Invalid entry adaptor key=' + dto.adaptorKey,
       );
 
-    const id = Utils.uuid();
-    // init ep name
-    dto.host = dto.host.replace('{id}', id);
-    dto.name || (dto.name = dto.host);
+    dto.id = Utils.uuid();
+    const data = dto as Prisma.EntryUncheckedCreateInput;
+
+    adaptor.preCreate(data);
 
     return selectHelper(
       select,
       (select) =>
         prisma.entry.create({
           select,
-          data: { ...dto, id },
+          data,
         }),
       this.defSelect,
     );
@@ -303,11 +304,11 @@ export class EntriesService {
 
   @Transactional()
   async invokeSEP(reqEvent: ClientRequestEvent) {
-    const { map2Function, functions } = reqEvent.context;
-    if (!map2Function || !functions?.length)
+    const { map2Endpoints, endpoints } = reqEvent.context;
+    if (!map2Endpoints || !endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as EndpointDto;
+    const func = endpoints[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,
@@ -324,7 +325,7 @@ export class EntriesService {
 
     // may returns pending result
     return adapter
-      .invoke(func, map2Function.args, sep as any, reqEvent)
+      .invoke(func, map2Endpoints.args, sep as any, reqEvent)
       .then((res) => {
         if (res && res.resumeFunName) return res;
         return this.postInvokeSEP((res && res.data) || reqEvent);
@@ -335,12 +336,12 @@ export class EntriesService {
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
     const {
-      context: { functions, resp },
+      context: { endpoints, resp },
     } = reqEvent;
-    if (!functions?.length)
+    if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
-    const func = functions[0] as EndpointDto;
+    const func = endpoints[0] as EndpointDto;
     const sep = await this.findOne(func.entryId, {
       id: true,
       name: true,

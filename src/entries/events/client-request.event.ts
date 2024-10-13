@@ -11,11 +11,10 @@ import { EventObject } from '../../event-listeners/event-object';
 export class ClientRequestEvent extends EventObject {
   constructor(
     /** client entry id */
-    cepId: string,
+    entryId: string,
     /** empty to create new task */
     taskId: string,
     dataType: string,
-    callback: string,
     req: object,
     public readonly data: {
       callgentId: string;
@@ -23,12 +22,12 @@ export class ClientRequestEvent extends EventObject {
       /** empty means anonymous */
       callerId?: string;
       /** requested endpoint name */
-      funName?: string;
-      /** url template for progressive requesting, `callgent:funName[@callgent]` to invoke callgent */
+      epName?: string /** url template for progressive requesting, `callgent:epName[@callgent]` to invoke callgent */;
       progressive?: string;
     },
+    callback?: string,
   ) {
-    super(cepId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
+    super(entryId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
     this.context.req = req;
   }
 }

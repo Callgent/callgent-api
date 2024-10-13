@@ -81,3 +81,4 @@ export class Utils {
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type Requires<T, K extends keyof T> = T & Required<Pick<T, K>>;
