@@ -6,6 +6,7 @@ import {
   Inject,
   NotFoundException,
   Param,
+  Post,
   Query,
   Req,
   Res,
@@ -15,31 +16,18 @@ import {
   ApiHeader,
   ApiOperation,
   ApiParam,
-  ApiProperty,
   ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
-import { IsNotEmpty, IsString } from 'class-validator';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-
-export class Requirement {
-  @ApiProperty({
-    description: 'Requirement for callgent to fulfill.',
-    example:
-      'I want to apply for the Senior Algorithm Engineer based in Singapore.',
-    required: true,
-  })
-  @IsNotEmpty()
-  @IsString()
-  requirement: string;
-}
+import { RequestRequirement } from '../../dto/request-requirement.dto';
 
 /** to generate web pages based on request and callgent endpoints */
 @ApiTags('Client Entry: Webpage')
@@ -59,19 +47,25 @@ export class WebpageController {
     description:
       'AI agent will instantly generate page to fulfill the requirement.',
   })
+  @ApiHeader({
+    name: 'x-callgent-progressive',
+    required: false,
+    description: 'progressive request responder',
+  })
   @ApiQuery({
     name: 'taskId',
     required: false,
     description: 'Conversation Id',
   })
-  @Get('request/:callgentId/:entryId')
+  @Post('request/:callgentId/:entryId')
   async request(
-    @Body() requirement: Requirement,
+    @Body() requirement: RequestRequirement,
     @Param('callgentId') callgentId: string,
     @Req() req,
     @Res() res,
     @Param('entryId') entryId?: string,
     @Query('taskId') taskId?: string,
+    @Headers('x-callgent-progressive') progressive?: string,
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);
 
@@ -85,7 +79,7 @@ export class WebpageController {
           callgentId,
           callgentName: callgent.name,
           callerId: req.user?.sub,
-          // progressive, // 是否需要渐进式？
+          progressive,
         },
         // callback, // 是否需要异步返回结果
       ),
@@ -95,7 +89,7 @@ export class WebpageController {
 
     // [gen view/model/view-model, response]
 
-    // remove: | s-auth, invoke-service
+    // remove: | s-auth for all eps/entries, invoke-service
 
     // return generated webpage
     const code = result.statusCode || 200;
@@ -121,11 +115,6 @@ export class WebpageController {
       'rest/invoke/:callgentId/:entryId/`resource-path-here`. the wildcard path, may be empty',
   })
   @ApiHeader({ name: 'x-callgent-taskId', required: false })
-  @ApiHeader({
-    name: 'x-callgent-progressive',
-    required: false,
-    description: 'progressive request responder',
-  })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @Get('invoke/:callgentId/:entryId/*')

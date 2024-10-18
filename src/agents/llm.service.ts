@@ -1,6 +1,6 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
@@ -18,18 +18,27 @@ export class LLMService {
   ) {
     dot.templateSettings.strip = false;
   }
+  private readonly logger = new Logger(LLMService.name);
 
   /**
    * @param template prompt template name
    * @param args  prompt args
    * @param returnType if not empty, try to parse the response as the specified json
+   * @param validate if error: retry default times, true/false: stop retry, void: force retry. default retry is 3
    */
   @Transactional()
   async template<T>(
     template: string,
     args: { [key: string]: any },
-    returnType?: T,
-    bizKey?: string,
+    {
+      returnType,
+      bizKey,
+      validate,
+    }: {
+      returnType?: T;
+      bizKey?: string;
+      validate?: (generated: T, retry: number) => boolean | void;
+    },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
 
@@ -61,8 +70,24 @@ export class LLMService {
       // check type
       this._checkJsonType(returnType, ret, isArray);
     }
-
-    if (notCached) await this._llmCache(template, prompt, result);
+    let [maxRetry, valid] = [3, undefined];
+    for (let i = 0; i < maxRetry; i++) {
+      try {
+        valid = !validate || validate(ret, i);
+      } catch (e) {
+        this.logger.warn(
+          '[retry %d/%d] Fail validating generated content: \n%s\n\t%s',
+          i + 1,
+          maxRetry,
+          prompt.replace(/\n/g, '\\n'),
+          result.replace(/\n/g, '\\n'),
+        );
+        continue; // default retry
+      }
+      if (typeof valid === 'boolean') break; // force stop
+      maxRetry = i + 2; // force retry
+    }
+    if (valid && notCached) await this._llmCache(template, prompt, result);
 
     return ret;
   }
@@ -81,7 +106,10 @@ export class LLMService {
   }
 
   protected async _llmCache(name: string, prompt: string, result?: string) {
-    if (prompt.length > 8190) return;
+    if (prompt.length > 8190) {
+      this.logger.warn({ name, prompt, result });
+      return;
+    }
     const prisma = this.txHost.tx as PrismaClient;
     if (result)
       return prisma.llmCache.upsert({
@@ -107,7 +135,7 @@ export class LLMService {
       if (!tplStr?.prompt)
         throw new Error(`LLM Template ${template} not found`);
 
-      this.template[template] = tpl = dot.template(tplStr.prompt);
+      this.templates[template] = tpl = dot.template(tplStr.prompt);
     }
     try {
       return tpl(args);

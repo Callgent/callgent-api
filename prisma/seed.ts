@@ -188,40 +188,65 @@ async function initLlmTemplates(
   >,
 ) {
   const llmTemplates: Prisma.LlmTemplateUncheckedCreateInput[] = [
+    //     {
+    //       name: 'api2Function',
+    //       prompt: `Please convert below API doc of format {{=it.format}}:
+    // { "{{=it.apiName}}": {{=it.apiContent}} }
+
+    // into a js function, the function must be as follows:
+    // // the \`invoker\` function do the real invocation
+    // async (invoker: {{=it.handle}}, ...apiParams) {...; const json = await invoker(...); ...; return apiResult; }
+
+    // please generate the js function with **full implementation and error handling**! output a single-line json object:
+    // {"epName":"endpoint name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
+    //     },
     {
-      name: 'api2Function',
-      prompt: `Please convert below API doc of format {{=it.format}}:
-{ "{{=it.apiName}}": {{=it.apiContent}} }
+      name: 'map2Endpoint',
+      prompt: `given below service endpoint:
+service {{=it.callgentName}} {{{~ it.endpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
+{{~}}}
 
-into a js function, the function must be as follows:
-// the \`invoker\` function do the real invocation
-async (invoker: {{=it.handle}}, ...apiParams) {...; const json = await invoker(...); ...; return apiResult; }
+Please generate js function req2Args(request) to map below request into endpoint args following the openAPI params schema:
+const request_object = {{=JSON.stringify(it.req)}};
 
-please generate the js function with **full implementation and error handling**! output a single-line json object:
-{"epName":"endpoint name", "params":["invoker", ...apiParams]"documents":"formal js function documentation with description of params and response object with **all properties elaborated** exactly same as the API doc", "fullCode":"(invoker, ...)=>{...; const json = await invoker(...); ...; return apiResult;}"}`,
+output single-line json object below:
+{ "req2Args": "Full code of js function req2Args(request_object):ArgsMap, to map request into endpoint args. ArgsMap is a k-v map of vars in endpoint.params(no conflict keys, no more props than it, especially requestBody's key is '$requestBody$'), all values just extracted from request_object, but no direct constant in code from request_object, all calculated from request_object props as variables!" }`,
     },
     {
       name: 'map2Endpoints',
-      prompt: `given below service APIs:
-service {{=it.callgentName}} {{{~ it.endpoints :fun }}
-  "API: {{=fun.name}}": {"endpoint": "{{=fun.name}}", "summary":"{{=fun.summary}}", {{=fun.description ? '"description":"'+fun.description+'", ':''}}"params":{{=JSON.stringify(fun.params)}}, "responses":{{=JSON.stringify(fun.responses)}} },
+      prompt: `given below service endpoints:
+service {{=it.callgentName}} {{{~ it.endpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
-Please choose one API to fulfill below request:
-{
+Please choose relevant endpoints to fulfill below request:
+const request = {
 {{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
 {{ } }}"request from": "{{=it.cepAdaptor}}",
 "request_object": {{=JSON.stringify(it.req)}},
+},
+using the js macro function:
+\`\`\`typescript
+async function macro(macroParams) {
+  const ctx = {}; // context vars across endpoint invocations to final response
+  // logic script which uses \`callServerEndpoint(epId, epParams)\` to get final result
+  // NOTE: macroParams/epParams are k-v map of needed vars, especially requestBody's key is '$requestBody$'
+  const result = await invokeEndpoints(macroParams, ctx)
+  // wrap result into response
+  const resp = wrapResp(ctx, macroParams, result);
+  return resp;
 }
-and code for request_object to chosen function args mapping. if any data missing/unclear/ambiguous from request_object to invocation args, please ask question to the caller in below json.question field.
+// implementation of: invokeEndpoints/wrapResp
+\`\`\`
 
-output a single-line json object:
-{ "endpoint": "the chosen API endpoint to be invoked", "args":"params/body/headers/..., with same structure as the 'params' JSON object(no more args than it) with additional 'value' prop, or null if no args needed", "mapping": "if the the request_object is structured (or null if unstructured), generate the js function (request_object)=>{...;return API_signature_args;}, full implementation to return the **real** args from request_object to invoke the API. don't use data not exist or ambiguous in request", "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. null if the mapping is crystal clear." }"}`,
+output single-line json object below:
+{ "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. '' if the args mapping is crystal clear. if question not empty, all subsequent props(endpoints, macroParams,..) left empty", "endpoints": ["the chosen API endpoints to be invoked"], "summary":"short summary", "description":"Description help using this macro", "macroParams":"object of formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}, macro incoming params", "macroResponse": "object of formal openAPI format json {[http-code]:any}, final macro response", "args": "k-v map of needed args in \`macro-params\`(no conflict keys, no more props than it, '$requestBody$' is key for requestBody arg), all values just extracted from request.request_object, this is the actual args value to call \`const resp=await macro(args)\`", "invokeEndpoints": "full code of async js function(macroParams:MacroParams, ctx). no direct constant extracted from request.request_object", "wrapResp": "full code of js function(ctx, macroParams, result) to get resp matching \`macroResponse\` schema. No direct constant extracted from request.request_object" }`,
     },
     {
       name: 'convert2Response',
       prompt: `Given the openAPI endpoint:
-{"endpoint": "{{=it.fun.name}}", "summary":"{{=it.fun.summary}}", {{=it.fun.description ? '"description":"'+it.fun.description+'", ':''}}"params":{{=JSON.stringify(it.fun.params)}}, "responses":{{=JSON.stringify(it.fun.responses)}} }
+{"endpoint": "{{=it.ep.name}}", "summary":"{{=it.ep.summary}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"params":{{=JSON.stringify(it.ep.params)}}, "responses":{{=JSON.stringify(it.ep.responses)}} }
 
 invoked with the following request:
 <--- request begin ---

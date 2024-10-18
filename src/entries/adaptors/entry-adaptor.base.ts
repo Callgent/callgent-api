@@ -119,12 +119,8 @@ export abstract class EntryAdaptor {
       for (const [path, pathApis] of ps) {
         const entries = Object.entries(pathApis);
         for (const [method, restApi] of entries) {
-          const summary = `${
-            restApi.operationId ? restApi.operationId + ': ' : ''
-          }${restApi.summary}`;
-          let description = restApi.description || '';
-          if (restApi.tags?.length)
-            description += ` Tags: ${restApi.tags.join(', ')}`;
+          const summary = `${restApi.operationId || ''}${restApi.operationId && restApi.summary ? ': ' : ''}${restApi.summary || ''}`;
+          const description = `${restApi.description || ''}${restApi.description && restApi.tags?.length ? '; ' : ''}${restApi.tags?.length ? 'Tags: ' + restApi.tags.join(', ') : ''}`;
           const responses = restApi.responses;
           const params = {
             parameters: restApi.parameters,
@@ -135,7 +131,7 @@ export abstract class EntryAdaptor {
           // TODO restApi.callbacks
 
           ret.apis.push({
-            path: path.toLowerCase(),
+            path,
             method: method.toUpperCase(),
             summary,
             description,

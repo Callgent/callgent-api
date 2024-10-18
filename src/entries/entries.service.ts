@@ -309,7 +309,7 @@ export class EntriesService implements OnModuleInit {
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = endpoints[0] as EndpointDto;
-    const sep = await this.findOne(func.entryId, {
+    const sen = await this.findOne(func.entryId, {
       id: true,
       name: true,
       type: true,
@@ -320,12 +320,12 @@ export class EntriesService implements OnModuleInit {
       callgentId: true,
       callgent: { select: { id: true, name: true } },
     });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EntryType.SERVER);
+    const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
 
     // may returns pending result
     return adapter
-      .invoke(func, map2Endpoints.args, sep as any, reqEvent)
+      .invoke(func, map2Endpoints.args, sen as any, reqEvent)
       .then((res) => {
         if (res && res.resumeFunName) return res;
         return this.postInvokeSEP((res && res.data) || reqEvent);

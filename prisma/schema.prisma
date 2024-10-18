@@ -227,6 +227,65 @@ model CallgentTag {
   @@index([callgentId])
 }
 
+enum EntryType {
+  CLIENT
+  SERVER
+  EVENT
+}
+
+/// @description a callgent may have multiple entries, including client/server/event entries
+model Entry {
+  /// @DtoEntityHidden
+  pk       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id       String @unique @db.VarChar(36)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+
+  name       String    @default("") @db.VarChar(2047)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  type       EntryType /// @description entry type: CLIENT, SERVER OR EVENT
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
+  priority   Int       @default(0) /// @description priority in the callgent
+
+  /// @DtoCreateOptional
+  host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
+  initParams Json?  @db.Json /// @description initializing parameters
+  content    Json?  @db.Json /// @description generated content/code by init method
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
+  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmPk]: RealmSecurityItem }
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @DtoRelationIncludeId
+  callgentId String   @db.VarChar(36) /// @description callgent owning the entry
+  callgent   Callgent @relation(fields: [callgentId], references: [id])
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String    @db.VarChar(36)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  @@index([tenantPk])
+  @@index([callgentId])
+}
+
 /// @description endpoint in openAPI.json format
 model Endpoint {
   /// @DtoEntityHidden
@@ -419,65 +478,6 @@ model AuthToken {
   updatedAt DateTime  @default(now()) @updatedAt
 }
 
-enum EntryType {
-  CLIENT
-  SERVER
-  EVENT
-}
-
-/// @description a callgent may have multiple entries, including client/server/event entries
-model Entry {
-  /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
-
-  name       String    @default("") @db.VarChar(2047)
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  type       EntryType /// @description entry type: CLIENT, SERVER OR EVENT
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
-  priority   Int       @default(0) /// @description priority in the callgent
-
-  /// @DtoCreateOptional
-  host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
-  initParams Json?  @db.Json /// @description initializing parameters
-  content    Json?  @db.Json /// @description generated content/code by init method
-  /// @DtoReadOnly
-  /// @DtoPlainApiResponse
-  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
-  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmPk]: RealmSecurityItem }
-
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
-  /// @DtoRelationIncludeId
-  callgentId String   @db.VarChar(36) /// @description callgent owning the entry
-  callgent   Callgent @relation(fields: [callgentId], references: [id])
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index([tenantPk])
-  @@index([callgentId])
-}
-
 /// @DtoIgnoreModel
 model LlmTemplate {
   /// @DtoEntityHidden
@@ -506,22 +506,20 @@ model LlmCache {
   @@unique([prompt, name])
 }
 
-model PersistedAsync {
-  /// @DtoEntityHidden
+/// @DtoIgnoreModel
+/// @description repo to store req2Args mapping code when invoking(not requesting) sep from cep
+model Req2ArgsRepo {
   pk BigInt @id @default(autoincrement())
 
-  statusCode Int    @default(1) /// @description statusCode, 1: pending, 2: sent, 0: done, <0: failed
-  service    String @db.VarChar(127) /// @description callback service name
-  method     String @db.VarChar(127) /// @description callback method name
+  cepId    String @db.VarChar(36) /// @description source client endpoint id receiving the request
+  sepId    String @db.VarChar(36) /// @description target server endpoint id processing the request
+  req2Args String @db.VarChar(8192) /// @description js function req2Args(req) to convert request to args
 
-  parentPk BigInt? @db.BigInt /// @description parent async pk
+  createdBy String?  @db.VarChar(36)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index(parentPk)
+  @@unique([cepId, sepId])
 }
 
 enum ServiceType {

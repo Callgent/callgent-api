@@ -16,30 +16,17 @@ import {
   ApiHeader,
   ApiOperation,
   ApiParam,
-  ApiProperty,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
-import { IsNotEmpty, IsString } from 'class-validator';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-
-export class Requirement {
-  @ApiProperty({
-    description: 'Requirement for callgent to fulfill.',
-    example:
-      'I want to apply for the Senior Algorithm Engineer based in Singapore.',
-    required: true,
-  })
-  @IsNotEmpty()
-  @IsString()
-  requirement: string;
-}
+import { RequestRequirement } from '../../dto/request-requirement.dto';
 
 /** global rest-api entry entry */
 @ApiTags('Client Entry: Rest-API')
@@ -58,9 +45,17 @@ export class RestApiController {
     description:
       'AI agent will generate code to invoke several functional endpoints to fulfill the requirement.',
   })
+  @ApiHeader({
+    name: 'x-callgent-progressive',
+    required: false,
+    description: 'progressive request responder',
+  })
   @Post('request/:callgentId/:entryId')
   @ApiUnauthorizedResponse()
-  async request(@Body() req: Requirement) {
+  async request(
+    @Body() req: RequestRequirement,
+    @Headers('x-callgent-progressive') progressive?: string,
+  ) {
     // TODO
   }
 
@@ -84,11 +79,11 @@ export class RestApiController {
       'rest/invoke/:callgentId/:entryId/`resource-path-here`. the wildcard path, may be empty',
   })
   @ApiHeader({ name: 'x-callgent-taskId', required: false })
-  @ApiHeader({
-    name: 'x-callgent-progressive',
-    required: false,
-    description: 'progressive request responder',
-  })
+  // @ApiHeader({
+  //   name: 'x-callgent-progressive',
+  //   required: false,
+  //   description: 'progressive request responder',
+  // })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @ApiUnauthorizedResponse()
@@ -98,7 +93,7 @@ export class RestApiController {
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
     @Headers('x-callgent-taskId') taskId?: string,
-    @Headers('x-callgent-progressive') progressive?: string,
+    // @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
@@ -135,7 +130,7 @@ export class RestApiController {
           callgentId,
           callgentName: callgent.name,
           callerId,
-          progressive,
+          // progressive, FIXME progressive not supported for invoking?
           epName,
         },
         callback,

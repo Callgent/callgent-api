@@ -54,7 +54,7 @@ export class EventListenersService {
       ? Promise.race([
           result,
           Utils.sleep(timeout).then(() => ({
-            data,
+            data: { ...data, context: undefined },
             statusCode: 1,
             message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
           })),
@@ -141,8 +141,8 @@ export class EventListenersService {
           statusCode = funName
             ? 2 // pending
             : event.stopPropagation || idx >= listeners.length
-            ? 0 // done
-            : 1; // processing
+              ? 0 // done
+              : 1; // processing
           if (funName || event.stopPropagation) break;
         } catch (e) {
           statusCode = e.status || -1; // error
@@ -165,8 +165,8 @@ export class EventListenersService {
         statusCode == 1
           ? listeners[idx] // processing: next
           : statusCode == 0 || (statusCode > 2 && statusCode < 399)
-          ? null // success: null
-          : listeners[idx - 1]; // error/pending: current
+            ? null // success: null
+            : listeners[idx - 1]; // error/pending: current
       await this.eventStoresService.upsertEvent(
         event,
         funName || null,

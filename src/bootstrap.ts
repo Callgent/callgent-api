@@ -54,7 +54,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
     app,
     1,
     'Callgent APIs',
-    'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs',
+    'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs. Download <a href="api-json" target="_blank">Callgent-openAPI.json</a>, or <a href="api-yaml" target="_blank">Callgent-openAPI.yaml</a>',
     logger,
   );
 

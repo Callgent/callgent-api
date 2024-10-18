@@ -89,27 +89,28 @@ export class EmailAdaptor extends EntryAdaptor {
    *
    * @param fun - endpoint
    * @param args - function arguments
-   * @param sep - server entry
+   * @param sen - server entry
    * @param reqEvent - client request event
    */
   async invoke(
-    fun: EndpointDto,
+    endpoint: EndpointDto,
     args: object,
-    sep: Entry,
+    sentry: Entry,
     reqEvent: ClientRequestEvent,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
       reqEvent.id,
       EmailRelayKey.request,
     );
-    const { host: emailTo } = sep;
+    const { host: emailTo } = sentry;
 
-    const responses = this._responses30x(fun.responses);
+    const params = this._params30x(endpoint.params, args);
+    const responses = this._responses30x(endpoint.responses);
     return this.emailsService
       .sendTemplateEmail(
         emailTo,
         'relay-sep-invoke',
-        { relayId: reqEvent.id, fun, sep, args, responses },
+        { relayId: reqEvent.id, endpoint, sentry, params, responses },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
       .then((res) => ({
@@ -122,7 +123,26 @@ export class EmailAdaptor extends EntryAdaptor {
       }));
   }
 
-  private _responses30x(responses: any) {
+  /** openAPI 3.0.x */
+  protected _params30x(params: any, args: object) {
+    const ret = [];
+    const { parameters, requestBody } = params;
+    parameters?.forEach((p) => {
+      ret.push({ ...p, value: args[p.name] });
+    });
+    if (requestBody) {
+      const item: any = { name: 'requestBody' };
+      // item.content = this._formatMediaType(requestBody.content);
+      item.value = args['$requestBody$'];
+      if (requestBody.required) item.required = requestBody.required;
+      if (requestBody.description) item.description = requestBody.description;
+      ret.push(item);
+    }
+    return ret;
+  }
+
+  /** openAPI 3.0.x */
+  protected _responses30x(responses: any) {
     const list = [];
     if (!responses) return list;
     if (responses.default)
@@ -140,7 +160,7 @@ export class EmailAdaptor extends EntryAdaptor {
     return list;
   }
 
-  private _formatMediaType(content: any) {
+  protected _formatMediaType(content: any) {
     const list = [];
     if (!content) return content;
 
