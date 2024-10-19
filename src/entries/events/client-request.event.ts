@@ -12,8 +12,6 @@ export class ClientRequestEvent extends EventObject {
   constructor(
     /** client entry id */
     entryId: string,
-    /** empty to create new task */
-    taskId: string,
     dataType: string,
     req: object,
     public readonly data: {
@@ -23,6 +21,8 @@ export class ClientRequestEvent extends EventObject {
       callerId?: string;
       /** requested endpoint name */
       epName?: string /** url template for progressive requesting, `callgent:epName[@callgent]` to invoke callgent */;
+      /** empty to create new task */
+      taskId?: string;
       progressive?: string;
     },
     callback?: string,

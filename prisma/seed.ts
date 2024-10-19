@@ -122,7 +122,7 @@ function initEventListeners(
       dataType: 'Webpage',
       serviceType: 'SERVICE',
       serviceName: 'WebpagesService',
-      funName: 'genWebpage',
+      funName: 'genWebpages',
       description:
         'Generate webpage[view/model/view-model] from request & endpoints',
       createdBy: 'GLOBAL',

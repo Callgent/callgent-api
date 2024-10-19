@@ -17,10 +17,11 @@ export class WebpageService {
 
   /** Generate webpage[view/model/view-model], then respond the src code */
   @Transactional()
-  async genWebpage(
+  async genWebpages(
     data: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     data.stopPropagation = true; // stop event propagation
+    
     return { data };
   }
 }

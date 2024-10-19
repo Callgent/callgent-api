@@ -78,7 +78,7 @@ export class RestApiController {
     description:
       'rest/invoke/:callgentId/:entryId/`resource-path-here`. the wildcard path, may be empty',
   })
-  @ApiHeader({ name: 'x-callgent-taskId', required: false })
+  // @ApiHeader({ name: 'x-callgent-taskId', required: false })
   // @ApiHeader({
   //   name: 'x-callgent-progressive',
   //   required: false,
@@ -92,7 +92,7 @@ export class RestApiController {
     @Res() res,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
-    @Headers('x-callgent-taskId') taskId?: string,
+    // @Headers('x-callgent-taskId') taskId?: string,
     // @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
@@ -123,7 +123,6 @@ export class RestApiController {
     const result = await this.eventListenersService.emit(
       new ClientRequestEvent(
         cep.id,
-        taskId,
         cep.adaptorKey,
         req,
         {

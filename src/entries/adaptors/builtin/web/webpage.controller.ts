@@ -72,13 +72,13 @@ export class WebpageController {
     const result = await this.eventListenersService.emit(
       new ClientRequestEvent(
         entry.id,
-        taskId,
         entry.adaptorKey,
         requirement,
         {
           callgentId,
           callgentName: callgent.name,
           callerId: req.user?.sub,
+          taskId,
           progressive,
         },
         // callback, // 是否需要异步返回结果
@@ -114,7 +114,6 @@ export class WebpageController {
     description:
       'rest/invoke/:callgentId/:entryId/`resource-path-here`. the wildcard path, may be empty',
   })
-  @ApiHeader({ name: 'x-callgent-taskId', required: false })
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @Get('invoke/:callgentId/:entryId/*')
@@ -124,7 +123,6 @@ export class WebpageController {
     @Res() res,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
-    @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
     @Headers('x-callgent-callback') callback?: string,
     @Headers('x-callgent-timeout') timeout?: string,
@@ -138,7 +136,6 @@ export class WebpageController {
     const result = await this.eventListenersService.emit(
       new ClientRequestEvent(
         entry.id,
-        taskId,
         entry.adaptorKey,
         req,
         {
