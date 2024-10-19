@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <!-- relay email title always ends with #relayId -->
-<title>[Callgent] Function calling: '{{=it.endpoint.name}}' from Callgent {{=it.sentry.callgent.name}}. #{{=it.relayId}}</title>
+<title>[Callgent] Function calling: '{{=it.endpoint.name}}' of Callgent {{=it.sentry.callgent.name}}. #{{=it.relayId}}</title>
 <!-- { relayId, endpoint, sentry, params, responses[], to, sender, configs } -->
 </head>
 <body>
-<p>Hello {{=it.to[0].name }}!</p>
+<p>Hello {{=it.to[0].name }}, howdy!</p>
 
-<p>Somebody is calling: '{{=it.endpoint.name}}' from Callgent {{=it.sentry.callgent.name}}. Below is the detailed request information:</p>
+<p>Someone is calling: '{{=it.endpoint.name}}' from Callgent {{=it.sentry.callgent.name}}. Below is the detailed request information:</p>
 <hr/>
 
 <div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
@@ -58,6 +58,8 @@
     {{~}}
 </div>
 {{ } }}
+<br/>
+<b>Note:</b> You may reply this request in natural language text, and make sure all required information in the Response Schema is provided!
 <br/>
 <br/>
 <!-- TODO: TZ -->
