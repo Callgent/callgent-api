@@ -96,7 +96,7 @@ function initEventListeners(
       serviceName: 'EventStoresService',
       funName: 'loadTargetEvents',
       description:
-        'Load all events of same targetId into event.context.tgtEvents',
+        'Load all events of same taskId into event.context.tgtEvents',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },

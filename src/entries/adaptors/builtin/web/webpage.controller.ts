@@ -74,11 +74,11 @@ export class WebpageController {
         entry.id,
         entry.adaptorKey,
         requirement,
+        taskId,
         {
           callgentId,
           callgentName: callgent.name,
           callerId: req.user?.sub,
-          taskId,
           progressive,
         },
         // callback, // 是否需要异步返回结果
@@ -128,8 +128,10 @@ export class WebpageController {
     @Headers('x-callgent-timeout') timeout?: string,
   ) {
     const basePath = `invoke/${callgentId}/${entryId}/`;
-    let epName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
-    if (epName) epName = Utils.formalApiName(req.method, '/' + epName);
+    let pageName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
+    if (pageName) pageName = Utils.formalApiName(req.method, '/' + pageName);
+    // FIXME: invoke page name, not epName
+    // preprocess, c-auth, [load code, view route]
 
     const { entry, callgent } = await this._load(callgentId, entryId);
 
@@ -138,12 +140,12 @@ export class WebpageController {
         entry.id,
         entry.adaptorKey,
         req,
+        null,
         {
           callgentId,
           callgentName: callgent.name,
           callerId: req.user?.sub,
           progressive,
-          epName,
         },
         callback,
       ),

@@ -7,8 +7,8 @@ export class EventObject {
     public readonly srcId: string,
     public readonly eventType: string,
     public readonly dataType: string,
-    /** target id to relate several events */
-    public targetId: string,
+    /** task id to relate several events */
+    public taskId: string,
     /** url template for response callback, `callgent:epName[@callgent]` to invoke callgent */
     public callback?: string,
     public readonly callbackType: EventCallbackType = 'EVENT',

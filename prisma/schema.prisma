@@ -165,9 +165,12 @@ model Callgent {
   // add to migration.sql
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  name    String  @db.VarChar(255)
-  avatar  String? @db.VarChar(1023)
-  summary String? @db.VarChar(4095)
+  name        String  @db.VarChar(255)
+  avatar      String? @db.VarChar(1023)
+  /// @description Summary to quickly understand in what scenarios to use this service.
+  summary     String? @default("") @db.VarChar(4095)
+  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
+  instruction String? @default("") @db.VarChar(4095)
 
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -246,15 +249,19 @@ model Entry {
   // add to migration.sql
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  name       String    @default("") @db.VarChar(2047)
+  name        String    @default("") @db.VarChar(2047)
+  /// @description Summary to quickly understand in what scenarios to use this service.
+  summary     String?   @default("") @db.VarChar(4095)
+  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
+  instruction String?   @default("") @db.VarChar(4095)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  type       EntryType /// @description entry type: CLIENT, SERVER OR EVENT
+  type        EntryType /// @description entry type: CLIENT, SERVER OR EVENT
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
-  priority   Int       @default(0) /// @description priority in the callgent
+  adaptorKey  String    @db.VarChar(127) /// @description entry adaptor key
+  priority    Int       @default(0) /// @description priority in the callgent
 
   /// @DtoCreateOptional
   host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
@@ -302,16 +309,16 @@ model Endpoint {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  name        String @db.VarChar(1023) /// @description `${method} ${path}`
-  path        String @db.VarChar(1000) /// @description openAPI path
-  method      String @db.VarChar(15) /// @description openAPI method
-  summary     String @default("") @db.VarChar(511)
-  description String @default("") @db.VarChar(1023)
+  name        String  @db.VarChar(1023) /// @description `${method} ${path}`
+  path        String  @db.VarChar(1000) /// @description openAPI path
+  method      String  @db.VarChar(15) /// @description openAPI method
+  summary     String? @default("") @db.VarChar(2047)
+  description String? @default("") @db.VarChar(4095)
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
-  securities  Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
-  params      Json?  @db.Json /// @description declaration of API params
-  responses   Json?  @db.Json /// @description declaration of API responses
-  rawJson     Json   @db.Json
+  securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
+  params      Json?   @db.Json /// @description declaration of API params
+  responses   Json?   @db.Json /// @description declaration of API responses
+  rawJson     Json    @db.Json
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
@@ -581,7 +588,7 @@ model EventStore {
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)
   /// @Description target id to relate several events
-  targetId     String?           @db.VarChar(36)
+  taskId       String?           @db.VarChar(36)
   eventType    String            @db.VarChar(36)
   dataType     String            @db.VarChar(36)
   /// @Description callback url or parent event id to invoke
@@ -608,5 +615,5 @@ model EventStore {
   deletedAt DateTime? /// @description logical deletion.
 
   @@index([srcId])
-  @@index([targetId])
+  @@index([taskId])
 }

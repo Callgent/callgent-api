@@ -48,7 +48,7 @@ export class AgentsService {
         'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
       );
 
-    // FIXME map from all targetId events
+    // FIXME map from all taskId events
 
     // if epName, try find mapArgs function by [cepAdaptor, epName]
     const mapped = await (reqEvent.data.epName
@@ -110,6 +110,8 @@ export class AgentsService {
       {
         returnType: {
           question: '',
+          summary: '',
+          description: '',
           endpoints: [''],
           components: [],
           args: {},

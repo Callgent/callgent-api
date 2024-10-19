@@ -11,20 +11,20 @@ export class EventStoresService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {}
 
-  /** create random targetId if not set, else load all events of targetId */
+  /** load all events of taskId if not empty */
   async loadTargetEvents(event: EventObject) {
-    const { id, targetId } = event;
-    if (targetId) {
-      const prisma = this.txHost.tx as PrismaClient;
-      const es = await prisma.eventStore.findMany({
-        select: { id: true, eventType: true, dataType: true, data: true }, // TODO, what to select
-        where: { AND: [{ NOT: { id } }, { targetId }] },
-        orderBy: { id: 'asc' },
-      });
-      if (!es?.length)
-        throw new NotFoundException('Invalid event.targetId: ' + targetId);
-      event.context.tgtEvents = es;
-    } else event.targetId = Utils.uuid(); // create new targetId
+    const { id, taskId } = event;
+    if (!taskId) return;
+
+    const prisma = this.txHost.tx as PrismaClient;
+    const es = await prisma.eventStore.findMany({
+      select: { id: true, eventType: true, dataType: true, data: true }, // TODO, what to select
+      where: { AND: [{ NOT: { id } }, { taskId }] },
+      orderBy: { id: 'asc' },
+    });
+    if (!es?.length)
+      throw new NotFoundException('Invalid event.taskId: ' + taskId);
+    event.context.tgtEvents = es;
   }
 
   findOne(eventId: string) {
@@ -46,6 +46,7 @@ export class EventStoresService {
       funName || (funName = undefined);
       listenerId || (listenerId = undefined);
     }
+    if (!event.taskId) event.taskId = event.id;
 
     const prisma = this.txHost.tx as PrismaClient;
     const data: Prisma.EventStoreCreateInput = {
