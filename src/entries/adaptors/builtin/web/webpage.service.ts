@@ -15,13 +15,16 @@ export class WebpageService {
     private readonly tenancyService: PrismaTenancyService,
   ) {}
 
-  /** Generate webpage[view/model/view-model], then respond the src code */
+  /** Generate webpage[view/route/model/view-model], then respond the src code */
   @Transactional()
   async genWebpages(
     data: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     data.stopPropagation = true; // stop event propagation
-    
+
+    // data.context.req: { requirement }
+    // data.context.endpoints, target events,
+  
     return { data };
   }
 }

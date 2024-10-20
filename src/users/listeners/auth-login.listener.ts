@@ -12,7 +12,7 @@ export class AuthLoginListener {
   private readonly logger = new Logger(AuthLoginListener.name);
   constructor(private readonly usersService: UsersService) {}
 
-  @OnEvent(AuthLoginEvent.eventName, { async: false })
+  @OnEvent(AuthLoginEvent.eventName)
   async handleEvent(event: AuthLoginEvent) {
     this.logger.debug('Handling event: %j', {
       ...event,

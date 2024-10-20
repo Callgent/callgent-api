@@ -1,12 +1,14 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { Endpoint } from '../endpoints/entities/endpoint.entity';
+import { Entry } from '../entries/entities/entry.entity';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';
-import { PrismaClient } from '@prisma/client';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
@@ -210,5 +212,53 @@ export class AgentsService {
     ); // TODO check `epName` exists in endpoints, validating `mapping`
 
     return { statusCode: mapped.statusCode, data: mapped.data };
+  }
+
+  /**
+   * @param total - whether summarizing from all eps of entry
+   * @returns
+   */
+  async summarizeEntry({
+    entry,
+    news,
+    olds,
+    total,
+  }: {
+    entry: {
+      id: string;
+      summary?: string;
+      instruction?: string;
+      callgentId?: string;
+    };
+    news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
+    olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
+    total?: boolean;
+  }) {
+    const summary = '',
+      instruction = '';
+    return { summary, instruction, total };
+  }
+  /**
+   * @param total - whether summarizing from all eps of entry
+   * @returns
+   */
+  async summarizeCallgent({
+    callgent,
+    news,
+    olds,
+    total,
+  }: {
+    callgent: {
+      id: string;
+      summary?: string;
+      instruction?: string;
+    };
+    news?: Omit<Entry, 'securities' | 'createdAt'>[];
+    olds?: Omit<Entry, 'securities' | 'createdAt'>[];
+    total?: boolean;
+  }) {
+    const summary = '',
+      instruction = '';
+    return { summary, instruction, total };
   }
 }

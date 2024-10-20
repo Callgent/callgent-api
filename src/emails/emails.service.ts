@@ -150,7 +150,7 @@ export class EmailsService implements OnModuleInit {
       case 'callgent':
         // this.logger.debug('relay %j', msg);
         // FIXME persistent emit, to prevent lost event
-        this.eventEmitter.emit(
+        this.eventEmitter.emitAsync(
           EmailRelayEvent.eventPrefix + relayKey,
           new EmailRelayEvent(relayKey as EmailRelayKey, relayId, email),
         );

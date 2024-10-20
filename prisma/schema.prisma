@@ -168,9 +168,9 @@ model Callgent {
   name        String  @db.VarChar(255)
   avatar      String? @db.VarChar(1023)
   /// @description Summary to quickly understand in what scenarios to use this service.
-  summary     String? @default("") @db.VarChar(4095)
+  summary     String? @db.VarChar(4095)
   /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
-  instruction String? @default("") @db.VarChar(4095)
+  instruction String? @db.VarChar(4095)
 
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -251,9 +251,9 @@ model Entry {
 
   name        String    @default("") @db.VarChar(2047)
   /// @description Summary to quickly understand in what scenarios to use this service.
-  summary     String?   @default("") @db.VarChar(4095)
+  summary     String?   @db.VarChar(4095)
   /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
-  instruction String?   @default("") @db.VarChar(4095)
+  instruction String?   @db.VarChar(4095)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type        EntryType /// @description entry type: CLIENT, SERVER OR EVENT
@@ -312,8 +312,8 @@ model Endpoint {
   name        String  @db.VarChar(1023) /// @description `${method} ${path}`
   path        String  @db.VarChar(1000) /// @description openAPI path
   method      String  @db.VarChar(15) /// @description openAPI method
-  summary     String? @default("") @db.VarChar(2047)
-  description String? @default("") @db.VarChar(4095)
+  summary     String? @db.VarChar(2047)
+  description String? @db.VarChar(4095)
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
   securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?   @db.Json /// @description declaration of API params

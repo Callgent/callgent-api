@@ -9,13 +9,13 @@ import { WebpageService } from './adaptors/builtin/web/webpage.service';
 import { EntriesController } from './entries.controller';
 import { EntriesService } from './entries.service';
 import { CallgentCreatedListener } from './listeners/callgent-created.listener';
+import { EntriesChangedListener } from './listeners/entries-changed.listener';
 
 @Module({
   imports: [CallgentsModule],
   providers: [
     { provide: 'EntriesService', useClass: EntriesService },
     { provide: 'WebpageService', useClass: WebpageService },
-    CallgentCreatedListener,
     {
       provide: 'restAPI-EntryAdaptor',
       useClass: RestAPIAdaptor,
@@ -28,6 +28,8 @@ import { CallgentCreatedListener } from './listeners/callgent-created.listener';
       provide: 'Email-EntryAdaptor',
       useClass: EmailAdaptor,
     },
+    CallgentCreatedListener,
+    EntriesChangedListener,
   ],
   controllers: [EntriesController, RestApiController, WebpageController],
   exports: ['EntriesService'],
