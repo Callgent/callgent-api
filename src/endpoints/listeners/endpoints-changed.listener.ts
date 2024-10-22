@@ -7,9 +7,10 @@ import { EntriesChangedEvent } from '../../entries/events/entries-changed.event'
 import { EndpointsService } from '../endpoints.service';
 import { EndpointsChangedEvent } from '../events/endpoints-changed.event';
 
+/** summarize entry when eps changed */
 @Injectable()
-export class EndpointsChangedListener {
-  private readonly logger = new Logger(EndpointsChangedListener.name);
+export class EndpointsChangedSumEntryListener {
+  private readonly logger = new Logger(EndpointsChangedSumEntryListener.name);
   constructor(
     @Inject('EndpointsService')
     private readonly endpointsService: EndpointsService,
@@ -27,31 +28,49 @@ export class EndpointsChangedListener {
     this.logger.debug('Handling event: %j', event);
 
     // re-summarize entry summary/instruction
-    const { entry, news, olds } = event.data;
-    if (!entry.callgentId)
-      event.data.entry = await this.entriesService.findOne(entry.id);
+    let { entry: oldEntry } = event.data;
+    if (!oldEntry.callgentId)
+      oldEntry = event.data.entry = await this.entriesService.findOne(
+        oldEntry.id,
+      );
 
     let result = await this.agentsService.summarizeEntry(event.data);
-    if (result.total) {
+    if (result.totally) {
       // totally re-summarize
       const news = await this.endpointsService.findAll({
-        where: { entryId: entry.id },
+        where: { entryId: oldEntry.id },
       });
+      if (!news.length) return;
+
       result = await this.agentsService.summarizeEntry({
-        entry,
+        entry: event.data.entry,
         news,
-        total: true,
+        totally: true,
       });
     }
-    await this.entriesService.update(entry.id, {
-      summary: result.summary,
-      instruction: result.instruction,
-    });
+
+    if (
+      result.summary === oldEntry.summary &&
+      result.instruction === oldEntry.instruction
+    )
+      return;
+    const newEntry = await this.entriesService.update(
+      oldEntry.id,
+      {
+        summary: result.summary,
+        instruction: result.instruction,
+      },
+      { pk: null },
+    );
 
     // bubble up to the callgent
     await this.eventEmitter.emitAsync(
       EntriesChangedEvent.eventName,
-      new EntriesChangedEvent({ callgent: { id: entry.callgentId }, news: [] }),
+      new EntriesChangedEvent({
+        callgent: { id: oldEntry.callgentId },
+        news: [newEntry],
+        olds: [{ ...oldEntry, pk: newEntry.pk } as any],
+      }),
     );
   }
 }

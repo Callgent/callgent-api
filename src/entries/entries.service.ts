@@ -196,10 +196,12 @@ export class EntriesService implements OnModuleInit {
   }
 
   @Transactional()
-  update(id: string, dto: UpdateEntryDto) {
+  update(id: string, dto: UpdateEntryDto, select?: Prisma.EntrySelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.entry.update({ select, where: { id }, data: dto }),
+    return selectHelper(
+      select,
+      (select) => prisma.entry.update({ select, where: { id }, data: dto }),
+      this.defSelect,
     );
   }
 

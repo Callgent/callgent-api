@@ -9,7 +9,7 @@ import { WebpageService } from './adaptors/builtin/web/webpage.service';
 import { EntriesController } from './entries.controller';
 import { EntriesService } from './entries.service';
 import { CallgentCreatedListener } from './listeners/callgent-created.listener';
-import { EntriesChangedListener } from './listeners/entries-changed.listener';
+import { EntriesChangedSumCallgentListener } from './listeners/entries-changed.listener';
 
 @Module({
   imports: [CallgentsModule],
@@ -29,7 +29,7 @@ import { EntriesChangedListener } from './listeners/entries-changed.listener';
       useClass: EmailAdaptor,
     },
     CallgentCreatedListener,
-    EntriesChangedListener,
+    EntriesChangedSumCallgentListener,
   ],
   controllers: [EntriesController, RestApiController, WebpageController],
   exports: ['EntriesService'],

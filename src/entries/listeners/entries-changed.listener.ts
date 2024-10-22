@@ -6,9 +6,10 @@ import { CallgentsService } from '../../callgents/callgents.service';
 import { EntriesService } from '../../entries/entries.service';
 import { EntriesChangedEvent } from '../../entries/events/entries-changed.event';
 
+/** summarize callgent when entries changed */
 @Injectable()
-export class EntriesChangedListener {
-  private readonly logger = new Logger(EntriesChangedListener.name);
+export class EntriesChangedSumCallgentListener {
+  private readonly logger = new Logger(EntriesChangedSumCallgentListener.name);
   constructor(
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
@@ -24,27 +25,35 @@ export class EntriesChangedListener {
     this.logger.debug('Handling event: %j', event);
 
     // re-summarize summary/instruction
-    const { callgent, news, olds } = event.data;
-    if (typeof callgent.summary === 'undefined')
-      event.data.callgent = await this.callgentsService.findOne(callgent.id, {
-        id: true,
-        summary: true,
-        instruction: true,
-      });
+    let { callgent } = event.data;
+    if (typeof callgent.name === 'undefined')
+      callgent = event.data.callgent = await this.callgentsService.findOne(
+        callgent.id,
+        {
+          id: true,
+          name: true,
+          summary: true,
+          instruction: true,
+        },
+      );
 
     let result = await this.agentsService.summarizeCallgent(event.data);
-    if (result.total) {
+    if (result.totally) {
       // totally re-summarize
       const news = await this.entriesService.findAll({
-        where: { callgentId: callgent.id },
+        select: { pk: null },
+        where: { callgentId: callgent.id, type: 'SERVER' },
       });
+      if (!news.length) return;
+
       result = await this.agentsService.summarizeCallgent({
         callgent,
         news,
-        total: true,
+        totally: true,
       });
     }
-    await this.entriesService.update(callgent.id, {
+    await this.callgentsService.update({
+      id: callgent.id,
       summary: result.summary,
       instruction: result.instruction,
     });

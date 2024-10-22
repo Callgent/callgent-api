@@ -107,21 +107,36 @@ export class LLMService {
 
   protected async _llmCache(name: string, prompt: string, result?: string) {
     if (prompt.length > 8190) {
-      this.logger.warn({ name, prompt, result });
+      this.logger.warn(
+        '>>> Prompt too long to cache: name: %s, prompt: \n%s\n\n\tresult: %s',
+        { name, prompt, result },
+      );
       return;
     }
     const prisma = this.txHost.tx as PrismaClient;
-    if (result)
+    if (result) {
+      this.logger.debug(
+        '>>>> Write LLM result to cache: name: %s, prompt: %s\n\n\tresult: %s',
+        {
+          name,
+          prompt,
+          result,
+        },
+      );
       return prisma.llmCache.upsert({
         where: { prompt_name: { prompt, name } },
         create: { name, prompt, result },
         update: { name, prompt, result },
       });
+    }
 
-    return prisma.llmCache.findUnique({
+    const ret = await prisma.llmCache.findUnique({
       where: { prompt_name: { prompt, name } },
       select: { result: true },
     });
+    if (ret)
+      this.logger.debug('>>> Hit LLM result cache: %s, %s', name, ret.result);
+    return ret;
   }
 
   protected async _prompt(template: string, args: { [key: string]: any }) {

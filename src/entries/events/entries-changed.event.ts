@@ -6,9 +6,14 @@ export class EntriesChangedEvent {
 
   constructor(
     public readonly data: {
-      callgent: { id: string; summary?: string; instruction?: string };
-      news?: Omit<Entry, 'securities' | 'createdAt'>[];
-      olds?: Omit<Entry, 'securities' | 'createdAt'>[];
+      callgent: {
+        id: string;
+        name?: string;
+        summary?: string;
+        instruction?: string;
+      };
+      news?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: number })[];
+      olds?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: number })[];
     },
   ) {}
 }

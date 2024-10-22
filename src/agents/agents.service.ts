@@ -209,7 +209,7 @@ export class AgentsService {
         returnType: { statusCode: 200, data: {} },
         bizKey: eventId,
       },
-    ); // TODO check `epName` exists in endpoints, validating `mapping`
+    ); // TODO validating `mapping`
 
     return { statusCode: mapped.statusCode, data: mapped.data };
   }
@@ -218,12 +218,7 @@ export class AgentsService {
    * @param total - whether summarizing from all eps of entry
    * @returns
    */
-  async summarizeEntry({
-    entry,
-    news,
-    olds,
-    total,
-  }: {
+  async summarizeEntry(data: {
     entry: {
       id: string;
       summary?: string;
@@ -232,22 +227,20 @@ export class AgentsService {
     };
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
-    total?: boolean;
+    totally?: boolean;
   }) {
-    const summary = '',
-      instruction = '';
-    return { summary, instruction, total };
+    const result = await this.llmService.template('summarizeEntry', data, {
+      returnType: { summary: '', instruction: '', totally: true },
+      bizKey: data.entry.id,
+    });
+    return result;
   }
+
   /**
    * @param total - whether summarizing from all eps of entry
    * @returns
    */
-  async summarizeCallgent({
-    callgent,
-    news,
-    olds,
-    total,
-  }: {
+  async summarizeCallgent(data: {
     callgent: {
       id: string;
       summary?: string;
@@ -255,10 +248,13 @@ export class AgentsService {
     };
     news?: Omit<Entry, 'securities' | 'createdAt'>[];
     olds?: Omit<Entry, 'securities' | 'createdAt'>[];
-    total?: boolean;
+    totally?: boolean;
   }) {
-    const summary = '',
-      instruction = '';
-    return { summary, instruction, total };
+    const result = await this.llmService.template('summarizeCallgent', data, {
+      returnType: { summary: '', instruction: '', totally: true },
+      bizKey: data.callgent.id,
+    });
+
+    return result;
   }
 }

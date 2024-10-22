@@ -203,7 +203,7 @@ async function initLlmTemplates(
     {
       name: 'map2Endpoint',
       prompt: `given below service endpoint:
-service {{=it.callgentName}} {{{~ it.endpoints :ep }}
+service {{=it.callgentName}} { {{~ it.endpoints :ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
@@ -216,7 +216,7 @@ output single-line json object below:
     {
       name: 'map2Endpoints',
       prompt: `given below service endpoints:
-service {{=it.callgentName}} {{{~ it.endpoints :ep }}
+service {{=it.callgentName}} { {{~ it.endpoints :ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
@@ -260,6 +260,50 @@ we receive below response content:
 
 Please formalize the response content as a single-lined JSON object:
 {"statusCode": "the exact response code(integer) defined in API", "data": "extracted response value with respect to the corresponding API response schema, or undefined if abnormal response", "error": "message": "error message if abnormal response, otherwise undefined"}`,
+    },
+    {
+      name: 'summarizeEntry',
+      prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed endpoints{{ } }}:
+Service {{=it.entry.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+{{ } else { }}
+  summary: '{{=it.entry.summary}}',
+  instruction: '{{=it.entry.instruction}}',
+  endpoints: { {{ if (it.news && it.news.length) { }}
+    existing: {...},
+    added: { {{~ it.news : ep }}
+      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+    },{{ } }}{{ if (it.olds && it.olds.length) { }}
+    removed: { {{~ it.olds : ep }}
+      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+    },{{ } }}
+  }{{ } }}
+};
+Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+output a single-lined JSON object:
+{ "totally": "set to true if you need to reload all service endpoints to re-summarize.",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
+    },
+    {
+      name: 'summarizeCallgent',
+      prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed functional entries{{ } }}:
+Service {{=it.callgent.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
+  "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+{{ } else { }}
+  summary: '{{=it.callgent.summary}}',
+  instruction: '{{=it.callgent.instruction}}',
+  entries: { {{ if (it.news && it.news.length) { }}
+    existing: {...},
+    added: { {{~ it.news : ep }}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+    },{{ } }}{{ if (it.olds && it.olds.length) { }}
+    removed: { {{~ it.olds : ep }}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+    },{{ } }}
+  }{{ } }}
+};
+Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+output a single-lined JSON object:
+{ "totally": "set to true if you need to reload all service entries to re-summarize.", "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
     },
   ];
 
