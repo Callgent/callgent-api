@@ -13,10 +13,11 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { Optional, Requires, Utils } from '../infra/libs/utils';
+import { Optional, Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
 import { EntryAdaptor } from './adaptors/entry-adaptor.base';
@@ -24,6 +25,7 @@ import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/entry-adaptor.decorator
 import { EntryDto } from './dto/entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
+import { EntriesChangedEvent } from './events/entries-changed.event';
 
 @Injectable()
 export class EntriesService implements OnModuleInit {
@@ -33,6 +35,7 @@ export class EntriesService implements OnModuleInit {
     private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly tenancyService: PrismaTenancyService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.EntrySelect = {
     pk: false,
@@ -206,11 +209,22 @@ export class EntriesService implements OnModuleInit {
   }
 
   @Transactional()
-  delete(id: string) {
+  async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.entry.delete({ select, where: { id } }),
+    const ret = await selectHelper(
+      { pk: null },
+      (select) => prisma.entry.delete({ select, where: { id } }),
+      this.defSelect,
     );
+
+    this.eventEmitter.emitAsync(
+      EntriesChangedEvent.eventName,
+      new EntriesChangedEvent({
+        callgent: { id: ret.callgentId },
+        olds: [ret],
+      }),
+    );
+    return ret;
   }
 
   // @Transactional()
