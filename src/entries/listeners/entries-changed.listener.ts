@@ -20,7 +20,7 @@ export class EntriesChangedSumCallgentListener {
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EntriesChangedEvent.eventName)
+  @OnEvent(EntriesChangedEvent.eventName, { async: true })
   async handleEvent(event: EntriesChangedEvent) {
     this.logger.debug('Handling event: %j', event);
 
@@ -52,7 +52,7 @@ export class EntriesChangedSumCallgentListener {
         totally: true,
       });
     }
-    await this.callgentsService.update({
+    return this.callgentsService.update({
       id: callgent.id,
       summary: result.summary,
       instruction: result.instruction,

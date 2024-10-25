@@ -257,4 +257,21 @@ export class AgentsService {
 
     return result;
   }
+
+  async genVue1Route(data: {
+    requirement: string;
+    callgent: { name: string; summary: string; instruction: string };
+    srcId: string;
+  }) {
+    let url: string;
+    const result = await this.llmService.template('genVue1Route', data, {
+      returnType: {
+        views: { [url]: { name: '', file: '', summary: '', distance: 0 } },
+        'router/index.js': '',
+      },
+      bizKey: data.srcId,
+    });
+
+    return result;
+  }
 }

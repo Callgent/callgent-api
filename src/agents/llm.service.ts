@@ -117,11 +117,9 @@ export class LLMService {
     if (result) {
       this.logger.debug(
         '>>>> Write LLM result to cache: name: %s, prompt: %s\n\n\tresult: %s',
-        {
-          name,
-          prompt,
-          result,
-        },
+        name,
+        prompt,
+        result,
       );
       return prisma.llmCache.upsert({
         where: { prompt_name: { prompt, name } },

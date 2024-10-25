@@ -53,6 +53,7 @@ export class CallgentsService {
       });
     }
 
+    // await all async final results
     await this.eventEmitter.emitAsync(
       CallgentCreatedEvent.eventName,
       new CallgentCreatedEvent({ ...data, ...ret }),

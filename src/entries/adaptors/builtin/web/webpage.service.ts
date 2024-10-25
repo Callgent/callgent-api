@@ -1,18 +1,13 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
-import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable } from '@nestjs/common';
-import { ModuleRef, ModulesContainer } from '@nestjs/core';
-import { PrismaTenancyService } from '../../../../infra/repo/tenancy/prisma-tenancy.service';
+import { AgentsService } from '../../../../agents/agents.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 
 @Injectable()
 export class WebpageService {
   constructor(
-    private readonly moduleRef: ModuleRef,
-    @Inject(ModulesContainer)
-    private readonly modulesContainer: ModulesContainer,
-    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: PrismaTenancyService,
+    @Inject('AgentsService')
+    private readonly agentsService: AgentsService,
   ) {}
 
   /** Generate webpage[view/route/model/view-model], then respond the src code */
@@ -22,9 +17,18 @@ export class WebpageService {
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     data.stopPropagation = true; // stop event propagation
 
+    // data.context.callgent
     // data.context.req: { requirement }
     // data.context.endpoints, target events,
-  
+
+    // 根据req和callgent概要，规划几个comps，区分showing/ref
+
+    const route = await this.agentsService.genVue1Route({
+      srcId: data.srcId,
+      callgent: data.context.callgent,
+      requirement: data.context.req.requirement,
+    });
+
     return { data };
   }
 }

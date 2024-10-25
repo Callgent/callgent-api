@@ -74,19 +74,6 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-LOAD-ENDPOINTS',
-      srcId: 'GLOBAL',
-      tenantPk: 0,
-      eventType: 'CLIENT_REQUEST',
-      dataType: '*',
-      serviceType: 'SERVICE',
-      serviceName: 'EndpointsService',
-      funName: 'loadEndpoints',
-      description: 'Load all endpoints into event.context.endpoints',
-      createdBy: 'GLOBAL',
-      priority: (priority += 100),
-    },
-    {
       id: 'CR-LOAD-TARGET',
       srcId: 'GLOBAL',
       tenantPk: 0,
@@ -101,16 +88,15 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-MAP-2-ENDPOINTS',
+      id: 'CR-LOAD-ENDPOINTS',
       srcId: 'GLOBAL',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'AgentsService',
-      funName: 'map2Endpoints',
-      description:
-        'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
+      serviceName: 'EndpointsService',
+      funName: 'loadEndpoints',
+      description: 'Load all endpoints into event.context.endpoints',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -121,10 +107,24 @@ function initEventListeners(
       eventType: 'CLIENT_REQUEST',
       dataType: 'Webpage',
       serviceType: 'SERVICE',
-      serviceName: 'WebpagesService',
+      serviceName: 'WebpageService',
       funName: 'genWebpages',
       description:
         'Generate webpage[view/model/view-model] from request & endpoints',
+      createdBy: 'GLOBAL',
+      priority: (priority += 100),
+    },
+    {
+      id: 'CR-MAP-2-ENDPOINTS',
+      srcId: 'GLOBAL',
+      tenantPk: 0,
+      eventType: 'CLIENT_REQUEST',
+      dataType: '*',
+      serviceType: 'SERVICE',
+      serviceName: 'AgentsService',
+      funName: 'map2Endpoints',
+      description:
+        'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -203,7 +203,7 @@ async function initLlmTemplates(
     {
       name: 'map2Endpoint',
       prompt: `given below service endpoint:
-service {{=it.callgentName}} { {{~ it.endpoints :ep }}
+service \`{{=it.callgentName}}\` { {{~ it.endpoints :ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
@@ -216,7 +216,7 @@ output single-line json object below:
     {
       name: 'map2Endpoints',
       prompt: `given below service endpoints:
-service {{=it.callgentName}} { {{~ it.endpoints :ep }}
+service \`{{=it.callgentName}}\` { {{~ it.endpoints :ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
@@ -264,7 +264,7 @@ Please formalize the response content as a single-lined JSON object:
     {
       name: 'summarizeEntry',
       prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed endpoints{{ } }}:
-Service {{=it.entry.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
+Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 {{ } else { }}
   summary: '{{=it.entry.summary}}',
@@ -281,12 +281,12 @@ Service {{=it.entry.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
 };
 Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
 output a single-lined JSON object:
-{ "totally": "set to true if you need to reload all service endpoints to re-summarize.",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
+{ "totally": "{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
     },
     {
       name: 'summarizeCallgent',
       prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed functional entries{{ } }}:
-Service {{=it.callgent.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
+Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
 {{ } else { }}
   summary: '{{=it.callgent.summary}}',
@@ -303,7 +303,27 @@ Service {{=it.callgent.name}} { {{ if (it.totally) { }}{{~ it.news : ep }}
 };
 Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
 output a single-lined JSON object:
-{ "totally": "set to true if you need to reload all service entries to re-summarize.", "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
+{ "totally": "{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize.{{ } }}", "summary": "Concise summary to let users quickly understand in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
+    },
+    {
+      name: 'genVue1Route',
+      prompt: `Given requirement:
+{ "description": "{{=it.requirement}}" }
+
+You need to generate a Vue app for user to interact with backend service APIs:
+Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": {...} },
+
+There are 7 steps to generate Vue3+Pinia APP code to fulfil the requirement:
+1. generate \`router/index.js\`, only necessary \`views\` for the requirement
+2. define necessary Vue \`components\`, associate with each \`view\`: {view: [comps]};
+3. choose needed service endpoints for each component: {comp: [apis]};
+4. generate \`components/*.vue\` code, which may import \`stores/*.js\`;
+5. generate \`stores/*.js\` used by components, bind \`actions\` to service endpoints.
+6. generate \`views/*.vue\` code, which imports \`components/*.js\`, and \`stores/*.js\` if really needed.
+7. generate App.vue, main.js
+
+Now let's goto #1, please output a single-lined json object:
+{ "views": {["route-path"]: {"name": "component name", "file": "views/{file-name}.vue", "summary":"brief summary to guide developer to implement this view", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "router/index.js": "full implementation code" }`,
     },
   ];
 

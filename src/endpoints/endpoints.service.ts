@@ -115,7 +115,7 @@ export class EndpointsService {
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
   }) {
-    this.eventEmitter.emitAsync(
+    return this.eventEmitter.emitAsync(
       EndpointsChangedEvent.eventName,
       new EndpointsChangedEvent(data),
     );

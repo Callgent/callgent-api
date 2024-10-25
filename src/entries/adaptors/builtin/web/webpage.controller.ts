@@ -69,27 +69,27 @@ export class WebpageController {
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);
 
-    const result = await this.eventListenersService.emit(
-      new ClientRequestEvent(
-        entry.id,
-        entry.adaptorKey,
-        requirement,
-        taskId,
-        {
-          callgentId,
-          callgentName: callgent.name,
-          callerId: req.user?.sub,
-          progressive,
-        },
-        // callback, // 是否需要异步返回结果
-      ),
+    const e = new ClientRequestEvent(
+      entry.id,
+      entry.adaptorKey,
+      requirement,
+      taskId,
+      {
+        callgentId,
+        callgentName: callgent.name,
+        callerId: req.user?.sub,
+        progressive,
+      },
+      // callback, // 是否需要异步返回结果
     );
+    e.context.callgent = callgent;
+    const result = await this.eventListenersService.emit(e);
     // event listeners:
-    // preprocess, c-auth, load eps, load target events, map2Endpoints,
+    // preprocess, c-auth, load target events, load eps, (choose eps?),
 
-    // [gen view/model/view-model, response]
+    // [gen view/model/view-model from summary, response]
 
-    // remove: | s-auth for all eps/entries, invoke-service
+    // remove: | map2Endpoints,s-auth for all eps/entries, invoke-service
 
     // return generated webpage
     const code = result.statusCode || 200;
@@ -168,10 +168,13 @@ export class WebpageController {
     );
     if (!entry)
       throw new NotFoundException(
-        'restAPI entry not found for callgent: ' + callgentId,
+        'Entry not found for callgent: ' + callgentId,
       );
     const callgent = await this.callgentsService.findOne(callgentId, {
+      id: true,
       name: true,
+      summary: true,
+      instruction: true,
     });
     if (!callgent)
       throw new NotFoundException('callgent not found: ' + callgentId);

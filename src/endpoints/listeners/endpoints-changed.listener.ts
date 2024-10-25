@@ -23,7 +23,7 @@ export class EndpointsChangedSumEntryListener {
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EndpointsChangedEvent.eventName)
+  @OnEvent(EndpointsChangedEvent.eventName, { async: true })
   async handleEvent(event: EndpointsChangedEvent) {
     this.logger.debug('Handling event: %j', event);
 
@@ -54,17 +54,21 @@ export class EndpointsChangedSumEntryListener {
       result.instruction === oldEntry.instruction
     )
       return;
-    const newEntry = await this.entriesService.update(
-      oldEntry.id,
-      {
-        summary: result.summary,
-        instruction: result.instruction,
-      },
-      { pk: null },
-    );
-
+    const newEntry = await this.entriesService
+      .update(
+        oldEntry.id,
+        {
+          summary: result.summary,
+          instruction: result.instruction,
+        },
+        { pk: null },
+      )
+      .catch((err) => {
+        this.logger.error('Failed to update entry: %j', err);
+        throw err;
+      });
     // bubble up to the callgent
-    await this.eventEmitter.emitAsync(
+    this.eventEmitter.emitAsync(
       EntriesChangedEvent.eventName,
       new EntriesChangedEvent({
         callgent: { id: oldEntry.callgentId },
@@ -72,5 +76,7 @@ export class EndpointsChangedSumEntryListener {
         olds: [{ ...oldEntry, pk: newEntry.pk } as any],
       }),
     );
+
+    return newEntry;
   }
 }

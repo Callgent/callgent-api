@@ -31,6 +31,10 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   // pino logger
   const logger: ConsoleLogger = registerLogger(app);
 
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled Rejection:', reason);
+  });
+
   app.register(helmet);
   app.register(fastifyIp);
   app.register(fastifyMultipart);

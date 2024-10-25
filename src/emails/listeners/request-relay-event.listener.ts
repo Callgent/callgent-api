@@ -12,7 +12,7 @@ export class RequestRelayListener {
   constructor(private readonly eventListenersService: EventListenersService) {}
 
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request)
+  @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request, { async: true }) // always async
   async handleEvent(event: EmailRelayEvent) {
     this.logger.debug('Handling event: %j', event);
 
