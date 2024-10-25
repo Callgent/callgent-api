@@ -41,16 +41,18 @@ export class LLMService {
     },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
+    const llmModel = this.configService.get('LLM_MODEL');
 
     let result: string;
     let notCached = this.configService.get('LLM_CACHE_ENABLE');
     if (notCached)
-      notCached = !(result = (await this._llmCache(template, prompt))?.result);
+      notCached = !(result = (await this._llmCache(template, llmModel, prompt))
+        ?.result);
 
     if (!result) {
       const resp = await this._completion({
         messages: [{ role: 'user', content: prompt }],
-        model: this.configService.get('LLM_MODEL'),
+        model: llmModel,
         temperature: 0.5,
       });
 
@@ -87,7 +89,8 @@ export class LLMService {
       if (typeof valid === 'boolean') break; // force stop
       maxRetry = i + 2; // force retry
     }
-    if (valid && notCached) await this._llmCache(template, prompt, result);
+    if (valid && notCached)
+      await this._llmCache(template, llmModel, prompt, result);
 
     return ret;
   }
@@ -105,7 +108,12 @@ export class LLMService {
     }
   }
 
-  protected async _llmCache(name: string, prompt: string, result?: string) {
+  protected async _llmCache(
+    name: string,
+    model: string,
+    prompt: string,
+    result?: string,
+  ) {
     if (prompt.length > 8190) {
       this.logger.warn(
         '>>> Prompt too long to cache: name: %s, prompt: \n%s\n\n\tresult: %s',
@@ -122,14 +130,14 @@ export class LLMService {
         result,
       );
       return prisma.llmCache.upsert({
-        where: { prompt_name: { prompt, name } },
-        create: { name, prompt, result },
+        where: { prompt_model_name: { prompt, model, name } },
+        create: { name, model, prompt, result },
         update: { name, prompt, result },
       });
     }
 
     const ret = await prisma.llmCache.findUnique({
-      where: { prompt_name: { prompt, name } },
+      where: { prompt_model_name: { prompt, model, name } },
       select: { result: true },
     });
     if (ret)

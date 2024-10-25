@@ -505,12 +505,13 @@ model LlmCache {
   pk BigInt @id @default(autoincrement())
 
   name   String @db.VarChar(32)
+  model  String @db.VarChar(127)
   prompt String @db.VarChar(8192)
   result String @db.VarChar(8192)
 
   createdAt DateTime @default(now())
 
-  @@unique([prompt, name])
+  @@unique([prompt, model, name])
 }
 
 /// @DtoIgnoreModel
