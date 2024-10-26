@@ -17,13 +17,15 @@ export class LLMService {
     private readonly eventEmitter: EventEmitter2,
   ) {
     dot.templateSettings.strip = false;
+    this.llmModels = JSON.parse(this.configService.get('LLM_MODELS'));
   }
+  protected llmModels: string[];
   private readonly logger = new Logger(LLMService.name);
 
   /**
    * @param template prompt template name
    * @param args  prompt args
-   * @param returnType if not empty, try to parse the response as the specified json
+   * @param returnType if not empty, try to parse the response as the specified json. for index signature, do this: const key=''; returnType = { [key]: any }
    * @param validate if error: retry default times, true/false: stop retry, void: force retry. default retry is 3
    */
   @Transactional()
@@ -41,24 +43,26 @@ export class LLMService {
     },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
-    const llmModel = this.configService.get('LLM_MODEL');
 
-    let result: string;
+    let result: string, llmModel: string;
     let notCached = this.configService.get('LLM_CACHE_ENABLE');
-    if (notCached)
-      notCached = !(result = (await this._llmCache(template, llmModel, prompt))
-        ?.result);
+    if (notCached) {
+      [result, llmModel] = await this._llmCacheLoad(template, prompt);
+      notCached = !result;
+    }
 
     if (!result) {
       const resp = await this._completion({
         messages: [{ role: 'user', content: prompt }],
-        model: llmModel,
+        models: this.llmModels,
+        route: 'fallback',
         temperature: 0.5,
       });
+      llmModel = resp.model;
 
       if (!resp?.choices?.length)
         throw new Error(
-          `LLM service not available: template=${template} bizKey=${bizKey}`,
+          `LLM service not available: template=${template} bizKey=${bizKey}, error=${(resp as any)?.error?.message}`,
         );
 
       const choice = resp.choices[0] as NonStreamingChoice;
@@ -96,16 +100,38 @@ export class LLMService {
   }
 
   protected _checkJsonType(returnType: any, val: any, isArray: boolean) {
-    const keys = Object.keys(isArray ? returnType[0] : returnType);
+    const entries = Object.entries(isArray ? returnType[0] : returnType);
     const a = isArray ? val : [val];
     for (const v of a) {
-      if (!keys.every((key) => key in v))
+      if (
+        !entries.every(([key, type]) => {
+          // key may be '': means { [key]:.. }
+          if (key && !(key in v)) return false;
+          const value = key ? v[key] : Object.values(v)[0];
+          if (
+            value &&
+            (typeof value !== typeof type ||
+              Array.isArray(type) != Array.isArray(value))
+          )
+            return false;
+          return true;
+        })
+      )
         throw new Error(
-          `Return type error, props=${keys.join(',')}, val=${JSON.stringify(
+          `Return type error, props=${entries.join(',')}, val=${JSON.stringify(
             val,
           )}`,
         );
     }
+  }
+
+  protected async _llmCacheLoad(name: string, prompt: string) {
+    let result: string, llmModel: string;
+    for (llmModel of this.llmModels) {
+      result = (await this._llmCache(name, llmModel, prompt))?.result;
+      if (result) break;
+    }
+    return [result, llmModel];
   }
 
   protected async _llmCache(
