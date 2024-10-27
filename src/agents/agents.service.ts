@@ -263,11 +263,118 @@ export class AgentsService {
     callgent: { name: string; summary: string; instruction: string };
     srcId: string;
   }) {
-    let url: string;
+    let viewName = '';
     const result = await this.llmService.template('genVue1Route', data, {
       returnType: {
-        views: { [url]: { name: '', file: '', summary: '', distance: 0 } },
-        'router/index.js': '',
+        views: {
+          [viewName]: {
+            url: '',
+            file: '',
+            summary: '',
+            instruction: '',
+            title: '',
+            distance: 0,
+          },
+        },
+        '/src/router/index.js': '',
+      },
+      bizKey: data.srcId,
+    });
+
+    return result;
+  }
+
+  async genVue2Components(data: {
+    requirement: string;
+    callgent: { name: string; summary: string; instruction: string };
+    srcId: string;
+    views: {
+      [name: string]: {
+        url: string;
+        file: string;
+        summary: string;
+        distance: number;
+      };
+    };
+  }) {
+    let compName = '',
+      viewName = '';
+    const result = await this.llmService.template('genVue2Components', data, {
+      returnType: {
+        components: { [compName]: { file: '', summary: '', instruction: '' } },
+        associations: { [viewName]: [''] },
+      },
+      bizKey: data.srcId,
+      // validate gen.associations.view exists
+      validate: (gen) =>
+        Object.keys(gen.associations).every((view) => data.views[view]),
+    });
+
+    return result;
+  }
+
+  async genVue3Apis(data: {
+    srcId: string;
+    compsList: {
+      name: string;
+      summary: string;
+      instruction: string;
+    }[];
+    endpoints: {
+      name: string;
+      summary: string;
+      description: string;
+      string: any[];
+    }[];
+    callgent: { name: string; summary: string; instruction: string };
+  }) {
+    let compName = '';
+    const result = await this.llmService.template('genVue3Apis', data, {
+      returnType: {
+        [compName]: { endpoints: [''], summary: '', instruction: '' },
+      },
+      bizKey: data.srcId,
+      // validate compName/endpoints exists
+      validate: (gen) =>
+        Object.entries(gen).every(
+          ([compName, comp]) =>
+            data.compsList.find((comp) => comp.name === compName) &&
+            comp.endpoints.every((epName) =>
+              data.endpoints.find((ep) => ep.name === epName),
+            ),
+        ),
+    });
+
+    return result;
+  }
+
+  async genVue4Components(data: {
+    components: {
+      name: string;
+      file?: string;
+      summary: string;
+      instruction?: string;
+      endpoints?: { name: string; params: object; responses: object }[];
+    }[];
+    relatedViews: {
+      name: string;
+      title: string;
+      summary: string;
+      components: string[];
+    }[];
+    otherViews: {
+      name: string;
+      url: string;
+      summary: string;
+    }[];
+    stores: { file: string; summary: string; instruction: string }[];
+    srcId: string;
+  }) {
+    let compName = '';
+    const result = await this.llmService.template('genVue4Components', data, {
+      returnType: {
+        code: '',
+        importedStores: [{ file: '', state: {}, actions: [''], getters: [''] }],
       },
       bizKey: data.srcId,
     });

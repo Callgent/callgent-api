@@ -310,20 +310,75 @@ output a single-lined JSON object:
       prompt: `Given requirement:
 { "description": "{{=it.requirement}}" }
 
-You need to generate a Vue app for user to interact with backend service APIs:
+You need to generate a Vue3+Pinia app for user to interact with backend service APIs:
 Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": {...} },
 
-There are 7 steps to generate Vue3+Pinia APP code to fulfil the requirement:
-1. generate \`router/index.js\`, only necessary \`views\` for the requirement
+There are 7 steps to generate code to fulfil the requirement:
+1. generate \`/src/router/index.js\`, only necessary \`views\` for the requirement
 2. define necessary Vue \`components\`, associate with each \`view\`: {view: [comps]};
 3. choose needed service endpoints for each component: {comp: [apis]};
-4. generate \`components/*.vue\` code, which may import \`stores/*.js\`;
-5. generate \`stores/*.js\` used by components, bind \`actions\` to service endpoints.
-6. generate \`views/*.vue\` code, which imports \`components/*.js\`, and \`stores/*.js\` if really needed.
-7. generate App.vue, main.js
+4. generate \`/src/components/*.vue\` code, which may import \`/src/stores/*.js\`;
+5. generate \`/src/stores/*.js\` used by components, bind \`actions\` to service endpoints.
+6. generate \`/src/views/*.vue\` code, which imports \`/src/components/*.js\`, and \`/src/stores/*.js\` if really needed.
+7. generate /src/App.vue, /src/main.js
 
-Now let's goto #1, please output a single-lined json object:
-{ "views": {["route-path"]: {"name": "component name", "file": "views/{file-name}.vue", "summary":"brief summary to guide developer to implement this view", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "router/index.js": "full implementation code" }`,
+Now let's goto #1, design several view pages, please output a single-lined json object:
+{ "views": {[FormalViewName: string]: {"url": "route url", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "/src/router/index.js": "full implementation code. escape special chars to be valid json string" }`,
+    },
+    {
+      name: 'genVue2Components',
+      prompt: `Given requirement:
+{ "description": "{{=it.requirement}}" }
+
+You need to generate a Vue3+Pinia app for user to interact with backend service APIs:
+Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": {...} },
+
+There are 7 steps to generate code to fulfil the requirement:
+1. generate \`/src/router/index.js\`, only necessary \`views\` for the requirement
+2. define necessary Vue \`components\`, associate with each \`view\`: {view: [comps]};
+3. choose needed service endpoints for each component: {comp: [apis]};
+4. generate \`/src/components/*.vue\` code, which may import \`/src/stores/*.js\`;
+5. generate \`/src/stores/*.js\` used by components, bind \`actions\` to service endpoints.
+6. generate \`/src/views/*.vue\` code, which imports \`/src/components/*.js\`, and \`/src/stores/*.js\` if really needed.
+7. generate /src/App.vue, /src/main.js
+
+Base on the views list from #1:
+{{=JSON.stringify(it.views)}}
+
+Now let's goto #2, design several components, please output a single-lined json object:
+{"components":{[FormalComponentName: string]: {"file": "/src/components/{file-name}.vue", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement. ignore auth logic, which is handled outside of the VUE app."}}, "associations": { [FormalViewName: string]: ["component formal names array", "some components may be shared by multiple views", ..] }`,
+    },
+    {
+      name: 'genVue3Apis',
+      prompt: `Given proposed UI components of a Vue3+Pinia app: [{{~ it.compsList :comp }}
+  { "name": "{{=comp.name}}", "summary":"{{=comp.summary}}", "instruction": "{{=comp.instruction}}" },{{~}}
+],
+
+Back-ended with the following service APIs:
+Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": [{{~ it.endpoints :ep }}
+  { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters": {{=JSON.stringify(ep.params)}} },{{~}}
+  ]
+},
+
+Please choose needed service endpoints for each component,
+Note: all API params are totally listed above, yet components must be changed to fit APIs, so you can remove components if APIs don't support it, or adjust component summary/instruction to fit APIs params!
+output a single-lined json object(don't list removed components):
+{[ComponentName: string]: {"endpoints":["endpoint ids(METHOD /resource/url), which \`may\` be used by the component", ..], "summary":"Adjusted summary", "instruction": "Adjusted instruction"} }`,
+    },
+    {
+      name: 'genVue4Components',
+      prompt: `For Vue3+Pinia app with components structure:
+{
+  "components": {{=JSON.stringify(it.components)}},
+  "relatedViews": {{=JSON.stringify(it.relatedViews)}},
+  "otherViews": {{=JSON.stringify(it.otherViews)}},
+  "stores": {{=JSON.stringify(it.stores)}}
+};
+
+Please generate \`/src/components/JobListTable.vue\` full code based on it's instruction and endpoint APIs(especially props), and utilize \`element-ui@2.15.14\` as UI library,
+the component must import relevant \`stores/*.js\` for Pinia models and actions, needn't generate stores code in current step.
+output a single-lined json object:
+{ "importedStores": [{"file": "/src/stores/{file-name}.js", "state": {"State JSON object used by current component. don't list props not used by current component"}, "actions": ["Actions used by current component, all APIs goes here. you may extend existing, or create new ones.", "don't list items not used by current component", ..], "getters": ["getters used by current component", "don't list items not used by current component", ..]}, ..], "code": "formatted lines of full implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states and error handling. Escape special chars to be valid json string" }`,
     },
   ];
 
