@@ -375,10 +375,10 @@ output a single-lined json object(don't list removed components):
   "stores": {{=JSON.stringify(it.stores)}}
 };
 
-Please generate \`/src/components/JobListTable.vue\` full code based on it's instruction and endpoint APIs(especially props), and utilize \`element-ui@2.15.14\` as UI library,
+Please generate \`{{=it.components[0].file}}\` full code based on it's instruction and endpoint APIs(especially props), and utilize \`element-ui@2.15.14\` as UI library, \`vee-validate@4.14.6\`/\`yup@1.4.0\` for validations.
 the component must import relevant \`stores/*.js\` for Pinia models and actions, needn't generate stores code in current step.
 output a single-lined json object:
-{ "importedStores": [{"file": "/src/stores/{file-name}.js", "state": {"State JSON object used by current component. don't list props not used by current component"}, "actions": ["Actions used by current component, all APIs goes here. you may extend existing, or create new ones.", "don't list items not used by current component", ..], "getters": ["getters used by current component", "don't list items not used by current component", ..]}, ..], "code": "formatted lines of full implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states and error handling. Escape special chars to be valid json string" }`,
+{ "packages":["packages need to install"], "importedStores": [{"file": "/src/stores/{file-name}.js", "state": {"State JSON object used by current component. don't list props not used by current component. add new if needed"}, "actions": ["Actions used by current component, especially wrap APIs into actions. add new if needed.", "don't list actions not used by current component", ..], "getters": ["getters used by current component. add new if needed", "don't list getters not used by current component", ..]}, ..], "code": "formatted lines of full implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions. Escape special chars to be valid json string" }`,
     },
   ];
 

@@ -367,13 +367,19 @@ export class AgentsService {
       url: string;
       summary: string;
     }[];
-    stores: { file: string; summary: string; instruction: string }[];
+    stores: {
+      file: string;
+      state: object;
+      actions: string[];
+      getters: string[];
+    }[];
     srcId: string;
   }) {
     let compName = '';
     const result = await this.llmService.template('genVue4Components', data, {
       returnType: {
         code: '',
+        packages: [''],
         importedStores: [{ file: '', state: {}, actions: [''], getters: [''] }],
       },
       bizKey: data.srcId,

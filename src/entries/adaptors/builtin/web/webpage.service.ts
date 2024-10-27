@@ -71,8 +71,14 @@ export class WebpageService {
     });
 
     // 4. generate `components/*.vue` code, which may import `stores/*.js`;
-    const entries = Object.entries(compApis),
-      stores: { file: string; summary: string; instruction: string }[] = [];
+    const stores: {
+      file: string;
+      state: object;
+      actions: string[];
+      getters: string[];
+    }[] = [];
+    const packages: string[] = [];
+    const entries = Object.entries(compApis);
     for (const [compName, comp] of entries) {
       // endpoints for the component
       const endpoints = comp.endpoints.map((epName) => {
@@ -118,7 +124,21 @@ export class WebpageService {
         stores,
         srcId: data.srcId,
       });
-      break;
+      files[components[0].file] = component.code;
+
+      // merge packages
+      component.packages?.length && packages.push(...component.packages);
+      // merge stores
+      component.importedStores?.forEach((store) => {
+        const s = stores.find((s) => s.file === store.file);
+        if (s) {
+          store.state && (s.state = { ...s.state, ...store.state }); // TODO deep merge?
+          store.actions?.length &&
+            (s.actions = [...s.actions, ...store.actions]);
+          store.getters?.length &&
+            (s.getters = [...s.getters, ...store.getters]);
+        } else stores.push(store);
+      });
     }
 
     // 5. generate `stores/*.js` used by components, bind `actions` to service endpoints.
