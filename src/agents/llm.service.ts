@@ -93,8 +93,8 @@ export class LLMService {
       if (typeof valid === 'boolean') break; // force stop
       maxRetry = i + 2; // force retry
     }
-    if (valid && notCached)
-      await this._llmCache(template, llmModel, prompt, result);
+    if (!valid) throw new Error('Fail validating generated content');
+    if (notCached) await this._llmCache(template, llmModel, prompt, result);
 
     return ret;
   }
@@ -127,20 +127,23 @@ export class LLMService {
 
   protected async _llmCacheLoad(name: string, prompt: string) {
     let result: string, llmModel: string;
-    for (llmModel of this.llmModels) {
-      result = (await this._llmCache(name, llmModel, prompt))?.result;
-      if (result) break;
+    if (prompt.length <= this.CACHE_PROMPT_MAX_LEN) {
+      for (llmModel of this.llmModels) {
+        result = (await this._llmCache(name, llmModel, prompt))?.result;
+        if (result) break;
+      }
     }
     return [result, llmModel];
   }
 
+  protected readonly CACHE_PROMPT_MAX_LEN = 8190;
   protected async _llmCache(
     name: string,
     model: string,
     prompt: string,
     result?: string,
   ) {
-    if (prompt.length > 8190) {
+    if (prompt.length > this.CACHE_PROMPT_MAX_LEN) {
       this.logger.warn(
         '>>> Prompt too long to cache: name: %s, prompt: \n%s\n\n\tresult: %s',
         { name, prompt, result },
@@ -166,8 +169,7 @@ export class LLMService {
       where: { prompt_model_name: { prompt, model, name } },
       select: { result: true },
     });
-    if (ret)
-      this.logger.debug('>>> Hit LLM result cache: %s, %s', name, ret.result);
+    if (ret) this.logger.debug('>>> Hit LLM result cache: %s, %s', name, model);
     return ret;
   }
 
