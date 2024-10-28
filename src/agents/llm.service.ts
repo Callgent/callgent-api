@@ -81,6 +81,7 @@ export class LLMService {
       try {
         valid = !validate || validate(ret, i);
       } catch (e) {
+        // TODO: add error to conversation to optimize result
         this.logger.warn(
           '[retry %d/%d] Fail validating generated content: \n%s\n\t%s',
           i + 1,
@@ -93,7 +94,7 @@ export class LLMService {
       if (typeof valid === 'boolean') break; // force stop
       maxRetry = i + 2; // force retry
     }
-    if (!valid) throw new Error('Fail validating generated content');
+    if (!valid) throw new Error('Fail validating generated content, ' + template);
     if (notCached) await this._llmCache(template, llmModel, prompt, result);
 
     return ret;

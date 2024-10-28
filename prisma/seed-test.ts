@@ -83,7 +83,7 @@ function initTestData(
     callgentId: 'TEST_CALLGENT_ID',
     type: 'CLIENT',
     adaptorKey: 'restAPI',
-    host: '',
+    host: '/api/rest/invoke/TEST_CALLGENT_ID/TEST_CEP_ID',
     tenantPk: 1,
     createdBy: userId,
   };

@@ -373,9 +373,9 @@ export class AgentsService {
       actions: string[];
       getters: string[];
     }[];
+    packages: string[];
     srcId: string;
   }) {
-    let compName = '';
     const result = await this.llmService.template('genVue4Components', data, {
       returnType: {
         code: '',
@@ -383,6 +383,34 @@ export class AgentsService {
         importedStores: [{ file: '', state: {}, actions: [''], getters: [''] }],
       },
       bizKey: data.srcId,
+      validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
+    });
+
+    return result;
+  }
+
+  async genVue5Stores(data: {
+    store: {
+      file: string;
+      state: object;
+      actions: string[];
+      getters: string[];
+      endpoints: {
+        name: any;
+        summary: any;
+        description: any;
+        params: any;
+        responses: any;
+      }[];
+    };
+    packages: string[];
+    apiBaseUrl: string;
+    srcId: string;
+  }) {
+    const result = await this.llmService.template('genVue5Stores', data, {
+      returnType: { code: '', packages: [''] },
+      bizKey: data.srcId,
+      validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
     });
 
     return result;

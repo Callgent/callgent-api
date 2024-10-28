@@ -322,8 +322,8 @@ There are 7 steps to generate code to fulfil the requirement:
 6. generate \`/src/views/*.vue\` code, which imports \`/src/components/*.js\`, and \`/src/stores/*.js\` if really needed.
 7. generate /src/App.vue, /src/main.js
 
-Now let's goto #1, design several view pages, please output a single-lined json object:
-{ "views": {[FormalViewName: string]: {"url": "route url", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "/src/router/index.js": "full implementation code. escape special chars to be valid json string" }`,
+Now let's goto #1, as our chief frontend expert, please design several view pages, output a single-lined json object:
+{ "views": {[FormalViewName: string]: {"url": "route url", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "/src/router/index.js": "full implementation code" }`,
     },
     {
       name: 'genVue2Components',
@@ -345,7 +345,7 @@ There are 7 steps to generate code to fulfil the requirement:
 Base on the views list from #1:
 {{=JSON.stringify(it.views)}}
 
-Now let's goto #2, design several components, please output a single-lined json object:
+Now let's goto #2, as our chief frontend expert, please design several simple/reusable components, output a single-lined json object:
 {"components":{[FormalComponentName: string]: {"file": "/src/components/{file-name}.vue", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement. ignore auth logic, which is handled outside of the VUE app."}}, "associations": { [FormalViewName: string]: ["component formal names array", "some components may be shared by multiple views", ..] }`,
     },
     {
@@ -360,7 +360,7 @@ Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "inst
   ]
 },
 
-Please choose needed service endpoints for each component,
+As our chief frontend expert, please choose needed service endpoints for each component,
 Note: all API params are totally listed above, yet components must be changed to fit APIs, so you can remove components if APIs don't support it, or adjust component summary/instruction to fit APIs params!
 output a single-lined json object(don't list removed components):
 {[ComponentName: string]: {"endpoints":["endpoint ids(METHOD /resource/url), which \`may\` be used by the component", ..], "summary":"Adjusted summary", "instruction": "Adjusted instruction"} }`,
@@ -372,13 +372,24 @@ output a single-lined json object(don't list removed components):
   "components": {{=JSON.stringify(it.components)}},
   "relatedViews": {{=JSON.stringify(it.relatedViews)}},
   "otherViews": {{=JSON.stringify(it.otherViews)}},
-  "stores": {{=JSON.stringify(it.stores)}}
+  "stores": {{=JSON.stringify(it.stores)}},
+  "packages": {{=JSON.stringify(it.packages)}}
 };
 
-Please generate \`{{=it.components[0].file}}\` full code based on it's instruction and endpoint APIs(especially props), and utilize \`element-ui@2.15.14\` as UI library, \`vee-validate@4.14.6\`/\`yup@1.4.0\` for validations.
+As our chief frontend expert, please write \`{{=it.components[0].file}}\` full code based on it's instruction and endpoint APIs(especially props).
 the component must import relevant \`stores/*.js\` for Pinia models and actions, needn't generate stores code in current step.
 output a single-lined json object:
-{ "packages":["packages need to install"], "importedStores": [{"file": "/src/stores/{file-name}.js", "state": {"State JSON object used by current component. don't list props not used by current component. add new if needed"}, "actions": ["Actions used by current component, especially wrap APIs into actions. add new if needed.", "don't list actions not used by current component", ..], "getters": ["getters used by current component. add new if needed", "don't list getters not used by current component", ..]}, ..], "code": "formatted lines of full implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions. Escape special chars to be valid json string" }`,
+{ "packages":["additional real packages(format: package@version) imported by current file, don't list existing/different versioned/unused ones!","make sure packages exists!"], "importedStores": [{"file": "/src/stores/{file-name}.js", "state": {"State JSON object used by current component, list detailed props used by component for each entity(give example object each arrays). don't list props not used by current component. better use existing, add new if needed"}, "actions": ["Actions(full params/resp signature) used by current component, especially wrap APIs into actions. better use existing, add new if needed.", "don't list actions not used by current component", ..], "getters": ["getters used by current component. add new if needed", "don't list getters not used by current component", ..]}, ..], "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions" }`,
+    },
+    {
+      name: 'genVue5Stores',
+      prompt: `For Vue3+Pinia app, please generate \`{{=it.store.file}}\` following the specification:
+{{=JSON.stringify(it.store)}};
+
+existing packages: {{=JSON.stringify(it.packages)}};
+NOTE: call all API with const apiBaseUrl= '{{=it.apiBaseUrl}}';
+As our chief frontend expert, please write the code, output a single-lined json object:
+{ "packages":["additional packages(format: package@version) imported by current file, don't list existing/different versioned/unused ones!","make sure packages exists!"], "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation js code" }`,
     },
   ];
 
