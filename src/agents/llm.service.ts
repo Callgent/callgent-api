@@ -94,7 +94,10 @@ export class LLMService {
       if (typeof valid === 'boolean') break; // force stop
       maxRetry = i + 2; // force retry
     }
-    if (!valid) throw new Error('Fail validating generated content, ' + template);
+    if (!valid) {
+      this.logger.warn('Fail validating generated content, %s, %j', template, ret);
+      throw new Error('Fail validating generated content, ' + template);
+    }
     if (notCached) await this._llmCache(template, llmModel, prompt, result);
 
     return ret;
@@ -147,31 +150,35 @@ export class LLMService {
     if (prompt.length > this.CACHE_PROMPT_MAX_LEN) {
       this.logger.warn(
         '>>> Prompt too long to cache: name: %s, prompt: \n%s\n\n\tresult: %s',
-        { name, prompt, result },
-      );
-      return;
-    }
-    const prisma = this.txHost.tx as PrismaClient;
-    if (result) {
-      this.logger.debug(
-        '>>>> Write LLM result to cache: name: %s, prompt: %s\n\n\tresult: %s',
         name,
         prompt,
         result,
       );
-      return prisma.llmCache.upsert({
-        where: { prompt_model_name: { prompt, model, name } },
-        create: { name, model, prompt, result },
-        update: { name, prompt, result },
-      });
+      return;
+    }
+    const prisma = this.txHost.tx as PrismaClient;
+    const ret = await prisma.llmCache.findFirst({
+      where: { prompt, model, name },
+      select: { pk: true, result: true },
+    });
+
+    if (!result) {
+      ret && this.logger.debug('>>> Hit LLM result cache: %s, %s', name, model);
+      return ret;
     }
 
-    const ret = await prisma.llmCache.findUnique({
-      where: { prompt_model_name: { prompt, model, name } },
-      select: { result: true },
-    });
-    if (ret) this.logger.debug('>>> Hit LLM result cache: %s, %s', name, model);
-    return ret;
+    this.logger.debug(
+      '>>>> Write LLM result to cache: name: %s, prompt: %s\n\n\tresult: %s',
+      name,
+      prompt,
+      result,
+    );
+    return ret
+      ? prisma.llmCache.update({
+          where: { pk: ret.pk },
+          data: { result },
+        })
+      : prisma.llmCache.create({ data: { name, model, prompt, result } });
   }
 
   protected async _prompt(template: string, args: { [key: string]: any }) {

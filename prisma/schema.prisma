@@ -511,7 +511,8 @@ model LlmCache {
 
   createdAt DateTime @default(now())
 
-  @@unique([prompt, model, name])
+  @@index([prompt], type: Hash)
+  @@index([model, name])
 }
 
 /// @DtoIgnoreModel
