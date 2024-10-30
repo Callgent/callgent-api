@@ -1,5 +1,5 @@
 import { Transactional } from '@nestjs-cls/transactional';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EntryType } from '@prisma/client';
 import { AgentsService } from '../../../../agents/agents.service';
@@ -22,6 +22,7 @@ export class WebpageService {
       this.configService.get('WEBPAGE_PACKAGES_STORE'),
     );
   }
+  private readonly logger = new Logger(WebpageService.name);
   protected initPackagesComponent = [];
   protected initPackagesStore = [];
 
@@ -276,6 +277,7 @@ export class WebpageService {
 
     // 7. generate App.vue, main.js
 
+    this.logger.warn(JSON.stringify([packages, files]));
     return { data };
   }
 
