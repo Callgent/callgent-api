@@ -598,7 +598,7 @@ model EventStore {
   /// @Description callback type, 'URL' or 'EVENT'
   callbackType EventCallbackType @default(EVENT)
 
-  data    Json? @db.Json
+  // data    Json? @db.Json
   context Json? @db.Json
 
   /// @description statusCode, 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume calling current-listener.funName, <0: error

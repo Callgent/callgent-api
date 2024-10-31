@@ -53,7 +53,7 @@ export class AgentsService {
     // FIXME map from all taskId events
 
     // if epName, try find mapArgs function by [cepAdaptor, epName]
-    const mapped = await (reqEvent.data.epName
+    const mapped = await (reqEvent.context.epName
       ? this._map2Endpoint(reqEvent)
       : this._map2Endpoints(reqEvent));
     if (!mapped) return;
@@ -68,8 +68,7 @@ export class AgentsService {
       id,
       srcId,
       dataType: cenAdaptor,
-      data: { callgentName, epName },
-      context: { endpoints, tgtEvents, req },
+      context: { callgentName, epName, endpoints, req, tgtEvents },
     } = reqEvent;
     const endpoint: EndpointDto = endpoints[0];
 
@@ -89,9 +88,12 @@ export class AgentsService {
       'map2Endpoint',
       { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
       {
-        returnType: { req2Args: '', args: {} },
+        returnType: { req2Args: '' },
         bizKey: id,
-        validate: (data) => ((data.args = eval(data.req2Args)(req)), true),
+        validate: (data) => (
+          ((data as any).args = new Function('return ' + data.req2Args)()(req)),
+          true
+        ),
       },
     );
     return mapped;
@@ -102,8 +104,7 @@ export class AgentsService {
       id,
       srcId,
       dataType: cenAdaptor,
-      data: { callgentName, epName, progressive },
-      context: { endpoints, tgtEvents, req },
+      context: { callgentName, epName, progressive, endpoints, req, tgtEvents },
     } = reqEvent;
 
     const mapped = await this.llmService.template(

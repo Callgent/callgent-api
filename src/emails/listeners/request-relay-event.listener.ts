@@ -26,9 +26,7 @@ export class RequestRelayListener {
         reqEventId,
       );
 
-    reqEvent.data
-      ? ((reqEvent.data as JsonObject).resp = resp)
-      : (reqEvent.data = { resp });
+    (reqEvent.context as JsonObject).resp = resp;
 
     // resuming event chain
     await this.eventListenersService.resume(reqEvent);

@@ -95,7 +95,12 @@ export class LLMService {
       maxRetry = i + 2; // force retry
     }
     if (!valid) {
-      this.logger.warn('Fail validating generated content, %s, %j', template, ret);
+      this.logger.warn(
+        'Fail validating generated content, %s,\n%s\n%j',
+        template,
+        prompt,
+        ret,
+      );
       throw new Error('Fail validating generated content, ' + template);
     }
     if (notCached) await this._llmCache(template, llmModel, prompt, result);

@@ -18,7 +18,7 @@ export class EventStoresService {
 
     const prisma = this.txHost.tx as PrismaClient;
     const es = await prisma.eventStore.findMany({
-      select: { id: true, eventType: true, dataType: true, data: true }, // TODO, what to select
+      select: { id: true, eventType: true, dataType: true }, // TODO, what to select
       where: { AND: [{ NOT: { id } }, { taskId }] },
       orderBy: { id: 'asc' },
     });
@@ -51,6 +51,9 @@ export class EventStoresService {
     const prisma = this.txHost.tx as PrismaClient;
     const data: Prisma.EventStoreCreateInput = {
       ...event,
+      context: event.context,
+      stopPropagation: event.stopPropagation,
+      preventDefault: event.preventDefault,
       funName,
       listenerId,
     };

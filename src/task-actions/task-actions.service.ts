@@ -21,7 +21,7 @@ export class TaskActionsService {
   /** create task action for client request. */
   // @Transactional()
   // async createTaskAction(reqEvent: ClientRequestEvent) {
-  //   const { taskId, caller, progressive, callback, funName } = reqEvent.data;
+  //   const { taskId, caller, progressive, callback, funName } = reqEvent.context;
   //   const req = (reqEvent.processed.req || reqEvent.context.req) as any;
 
   //   // new task
@@ -45,7 +45,7 @@ export class TaskActionsService {
   //   // TODO: some action needn't persist, e.g. (action && !taskId)
   //   const prisma = this.txHost.tx as PrismaClient;
   //   await prisma.taskAction.create({ data });
-  //   reqEvent.data.taskId = task.id;
+  //   reqEvent.taskId = task.id;
   //   reqEvent.processed.taskActionId = data.id;
   // }
 

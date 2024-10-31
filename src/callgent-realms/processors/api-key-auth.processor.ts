@@ -110,7 +110,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
   ): Promise<true> {
     // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"api.callgent.com"}
     const scheme: APIKeySecurityScheme = realm.scheme as any;
-    const req = reqEvent.context.req as any;
+    const req = reqEvent.context.req;
 
     const [name, value] = [scheme.name, realm.secret as string];
     let in0 = scheme.in;

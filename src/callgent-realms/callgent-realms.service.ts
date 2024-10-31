@@ -162,7 +162,7 @@ export class CallgentRealmsService implements OnModuleInit {
   //// auth check start, auth config end ////
 
   /** same as sep auth, except token cannot be attached to request event */
-  async checkCepAuth(
+  async checkCenAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const cep = await this.entriesService.findOne(reqEvent.srcId);
@@ -246,7 +246,7 @@ export class CallgentRealmsService implements OnModuleInit {
     if (!realm?.enabled) return false;
 
     // read existing from token store
-    const userToken = await this.findUserToken(realm, reqEvent.data.callerId);
+    const userToken = await this.findUserToken(realm, reqEvent.context.callerId);
     if (userToken) {
       // invoke validation url. TODO security as arg
       const result = await processor.validateToken(

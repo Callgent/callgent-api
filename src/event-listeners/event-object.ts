@@ -14,9 +14,24 @@ export class EventObject {
     public readonly callbackType: EventCallbackType = 'EVENT',
   ) {
     this.id = Utils.uuid();
+
+    Object.defineProperty(this, 'context', {
+      value: {},
+      enumerable: false,
+    });
+    Object.defineProperty(this, 'stopPropagation', {
+      value: false,
+      writable: true,
+      enumerable: false,
+    });
+    Object.defineProperty(this, 'preventDefault', {
+      value: false,
+      writable: true,
+      enumerable: false,
+    });
   }
   public readonly id: string;
-  public readonly context: { [key: string]: any } = {};
-  public stopPropagation = false;
-  public preventDefault = false;
+  public declare readonly context: { [key: string]: any };
+  public declare stopPropagation: boolean;
+  public declare preventDefault: boolean;
 }

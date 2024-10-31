@@ -54,7 +54,7 @@ export class EventListenersService {
       ? Promise.race([
           result,
           Utils.sleep(timeout).then(() => ({
-            data: { ...data, context: undefined },
+            data,
             statusCode: 1,
             message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
           })),
@@ -150,14 +150,14 @@ export class EventListenersService {
             e.response?.data?.message || `[${e.name}] ${e.message}`;
           e.status < 500 || this.logger.error(e);
           return {
-            data: { ...event, context: undefined },
+            data: event,
             statusCode,
             message,
           };
         }
       }
       return {
-        data: { ...event, context: undefined },
+        data: event,
         statusCode,
       };
     } finally {

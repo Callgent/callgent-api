@@ -48,7 +48,7 @@ export class EndpointsService {
   async loadEndpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const { epName, callgentId } = reqEvent.data;
+    const { epName, callgentId } = reqEvent.context;
 
     // TODO if too many endpoints, use summary first
     const { data: eps } = await this.findMany({

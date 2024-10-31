@@ -15,7 +15,7 @@ export class ClientRequestEvent extends EventObject {
     dataType: string,
     req: object,
     taskId: string,
-    public readonly data: {
+    context: {
       callgentId: string;
       callgentName: string;
       /** empty means anonymous */
@@ -28,6 +28,17 @@ export class ClientRequestEvent extends EventObject {
     callback?: string,
   ) {
     super(entryId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
+    Object.assign(this.context, context);
     this.context.req = req;
   }
+  public declare readonly context: {
+    req: any;
+    resp?: any;
+    callgentId: string;
+    callgentName: string;
+    callerId?: string;
+    epName?: string;
+    progressive?: string;
+    [key: string]: any;
+  };
 }

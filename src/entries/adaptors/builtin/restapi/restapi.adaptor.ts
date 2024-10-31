@@ -135,7 +135,7 @@ export class RestAPIAdaptor extends EntryAdaptor {
       );
     const {
       callback,
-      data: { progressive },
+      context: { progressive },
     } = reqEvent;
 
     // read callback from cep config
