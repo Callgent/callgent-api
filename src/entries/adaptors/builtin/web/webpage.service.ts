@@ -110,16 +110,16 @@ export class WebpageService {
     }
     keys = undefined;
     const viewComps: { [view: string]: string[] } = {};
-    const compsList = Object.entries(components).map(([name, comp]) => {
-      comp.inViews.forEach((view) => {
-        const comps = viewComps[view] || (viewComps[view] = []);
-        comps.push(name);
-      });
-      return {
-        name,
-        ...comp,
-      };
-    });
+    // const compsList = Object.entries(components).map(([name, comp]) => {
+    //   comp.inViews.forEach((view) => {
+    //     const comps = viewComps[view] || (viewComps[view] = []);
+    //     comps.push(name);
+    //   });
+    //   return {
+    //     name,
+    //     ...comp,
+    //   };
+    // });
 
     // 3. choose needed service endpoints for each component: {comp: [apis]};
     // TODO filter by view distances
@@ -130,12 +130,12 @@ export class WebpageService {
     //   callgent: data.context.callgent,
     // });
 
-    // 4. generate `components/*.vue` code, which may import `stores/*.js`;
+    // 3. generate `components/*.vue` code, which may import `stores/*.js`;
     const stores: {
       file: string;
       state: object;
       actions: string[];
-      getters: string[];
+      getters: object[];
       endpoints: string[];
     }[] = [];
     let packages: string[] = this.initPackagesComponent;
@@ -182,7 +182,7 @@ export class WebpageService {
         endpoints,
       });
 
-      const component = await this.agentsService.genVue4Component({
+      const component = await this.agentsService.genVue3Component({
         components: relatedComps,
         relatedViews,
         otherViews,
@@ -221,7 +221,7 @@ export class WebpageService {
     }
     entries = undefined;
 
-    // 5. generate `stores/*.js` used by components, bind `actions` to service endpoints.
+    // 4. generate `stores/*.js` used by components, bind `actions` to service endpoints.
     packages.push(...this.initPackagesStore);
     for (const store of stores) {
       const endpoints = store.endpoints.map((epName) => {
@@ -235,7 +235,7 @@ export class WebpageService {
         };
       });
 
-      const storeResult = await this.agentsService.genVue5Store({
+      const storeResult = await this.agentsService.genVue4Store({
         packages,
         store: { ...store, endpoints },
         apiBaseUrl,
@@ -247,7 +247,7 @@ export class WebpageService {
       files[store.file] = storeResult.code;
     }
 
-    // 6. generate `views/*.vue` code, which imports `components/*.js`, and `stores/*.js` if really needed.
+    // 5. generate `views/*.vue` code, which imports `components/*.js`, and `stores/*.js` if really needed.
     // change view descriptions
     let entries1 = Object.entries(viewComps);
     for (const [name, compNames] of entries1) {
@@ -262,7 +262,7 @@ export class WebpageService {
         endpoints: undefined,
         inViews: undefined,
       }));
-      const result = await this.agentsService.genVue6View({
+      const result = await this.agentsService.genVue5View({
         view,
         otherViews,
         components: comps,
@@ -275,9 +275,10 @@ export class WebpageService {
     }
     entries1 = undefined;
 
-    // 7. generate App.vue, main.js
+    // 6. needn't generate App.vue, main.js
 
-    this.logger.warn(JSON.stringify([packages, files]));
+    data.context.resp = { packages, files };
+    // this.logger.warn(JSON.stringify(data.context.resp));
     return { data };
   }
 

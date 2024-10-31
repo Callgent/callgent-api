@@ -389,7 +389,7 @@ export class AgentsService {
     return result;
   }
 
-  async genVue4Component(data: {
+  async genVue3Component(data: {
     components: {
       name: string;
       // props: string[];
@@ -413,16 +413,18 @@ export class AgentsService {
       file: string;
       state: object;
       actions: string[];
-      getters: string[];
+      getters: object[];
     }[];
     packages: string[];
     srcId: string;
   }) {
-    const result = await this.llmService.template('genVue4Component', data, {
+    const result = await this.llmService.template('genVue3Component', data, {
       returnType: {
         code: '',
         packages: [''],
-        importedStores: [{ file: '', state: {}, actions: [''], getters: [''] }],
+        importedStores: [
+          { file: '', name: '', state: {}, actions: [''], getters: [{}] },
+        ],
         spec: {
           props: [''],
           slots: [{ name: '', summary: '' }],
@@ -433,18 +435,20 @@ export class AgentsService {
       bizKey: data.srcId,
       validate: (gen) =>
         gen.packages?.every((p) => p.lastIndexOf('@') > 0) &&
-        gen.spec?.components?.every((c) => data.components.find((comp) => comp.name === c)),
+        gen.spec?.components?.every((c) =>
+          data.components.find((comp) => comp.name === c),
+        ),
     });
 
     return result;
   }
 
-  async genVue5Store(data: {
+  async genVue4Store(data: {
     store: {
       file: string;
       state: object;
       actions: string[];
-      getters: string[];
+      getters: object[];
       endpoints: {
         name: any;
         summary: any;
@@ -457,7 +461,7 @@ export class AgentsService {
     apiBaseUrl: string;
     srcId: string;
   }) {
-    const result = await this.llmService.template('genVue5Store', data, {
+    const result = await this.llmService.template('genVue4Store', data, {
       returnType: { code: '', packages: [''] },
       bizKey: data.srcId,
       validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
@@ -465,7 +469,7 @@ export class AgentsService {
     return result;
   }
 
-  async genVue6View(data: {
+  async genVue5View(data: {
     view: {
       name: string;
       title: string;
@@ -490,7 +494,7 @@ export class AgentsService {
     packages: string[];
     srcId: string;
   }) {
-    const result = await this.llmService.template('genVue6View', data, {
+    const result = await this.llmService.template('genVue5View', data, {
       returnType: { code: '', packages: [''] },
       bizKey: data.srcId,
       validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
