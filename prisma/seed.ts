@@ -280,9 +280,9 @@ Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
     },{{ } }}
   }{{ } }}
 };
-Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
 output a single-lined JSON object:
-{ "totally": "{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
+{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
     },
     {
       name: 'summarizeCallgent',
@@ -302,9 +302,9 @@ Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
     },{{ } }}
   }{{ } }}
 };
-Please re-summarize service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
 output a single-lined JSON object:
-{ "totally": "{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
+{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
     },
     {
       name: 'genVue1Route',

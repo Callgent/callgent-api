@@ -144,17 +144,13 @@ export class CallgentsService {
   @Transactional()
   async findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    await prisma.callgent.update({
-      where: { id },
-      select: { id: true },
-      data: { viewed: { increment: 1 } },
-    });
     return selectHelper(
       select,
       (select) =>
-        prisma.callgent.findUnique({
-          select,
+        prisma.callgent.update({
           where: { id },
+          select,
+          data: { viewed: { increment: 1 } },
         }),
       this.defSelect,
     );

@@ -184,11 +184,7 @@ export class EndpointsService {
     });
 
     // create api endpoints
-    const prisma = this.txHost.tx as PrismaClient;
-    const { count: actionsCount } = await prisma.endpoint.createMany({
-      data: actMap,
-    });
-    this._pubEvent({ entry: entry as any, news: actMap as any[] });
+    const actionsCount = this.createMany(actMap, entry);
 
     // 根据adaptor，auth type，判定可选的auth servers
     // FIXME save securitySchemes on entry
@@ -199,6 +195,17 @@ export class EndpointsService {
     // FIXME add auth-listener for this sep,
 
     return actionsCount;
+  }
+
+  @Transactional()
+  async createMany(
+    data: Prisma.EndpointUncheckedCreateInput[],
+    entry: EntryDto,
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const { count } = await prisma.endpoint.createMany({ data });
+    this._pubEvent({ entry: entry as any, news: data as any[] });
+    return count;
   }
 
   @Transactional()
