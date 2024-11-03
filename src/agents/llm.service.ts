@@ -26,7 +26,7 @@ export class LLMService {
    * @param template prompt template name
    * @param args  prompt args
    * @param returnType if not empty, try to parse the response as the specified json. for index signature, do this: const key=''; returnType = { [key]: any }
-   * @param validate if error: retry default times, true/false: stop retry, void: force retry. default retry is 3
+   * @param validate if error: stop retry, true/false: retry default times, void: force retry. default retry is 3
    */
   @Transactional()
   async template<T>(
@@ -44,66 +44,80 @@ export class LLMService {
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
 
-    let result: string, llmModel: string;
+    let cache: string, llmModel: string;
     let notCached = this.configService.get('LLM_CACHE_ENABLE');
     if (notCached) {
-      [result, llmModel] = await this._llmCacheLoad(template, prompt);
-      notCached = !result;
+      [cache, llmModel] = await this._llmCacheLoad(template, prompt);
+      notCached = !cache;
     }
 
-    if (!result) {
-      const resp = await this._completion({
-        messages: [{ role: 'user', content: prompt }],
-        models: this.llmModels,
-        route: 'fallback',
-        temperature: 0.5,
-      });
-      llmModel = resp.model;
-
-      if (!resp?.choices?.length)
-        throw new Error(
-          `LLM service not available: template=${template} bizKey=${bizKey}, error=${(resp as any)?.error?.message}`,
-        );
-
-      const choice = resp.choices[0] as NonStreamingChoice;
-      result = choice.message?.content;
-    }
-
-    let ret = result as T;
-    if (returnType) {
-      const isArray = Array.isArray(returnType);
-      ret = Utils.toJSON(result, isArray);
-      // check type
-      this._checkJsonType(returnType, ret, isArray);
-    }
+    let ret: T,
+      llmResult = '';
     let [maxRetry, valid] = [3, undefined];
     for (let i = 0; i < maxRetry; i++) {
       try {
-        valid = !validate || validate(ret, i);
+        ret = cache as T;
+        if (!ret) {
+          const resp = await this._completion({
+            // messages: [{ role: 'user', content: prompt }],
+            prompt,
+            stream: false,
+            models: this.llmModels,
+            route: 'fallback',
+            temperature: 0.5,
+          });
+          llmModel = resp.model;
+
+          if (!resp?.choices?.length) {
+            i = maxRetry; // force stop
+            throw new Error(
+              `LLM service not available: template=${template} bizKey=${bizKey}, error=${(resp as any)?.error?.message}`,
+            );
+          }
+
+          const choice = resp.choices[0] as NonChatChoice;
+          llmResult = ret = choice.text as any;
+        }
+
+        if (returnType) {
+          const isArray = Array.isArray(returnType);
+          ret = Utils.toJSON(ret as any, isArray);
+          // check type
+          this._checkJsonType(returnType, ret, isArray);
+        }
       } catch (e) {
         // TODO: add error to conversation to optimize result
         this.logger.warn(
-          '[retry %d/%d] Fail validating generated content: \n%s\n\t%s',
+          '[retry %d/%d] Fail validating generated content: \n-----%s\n\n\t>>>>>%s',
           i + 1,
           maxRetry,
           prompt.replace(/\n/g, '\\n'),
-          result.replace(/\n/g, '\\n'),
+          llmResult.replace(/\n/g, '\\n'),
         );
         continue; // default retry
       }
-      if (typeof valid === 'boolean') break; // force stop
-      maxRetry = i + 2; // force retry
-    }
-    if (!valid) {
+      try {
+        valid = !validate || validate(ret, i);
+      } catch (e) {
+        this.logger.warn('validate error, force no retry: %s', e.message);
+        break; // force stop
+      }
+      if (typeof valid !== 'boolean') maxRetry = i + 2; // force retry;
+      if (valid) break;
       this.logger.warn(
-        'Fail validating generated content, %s,\n%s\n%j',
-        template,
-        prompt,
-        ret,
+        '[retry %d/%d] Fail validating generated content: \n-----%s\n\n\t>>>>>%s',
+        i + 1,
+        maxRetry,
+        prompt.replace(/\n/g, '\\n'),
+        llmResult.replace(/\n/g, '\\n'),
       );
-      throw new Error('Fail validating generated content, ' + template);
     }
-    if (notCached) await this._llmCache(template, llmModel, prompt, result);
+    if (!valid)
+      throw new Error(
+        'Fail validating generated content, ' + [llmModel, template],
+      );
+
+    if (notCached) await this._llmCache(template, llmModel, prompt, llmResult);
 
     return ret;
   }

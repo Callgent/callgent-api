@@ -262,24 +262,22 @@ export class AgentsService {
   async genVue1Route(data: {
     requirement: string;
     callgent: { name: string; summary: string; instruction: string };
-    srcId: string;
+    bizKey: string;
   }) {
-    let viewName = '';
     const result = await this.llmService.template('genVue1Route', data, {
-      returnType: {
-        views: {
-          [viewName]: {
-            url: '',
-            file: '',
-            summary: '',
-            instruction: '',
-            title: '',
-            distance: 0,
-          },
+      returnType: [
+        {
+          name: '',
+          path: '',
+          component: '',
+          file: '',
+          title: '',
+          summary: '',
+          instruction: '',
+          distance: 0,
         },
-        '/src/router/index.js': '',
-      },
-      bizKey: data.srcId,
+      ],
+      bizKey: data.bizKey,
     });
 
     return result;
@@ -288,7 +286,7 @@ export class AgentsService {
   async genVue2Components(data: {
     view: {
       name: string;
-      url: string;
+      path: string;
       file: string;
       title: string;
       summary: string;
@@ -296,7 +294,7 @@ export class AgentsService {
     };
     otherViews: {
       name: string;
-      url: string;
+      path: string;
       title: string;
       summary: string;
     }[];
@@ -316,7 +314,7 @@ export class AgentsService {
       params: [];
     }[];
     packages: string[];
-    srcId: string;
+    bizKey: string;
   }) {
     let compName = '';
     const result = await this.llmService.template('genVue2Components', data, {
@@ -329,7 +327,7 @@ export class AgentsService {
           instruction: '',
         },
       },
-      bizKey: data.srcId,
+      bizKey: data.bizKey,
       // validate endpoints exists
       validate: (gen) =>
         Object.values(gen).every((comp) =>
@@ -343,7 +341,7 @@ export class AgentsService {
   }
 
   async genVue3Apis(data: {
-    srcId: string;
+    bizKey: string;
     compsList: {
       name: string;
       // props: string[];
@@ -368,7 +366,7 @@ export class AgentsService {
           instruction: '',
         },
       },
-      bizKey: data.srcId,
+      bizKey: data.bizKey,
       // validate compName/endpoints exists
       validate: (gen) =>
         Object.entries(gen).every(([compName, comp]) => {
@@ -406,7 +404,7 @@ export class AgentsService {
     }[];
     otherViews: {
       name: string;
-      url: string;
+      path: string;
       summary: string;
     }[];
     stores: {
@@ -416,7 +414,7 @@ export class AgentsService {
       getters: object[];
     }[];
     packages: string[];
-    srcId: string;
+    bizKey: string;
   }) {
     const result = await this.llmService.template('genVue3Component', data, {
       returnType: {
@@ -432,7 +430,7 @@ export class AgentsService {
           components: ['ComponentName', 'may empty array'],
         },
       },
-      bizKey: data.srcId,
+      bizKey: data.bizKey,
       validate: (gen) =>
         gen.packages?.every((p) => p.lastIndexOf('@') > 0) &&
         gen.spec?.components?.every((c) =>
@@ -459,11 +457,11 @@ export class AgentsService {
     };
     packages: string[];
     apiBaseUrl: string;
-    srcId: string;
+    bizKey: string;
   }) {
     const result = await this.llmService.template('genVue4Store', data, {
       returnType: { code: '', packages: [''] },
-      bizKey: data.srcId,
+      bizKey: data.bizKey,
       validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
     });
     return result;
@@ -473,7 +471,7 @@ export class AgentsService {
     view: {
       name: string;
       title: string;
-      url: string;
+      path: string;
       summary: string;
       instruction: string;
       file: string;
@@ -481,7 +479,7 @@ export class AgentsService {
     otherViews: {
       name: string;
       title: string;
-      url: string;
+      path: string;
     }[];
     components: {
       name: string;
@@ -492,11 +490,11 @@ export class AgentsService {
       spec: object;
     }[];
     packages: string[];
-    srcId: string;
+    bizKey: string;
   }) {
     const result = await this.llmService.template('genVue5View', data, {
       returnType: { code: '', packages: [''] },
-      bizKey: data.srcId,
+      bizKey: data.bizKey,
       validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
     });
     return result;

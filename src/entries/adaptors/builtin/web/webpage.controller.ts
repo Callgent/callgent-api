@@ -83,7 +83,11 @@ export class WebpageController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
-    const result = await this.eventListenersService.emit(e);
+    const {
+      statusCode: code,
+      data,
+      message,
+    } = await this.eventListenersService.emit(e);
     // event listeners:
     // preprocess, c-auth, load target events, load eps, (choose eps?),
 
@@ -92,8 +96,14 @@ export class WebpageController {
     // remove: | map2Endpoints,s-auth for all eps/entries, invoke-service
 
     // return generated webpage
-    const code = result.statusCode || 200;
-    res.status(code < 0 ? 418 : code < 200 ? 200 : code).send(result);
+
+    const ctx = data?.context;
+    // FIXME data
+    const statusCode = code || 200;
+    // code cannot < 0
+    res
+      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
+      .send({ data: { ...data, response: ctx.resp }, statusCode, message });
   }
 
   @ApiOperation({ summary: 'To invoke pregenerated pages.' })

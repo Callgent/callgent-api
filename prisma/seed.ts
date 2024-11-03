@@ -322,24 +322,22 @@ There are 6 steps to generate code to fulfil the requirement:
 5. generate \`/src/views/*.vue\` code, which combines several \`/src/components/*.js\`, no any import of \`/src/stores/*.js\`.
 6. generate /src/App.vue, /src/main.js
 
-Now let's goto #1, as world-class frontend expert, please design necessary simple view pages, output a single-lined json object:
-{ "views": {[FormalViewName: string]: {"url": "route url", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root"}}, "/src/router/index.js": "full implementation code, route name must same with component name; no process.env.*!" }
-after generation before output, double-check to meet all rule:
-- FormalViewName must suffix with 'View'`,
+Now let's goto #1, as world-class frontend expert, please design necessary simple view pages, output a single-lined json array of routes:
+[{ "name": "just same as component name", "component": "component name, unique in this array, must suffix with 'View'", "path": "route path", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root" }]`,
     },
-    // TODO component tree
+    // TODO vue-i18n: src/i18n.js, app.use(i18n);
     {
       name: 'genVue2Components',
       prompt: `For Vue3+Pinia app with views:
 [
-  {"name":"{{=it.view.name}}","url":"{{=it.view.url}}","file":"{{=it.view.file}}","title":"{{=it.view.title}}","summary":"{{=it.view.summary}}","instruction":"{{=it.view.instruction}}},{{~it.otherViews:ov}}
-  {"name":"{{=ov.name}}","url":"{{=ov.url}}","title":"{{=ov.title}}","summary":"{{=ov.summary}}"},{{~}}
+  {"name":"{{=it.view.name}}","path":"{{=it.view.path}}","file":"{{=it.view.file}}","title":"{{=it.view.title}}","summary":"{{=it.view.summary}}","instruction":"{{=it.view.instruction}}},{{~it.otherViews:ov}}
+  {"name":"{{=ov.name}}","path":"{{=ov.path}}","title":"{{=ov.title}}","summary":"{{=ov.summary}}"},{{~}}
 ],
 and existing UI components:
 {{=JSON.stringify(it.components)}},
 
 Depending on the installed packages: [{{=it.packages}}], use these components libraries for best practice,
-As world-class frontend architect, please design simple components(not embedded into each other; and minimal props) for entire view \`{{=it.view.name}}\`, which are back-ended by service endpoints: [{{~ it.endpoints :ep }}
+As world-class frontend architect, please design simple components for entire view \`{{=it.view.name}}\`, which are back-ended by service endpoints: [{{~ it.endpoints :ep }}
   { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params": {{=JSON.stringify(ep.params)}} },{{~}}
 ],
 Note: all API params are already documented here! Components access them only via store states/actions.
@@ -347,8 +345,9 @@ Note: all API params are already documented here! Components access them only vi
 Please refine existing or add new components for view \`{{=it.view.name}}\`, output a single-lined json object:
 { [FormalComponentName: string]: {"file": "/src/components/{file-name}.vue", "endpoints":["endpoint ids(METHOD /resource/url), which **may** be used by the component", "may empty array" ..], "summary":"precise summary to let developers correctly use the component without reading the code!", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement. ignore auth logic, which is handled outside of the VUE app" }}
 After design before output, please redesign to meet rules:
-- FormalComponentName must suffix with 'Component' 
-- to strictly prohibit importing any stores into this view, the designed components in view only interact with each other via shared pinia stores!
+- Keep each component simple; and independent as possible: prevent embedding one to another, pass data among components only via shared pinia stores, not props/events!
+- FormalComponentName must suffix with 'Component'
+- strictly prohibit importing any stores into \`{{=it.view.name}}\` view
 - using ui components in installed packages is strongly encouraged over creating our own
 - Not missing any components or service endpoints for the \`{{=it.view.name}}\` view functionalities, yet make the view as simple as possible
 - Not including functionalities from other views, we'll design them later
@@ -388,17 +387,17 @@ After design before output, please redesign to meet rules:
 As world-class frontend expert, please write \`{{=it.components[0].file}}\` full code based on it's instruction and endpoint APIs(especially params).
 the component must import relevant \`stores/*.js\` for Pinia models and actions, needn't generate stores code in current step.
 output a single-lined json object:
-{ "packages":["additional real packages(format: package@version) imported by current file","make sure packages exists!"], "importedStores": [{"file": "/src/stores/{file-name}.js", "name":"the exported store name, must prefix with 'use'", "state": {"State JSON object used by current component, list detailed props used by component for each entity(give example object in each arrays, if prop is complex type(like File),express as string of js). don't list props unused by current component. better use existing, add new if really need"}, "actions": ["Actions(full params/return in ts function signature format) used by current component, especially wrap APIs into actions. better use existing, add new if really need", "don't list actions not used by current component", ..], "getters": [{"name": "name of derived state used by current component", "code": "(state) => { /*full js code to return derived value*/ }"}], ..]}, ..], "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation code for \`/src/components/JobListTable.vue\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions", "spec": {"props":["prop name"],"slots":[{"name":"","summary":""}],"events":[{"name":"","summary":"","payload":{[example of payload]}}],"components":["dependent ComponentName"]} }
+{ "packages":["additional real packages(format: package@version) imported by current file","make sure packages exists!"], "importedStores": [{"file": "/src/stores/{file-name}.js", "name":"the exported store name, must prefix with 'use'", "state": {"State JSON object used by current component, list detailed props used by component for each entity(give example object in each arrays, if prop is complex type(like File),express as string of js). don't list props unused by current component. better use existing, add new if really need"}, "actions": ["Actions(full params/return in ts function signature format) used by current component, especially wrap APIs into actions. better use existing, add new if really need", "don't list actions not used by current component", ..], "getters": [{"name": "name of derived state used by current component", "code": "(state) => { /*full js code to return derived value*/ }"}], ..]}, ..], "spec": {"props":[{"name":"", "type":"primitive types only!; prohibit to bind props with state or variables, only static constant values!"}],"slots":[{"name":"","summary":""}],"events":[{"name":"","summary":"","payload":{[example of payload]}}],"components":["dependent self-defined ComponentName, only list components from \`/src/components/*.vue\`!"]}, "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation code for \`{{=it.components[0].file}}}\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions" }
 after generate before output, please double-check the result json meets all rules:
 - all arrays may be \`[]\`, array items must not empty values!
 - don't add \`installedPackages\` into $.packages, only new ones; prohibit version conflicts!
-- $.spec.components **must** only component names listed in \`relatedComponents\` array, no ref any views nor 3rd-party components!
-- $.state are all simple example instances
+- $.state are all simple example instances, make sure all props are affordable from service endpoints
 - $.actions is array of strings
 - add only derived(need calculation, prohibit just aliases) state into \`getters\`; don't list getters unused by current component; better use existing, add new if really need
 - $.code must not any typescript; using components from installed packages are strongly encouraged
-- use vue3 best practices such as '<script setup>'; don't miss any import items(especially basic items(like 'ElMessage', or others in vue/element-plus))!
-- Be most careful don't introduce bugs in code, we'll lose big money for any bug!`,
+- use vue3 best practices; '<template>','<script setup>' is must; don't miss any import items(especially basic items(like 'ElMessage', or others in vue/element-plus))!
+- Be most careful don't introduce bugs in code, we'll lose big money for any bug!
+- double check output valid json object, especially $.code`,
     },
     {
       name: 'genVue4Store',
@@ -428,7 +427,8 @@ As world-class frontend expert, please write the code, output a single-lined jso
 { "packages":["additional packages(format: package@version) imported by current file, don't list existing/different versioned/unused ones!","make sure packages exists!","may empty array"], "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation js code" }.
 NOTE
 - strictly prohibit importing any stores in this view, only assemble components, they already interact via shared pinia stores!
-- Be most careful don't introduce bugs in code, we'll lose big money for any bug!`,
+- Be most careful don't introduce bugs in code, we'll lose big money for any bug!
+- use vue3 best practices; '<template>','<script setup>' is must`,
     },
   ];
 

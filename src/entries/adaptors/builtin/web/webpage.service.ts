@@ -5,6 +5,7 @@ import { EntryType } from '@prisma/client';
 import { AgentsService } from '../../../../agents/agents.service';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
+import { RoutesMapper } from '@nestjs/core/middleware/routes-mapper';
 
 @Injectable()
 export class WebpageService {
@@ -57,17 +58,21 @@ export class WebpageService {
 
     // generate route
     // 1. generate `router/index.js`, only necessary `views` for the requirement
-    const route = await this.agentsService.genVue1Route({
-      srcId: data.srcId,
+    const viewList = await this.agentsService.genVue1Route({
+      bizKey: data.id,
       callgent: data.context.callgent,
       requirement: data.context.req.requirement,
     });
-    files['/src/routes/index.js'] = route['/src/router/index.js'];
-    delete route['router/index.js'];
-    const viewList = Object.entries(route.views).map(([name, view]) => ({
-      name,
-      ...view,
-    }));
+    const viewMap: { [name: string]: any } = viewList.reduce(
+      (acc, view) => ((acc[view.name] = view), acc),
+      {},
+    );
+    // files['/src/routes/index.js'] = route['/src/router/index.js'];
+    // delete route['router/index.js'];
+    // const viewList = Object.entries(route.views).map(([name, view]) => ({
+    //   name,
+    //   ...view,
+    // }));
 
     // 2. define necessary Vue `components`, associate with each `view`: {view: [comps]};
     const components: {
@@ -78,6 +83,7 @@ export class WebpageService {
         instruction: string;
         endpoints: string[];
         inViews: string[];
+        spec?: object;
       };
     } = {};
     const endpoints = data.context.endpoints.map((e) => {
@@ -88,45 +94,38 @@ export class WebpageService {
         );
       return { ...e, params };
     });
-    let keys = Object.keys(route.views);
-    for (const viewName of keys) {
-      const view = viewList.find((v) => v.name === viewName);
-      const otherViews = viewList.filter((v) => v.name !== viewName);
+    for (const view of viewList) {
+      const otherViews = viewList.filter((v) => v.name !== view.name);
       const cps = await this.agentsService.genVue2Components({
         view,
         otherViews,
         components,
         endpoints,
         packages: this.initPackagesComponent,
-        srcId: data.srcId,
+        bizKey: data.id,
       });
       Object.entries(cps).forEach(([name, comp]) => {
         const cp = components[name];
         if (cp) {
-          cp.inViews.push(viewName);
+          cp.inViews.push(view.name);
           Object.assign(cp, comp);
-        } else components[name] = { ...comp, inViews: [viewName] };
+        } else components[name] = { ...comp, inViews: [view.name] };
       });
     }
-    keys = undefined;
     const viewComps: { [view: string]: string[] } = {};
-    // const compsList = Object.entries(components).map(([name, comp]) => {
-    //   comp.inViews.forEach((view) => {
-    //     const comps = viewComps[view] || (viewComps[view] = []);
-    //     comps.push(name);
-    //   });
-    //   return {
-    //     name,
-    //     ...comp,
-    //   };
-    // });
+    Object.entries(components).map(([name, comp]) =>
+      comp.inViews.forEach((view) => {
+        const comps = viewComps[view] || (viewComps[view] = []);
+        comps.push(name);
+      }),
+    );
 
     // 3. choose needed service endpoints for each component: {comp: [apis]};
     // TODO filter by view distances
     // const compApis = await this.agentsService.genVue3Apis({
     //   endpoints,
     //   compsList,
-    //   srcId: data.srcId,
+    //   bizKey: data.id,
     //   callgent: data.context.callgent,
     // });
 
@@ -149,15 +148,15 @@ export class WebpageService {
       // list related views
       const relatedViews = components[compName].inViews.map((view) => ({
         name: view,
-        url: route.views[view].url,
-        title: route.views[view].title,
-        summary: route.views[view].summary,
-        instruction: route.views[view].instruction,
+        path: viewMap[view].path,
+        title: viewMap[view].title,
+        summary: viewMap[view].summary,
+        instruction: viewMap[view].instruction,
         components: viewComps[view],
       }));
-      const otherViews = Object.entries(route.views)
-        .filter(([name]) => !relatedViews.find((v0) => v0.name === name))
-        .map(([name, v]) => ({ name, url: v.url, summary: v.summary }));
+      const otherViews = viewList
+        .filter((v) => !relatedViews.find((v0) => v0.name === v.name))
+        .map((v) => ({ name: v.name, path: v.path, summary: v.summary }));
 
       // and comps related to the views
       const relatedComps: {
@@ -172,6 +171,7 @@ export class WebpageService {
         .map((c) => ({
           name: c,
           // props: components[c].props,
+          spec: components[c].spec,
           summary: components[c].summary,
           instruction: components[c].instruction,
         }));
@@ -188,7 +188,7 @@ export class WebpageService {
         otherViews,
         stores,
         packages,
-        srcId: data.srcId,
+        bizKey: data.id,
       });
       files[components[compName].file] = component.code;
 
@@ -239,7 +239,7 @@ export class WebpageService {
         packages,
         store: { ...store, endpoints },
         apiBaseUrl,
-        srcId: data.srcId,
+        bizKey: data.id,
       });
       // merge packages
       storeResult.packages?.length &&
@@ -251,10 +251,10 @@ export class WebpageService {
     // change view descriptions
     let entries1 = Object.entries(viewComps);
     for (const [name, compNames] of entries1) {
-      const view = { name, ...route.views[name], distance: undefined };
-      const otherViews = Object.entries(route.views)
-        .filter(([n, v]) => n !== name && v)
-        .map(([name, v]) => ({ name, title: v.title, url: v.url }));
+      const view = { name, ...viewMap[name], distance: undefined };
+      const otherViews = viewList
+        .filter((v) => v.name !== name)
+        .map((v) => ({ name: v.name, title: v.title, path: v.path }));
       const comps = compNames.map((compName) => ({
         name: compName,
         spec: null,
@@ -267,7 +267,7 @@ export class WebpageService {
         otherViews,
         components: comps,
         packages,
-        srcId: data.srcId,
+        bizKey: data.id,
       });
       result.packages?.length &&
         (packages = [...new Set([...packages, ...result.packages])]);
@@ -277,8 +277,16 @@ export class WebpageService {
 
     // 6. needn't generate App.vue, main.js
 
-    data.context.resp = { packages, files };
-    // this.logger.warn(JSON.stringify(data.context.resp));
+    data.context.resp = {
+      packages,
+      files,
+      routes: viewList.map((v) => ({
+        name: v.name,
+        path: v.path,
+        component: v.component,
+      })),
+    };
+    this.logger.debug(JSON.stringify(data.context.resp));
     return { data };
   }
 
