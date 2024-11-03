@@ -25,6 +25,7 @@ import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
+import { PrismaTenancyService } from '../../../../infra/repo/tenancy/prisma-tenancy.service';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RequestRequirement } from '../../dto/request-requirement.dto';
@@ -39,6 +40,7 @@ export class WebpageController {
     @Inject('EntriesService')
     protected readonly entriesService: EntriesService,
     protected readonly eventListenersService: EventListenersService,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
 
   @ApiOperation({
@@ -180,6 +182,8 @@ export class WebpageController {
       throw new NotFoundException(
         'Entry not found for callgent: ' + callgentId,
       );
+    this.tenancyService.setTenantId(entry.tenantPk);
+
     const callgent = await this.callgentsService.findOne(callgentId, {
       id: true,
       name: true,

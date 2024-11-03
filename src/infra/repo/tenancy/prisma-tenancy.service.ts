@@ -4,12 +4,11 @@ import { ClsService } from 'nestjs-cls';
 
 @Injectable()
 export class PrismaTenancyService {
-  constructor(private readonly cls: ClsService) {}
+  constructor(readonly cls: ClsService) {}
 
   public static readonly TENANT_ID_KEY = 'TENANT_ID';
 
   setTenantId(tenantPk: number) {
-    this.cls.enter({ ifNested: 'reuse' });
     this.cls.set(PrismaTenancyService.TENANT_ID_KEY, tenantPk);
   }
 
@@ -21,6 +20,6 @@ export class PrismaTenancyService {
    * @param bypass default true
    */
   async bypassTenancy(tx: PrismaClient, bypass = true) {
-    return tx.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${bypass})`;
+    return tx.$executeRaw`SELECT set_config('tenancy.bypass_rls', ${bypass ? 'on' : 'off'}, true)`;
   }
 }

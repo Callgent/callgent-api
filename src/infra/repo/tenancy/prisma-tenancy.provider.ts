@@ -6,17 +6,17 @@ import { PrismaTenancyService } from './prisma-tenancy.service';
 /** 'tenancy.tenantPk'  */
 export const prismaTenancyUseFactory = (
   newTx: PrismaService,
-  store: ClsService,
+  tenancyService: PrismaTenancyService,
 ): any =>
   newTx.$extends({
     query: {
       $allModels: {
         async $allOperations({ args, query }) {
-          const tenantPk = store.get(PrismaTenancyService.TENANT_ID_KEY);
+          const tenantPk = tenancyService.getTenantId();
 
           // may be 0
           if (Number.isFinite(tenantPk)) {
-            const existingTx = store.get(getTransactionClsKey());
+            const existingTx = tenancyService.cls.get(getTransactionClsKey());
 
             // 2 ops
             const op = (existingTx || newTx)
@@ -41,6 +41,6 @@ export const TENANTED_PRISMA_SERVICE = Symbol('TENANTED_PRISMA_SERVICE_TOKEN');
 
 export const PrismaTenancyClientProvider = {
   provide: TENANTED_PRISMA_SERVICE,
-  inject: [PrismaService, ClsService],
+  inject: [PrismaService, PrismaTenancyService],
   useFactory: prismaTenancyUseFactory,
 };

@@ -191,9 +191,14 @@ export class EventListenersService {
     const prisma = this.txHost.tx as PrismaClient;
     const AND: Prisma.EventListenerWhereInput[] = [
       {
-        OR: [{ srcId }, { tenantPk: 0, srcId: 'GLOBAL' }],
+        OR: [{ srcId }, { srcId: '*' }],
       },
-      { OR: [{ eventType }, { dataType }] },
+      {
+        OR: [{ eventType }, { eventType: '*' }],
+      },
+      {
+        OR: [{ dataType }, { dataType: '*' }],
+      },
     ];
     deleted &&
       AND.push({
@@ -210,7 +215,7 @@ export class EventListenersService {
       .sort((a, b) => {
         const diff =
           a.priority - b.priority ||
-          (a.srcId === 'GLOBAL' ? -1 : 1) - (b.srcId === 'GLOBAL' ? -1 : 1);
+          (a.srcId === '*' ? -1 : 1) - (b.srcId === '*' ? -1 : 1);
         return diff;
       });
     if (!listeners.length)

@@ -153,7 +153,10 @@ export class CallgentsService {
           data: { viewed: { increment: 1 } },
         }),
       this.defSelect,
-    );
+    ).catch((e) => {
+      if (e.message.includes(' not found.')) return null;
+      throw e;
+    });
   }
 
   async getByName(name: string, select?: Prisma.CallgentSelect) {

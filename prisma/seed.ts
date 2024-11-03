@@ -47,7 +47,7 @@ function initEventListeners(
   const els: Prisma.EventListenerUncheckedCreateInput[] = [
     {
       id: 'CR-ADAPTOR-PREPROCESS',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -61,7 +61,7 @@ function initEventListeners(
     },
     {
       id: 'CR-CEP-AUTH',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -75,7 +75,7 @@ function initEventListeners(
     },
     {
       id: 'CR-LOAD-TARGET',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -89,7 +89,7 @@ function initEventListeners(
     },
     {
       id: 'CR-LOAD-ENDPOINTS',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -102,7 +102,7 @@ function initEventListeners(
     },
     {
       id: 'CR-GENERATE-WEBPAGE',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: 'Webpage',
@@ -116,7 +116,7 @@ function initEventListeners(
     },
     {
       id: 'CR-MAP-2-ENDPOINTS',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -130,7 +130,7 @@ function initEventListeners(
     },
     {
       id: 'CR-SEP-AUTH',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -144,7 +144,7 @@ function initEventListeners(
     },
     {
       id: 'CR-INVOKE-SEP',
-      srcId: 'GLOBAL',
+      srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
@@ -158,7 +158,7 @@ function initEventListeners(
     // {
     //   pk: elId++,
     //   id: 'PR-MAP-2-ARGS',
-    //   srcId: 'GLOBAL',
+    //   srcId: '*',
     //   tenantPk: 0,
     //   eventType: 'CLIENT_REQUEST',
     //   dataType: '*',

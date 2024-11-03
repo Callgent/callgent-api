@@ -1,4 +1,7 @@
-import { Global, Module } from '@nestjs/common';
+import {
+  Global,
+  Module
+} from '@nestjs/common';
 import {
   PrismaTenancyClientProvider,
   TENANTED_PRISMA_SERVICE,

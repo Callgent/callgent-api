@@ -122,14 +122,13 @@ export class EntriesService implements OnModuleInit {
     entryId?: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    return this.tenancyService.bypassTenancy(prisma).then(() =>
-      this.findFirstByType(type, callgentId, adaptorKey, entryId).then(
-        async (v) => {
-          v && this.tenancyService.setTenantId(v.tenantPk);
-          await this.tenancyService.bypassTenancy(prisma, false);
-          return v;
-        },
-      ),
+    await this.tenancyService.bypassTenancy(prisma);
+    return this.findFirstByType(type, callgentId, adaptorKey, entryId).then(
+      async (v) => {
+        await this.tenancyService.bypassTenancy(prisma, false);
+        v && this.tenancyService.setTenantId(v.tenantPk);
+        return v;
+      },
     );
   }
 

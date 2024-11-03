@@ -32,7 +32,17 @@ import { ValidatorModule } from './validators/validator.module';
     }),
     ClsModule.forRoot({
       global: true,
-      middleware: { mount: true },
+      // @see https://papooch.github.io/nestjs-cls/considerations/compatibility
+      // middleware: unsupported: WS,	Microservices
+      middleware: {
+        mount: true,
+        generateId: true,
+      },
+      // interceptor: context inaccessible in Guards and in Exception Filters
+      // interceptor: {
+      //   mount: true,
+      //   generateId: true,
+      // },
       plugins: [
         new ClsPluginTransactional({
           // if PrismaModule is not global, we need to make it available to the plugin

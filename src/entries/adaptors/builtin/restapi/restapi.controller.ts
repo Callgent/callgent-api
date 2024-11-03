@@ -24,6 +24,7 @@ import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infra/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infra/libs/utils';
+import { PrismaTenancyService } from '../../../../infra/repo/tenancy/prisma-tenancy.service';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RequestRequirement } from '../../dto/request-requirement.dto';
@@ -38,6 +39,7 @@ export class RestApiController {
     @Inject('EntriesService')
     protected readonly entriesService: EntriesService,
     protected readonly eventListenersService: EventListenersService,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
 
   @ApiOperation({
@@ -104,21 +106,7 @@ export class RestApiController {
     const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
-    const cep = await this.entriesService.$findFirstByType(
-      EntryType.CLIENT,
-      callgentId,
-      'restAPI',
-      entryId,
-    );
-    if (!cep)
-      throw new NotFoundException(
-        'restAPI entry not found for callgent: ' + callgentId,
-      );
-    const callgent = await this.callgentsService.findOne(callgentId, {
-      name: true,
-    });
-    if (!callgent)
-      throw new NotFoundException('callgent not found: ' + callgentId);
+    const { entry, callgent } = await this._load(callgentId, entryId);
 
     const {
       statusCode: code,
@@ -126,8 +114,8 @@ export class RestApiController {
       message,
     } = await this.eventListenersService.emit(
       new ClientRequestEvent(
-        cep.id,
-        cep.adaptorKey,
+        entry.id,
+        entry.adaptorKey,
         req,
         null,
         {
@@ -158,6 +146,32 @@ export class RestApiController {
   async invokeResult(@Param('requestId') reqId: string) {
     // FIXME
     return null;
+  }
+
+  private async _load(callgentId: string, entryId: string) {
+    // TODO owner defaults to caller callgent
+    // find callgent cep, then set tenantPk
+    const entry = await this.entriesService.$findFirstByType(
+      EntryType.CLIENT,
+      callgentId,
+      'restAPI',
+      entryId,
+    );
+    if (!entry)
+      throw new NotFoundException(
+        'Entry not found for callgent: ' + callgentId,
+      );
+    this.tenancyService.setTenantId(entry.tenantPk);
+
+    const callgent = await this.callgentsService.findOne(callgentId, {
+      id: true,
+      name: true,
+      summary: true,
+      instruction: true,
+    });
+    if (!callgent)
+      throw new NotFoundException('callgent not found: ' + callgentId);
+    return { entry, callgent };
   }
 
   /**
