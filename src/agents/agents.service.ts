@@ -90,10 +90,14 @@ export class AgentsService {
       {
         returnType: { req2Args: '' },
         bizKey: id,
-        validate: (data) => (
-          ((data as any).args = new Function('return ' + data.req2Args)()(req)),
-          true
-        ),
+        validate: (data) => {
+          try {
+            (data as any).args = new Function('return ' + data.req2Args)()(req);
+          } catch (e) {
+            throw new Error('error calling `req2Args` function: ' + e.message);
+          }
+          return true;
+        },
       },
     );
     return mapped;
@@ -330,58 +334,15 @@ export class AgentsService {
       bizKey: data.bizKey,
       // validate endpoints exists
       validate: (gen) =>
-        Object.values(gen).every((comp) =>
-          comp.endpoints.every((epName) =>
-            data.endpoints.find((ep) => (ep as any).name === epName),
-          ),
+        Object.entries(gen).every(([compName, comp]) =>
+          comp.endpoints.every((epName) => {
+            if (data.endpoints.find((ep) => (ep as any).name === epName))
+              return true;
+            throw new Error(
+              `endpoint '${epName}' not found for component: ${compName}`,
+            );
+          }),
         ),
-    });
-
-    return result;
-  }
-
-  async genVue3Apis(data: {
-    bizKey: string;
-    compsList: {
-      name: string;
-      // props: string[];
-      summary: string;
-      instruction: string;
-    }[];
-    endpoints: {
-      name: string;
-      summary: string;
-      description: string;
-      string: any[];
-    }[];
-    callgent: { name: string; summary: string; instruction: string };
-  }) {
-    let compName = '';
-    const result = await this.llmService.template('genVue3Apis', data, {
-      returnType: {
-        [compName]: {
-          endpoints: [''],
-          // props: [''],
-          summary: '',
-          instruction: '',
-        },
-      },
-      bizKey: data.bizKey,
-      // validate compName/endpoints exists
-      validate: (gen) =>
-        Object.entries(gen).every(([compName, comp]) => {
-          if (comp['removed']) {
-            delete gen[compName];
-            return true;
-          }
-          delete comp['removed'];
-          return (
-            data.compsList.find((comp) => comp.name === compName) &&
-            comp.endpoints.every((epName) =>
-              data.endpoints.find((ep) => ep.name === epName),
-            )
-          );
-        }),
     });
 
     return result;
@@ -426,16 +387,22 @@ export class AgentsService {
         spec: {
           props: [''],
           slots: [{ name: '', summary: '' }],
-          events: [{ name: '', summary: '', payload: {} }],
-          components: ['ComponentName', 'may empty array'],
+          // events: [{ name: '', summary: '', payload: {} }],
+          importedComponents: ['ComponentName', 'may empty array'],
         },
       },
       bizKey: data.bizKey,
       validate: (gen) =>
-        gen.packages?.every((p) => p.lastIndexOf('@') > 0) &&
-        gen.spec?.components?.every((c) =>
-          data.components.find((comp) => comp.name === c),
-        ),
+        gen.packages.every((p) => {
+          if (p.lastIndexOf('@') <= 0)
+            throw new Error('package name should be like `name@version`: ' + p);
+          return true;
+        }) &&
+        (!gen.spec.importedComponents ||
+          gen.spec.importedComponents.every((c) => {
+            if (data.components.find((comp) => comp.name === c)) return true;
+            throw new Error(`in $.spec.importedComponents: '${c}' isn't a self-defined components, must not listed here!`);
+          })),
     });
 
     return result;
@@ -462,7 +429,12 @@ export class AgentsService {
     const result = await this.llmService.template('genVue4Store', data, {
       returnType: { code: '', packages: [''] },
       bizKey: data.bizKey,
-      validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
+      validate: (gen) =>
+        gen.packages.every((p) => {
+          if (p.lastIndexOf('@') <= 0)
+            throw new Error('package name should be like `name@version`: ' + p);
+          return true;
+        }),
     });
     return result;
   }
@@ -495,7 +467,11 @@ export class AgentsService {
     const result = await this.llmService.template('genVue5View', data, {
       returnType: { code: '', packages: [''] },
       bizKey: data.bizKey,
-      validate: (gen) => gen.packages?.every((p) => p.lastIndexOf('@') > 0),
+      validate: (gen) =>
+        gen.packages?.every((p) => {
+          if (p.lastIndexOf('@') > 0) return true;
+          throw new Error('package name should be like `name@version`');
+        }),
     });
     return result;
   }

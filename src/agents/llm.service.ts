@@ -26,7 +26,7 @@ export class LLMService {
    * @param template prompt template name
    * @param args  prompt args
    * @param returnType if not empty, try to parse the response as the specified json. for index signature, do this: const key=''; returnType = { [key]: any }
-   * @param validate if error: stop retry, true/false: retry default times, void: force retry. default retry is 3
+   * @param validate if error: retry default times(adding error msgs into prompt), default retry is 3, else stop retry
    */
   @Transactional()
   async template<T>(
@@ -52,15 +52,19 @@ export class LLMService {
     }
 
     let ret: T,
-      llmResult = '';
+      llmResult = '',
+      errorMessage = '';
     let [maxRetry, valid] = [3, undefined];
     for (let i = 0; i < maxRetry; i++) {
       try {
         ret = cache as T;
         if (!ret) {
+          const promptExt = errorMessage
+            ? `${prompt}\n\nPlease retry as you just made a mistake: ${errorMessage}`
+            : prompt;
           const resp = await this._completion({
             // messages: [{ role: 'user', content: prompt }],
-            prompt,
+            prompt: promptExt,
             stream: false,
             models: this.llmModels,
             route: 'fallback',
@@ -69,10 +73,9 @@ export class LLMService {
           llmModel = resp.model;
 
           if (!resp?.choices?.length) {
-            i = maxRetry; // force stop
-            throw new Error(
-              `LLM service not available: template=${template} bizKey=${bizKey}, error=${(resp as any)?.error?.message}`,
-            );
+            valid = false;
+            errorMessage = `LLM service not available, error=${(resp as any)?.error?.message}`;
+            break;
           }
 
           const choice = resp.choices[0] as NonChatChoice;
@@ -85,36 +88,25 @@ export class LLMService {
           // check type
           this._checkJsonType(returnType, ret, isArray);
         }
+        valid = !validate || validate(ret, i);
       } catch (e) {
-        // TODO: add error to conversation to optimize result
+        // add error to conversation to optimize result
+        errorMessage = e.message;
         this.logger.warn(
-          '[retry %d/%d] Fail validating generated content: \n-----%s\n\n\t>>>>>%s',
+          '[retry %s %d/%d] Fail validating generated content: %s',
+          template,
           i + 1,
           maxRetry,
-          prompt.replace(/\n/g, '\\n'),
-          llmResult.replace(/\n/g, '\\n'),
+          errorMessage,
         );
         continue; // default retry
       }
-      try {
-        valid = !validate || validate(ret, i);
-      } catch (e) {
-        this.logger.warn('validate error, force no retry: %s', e.message);
-        break; // force stop
-      }
-      if (typeof valid !== 'boolean') maxRetry = i + 2; // force retry;
-      if (valid) break;
-      this.logger.warn(
-        '[retry %d/%d] Fail validating generated content: \n-----%s\n\n\t>>>>>%s',
-        i + 1,
-        maxRetry,
-        prompt.replace(/\n/g, '\\n'),
-        llmResult.replace(/\n/g, '\\n'),
-      );
+      break; // force stop;
     }
     if (!valid)
       throw new Error(
-        'Fail validating generated content, ' + [llmModel, template],
+        'Fail validating generated content, ' +
+          [llmModel, template, errorMessage],
       );
 
     if (notCached) await this._llmCache(template, llmModel, prompt, llmResult);
@@ -126,25 +118,19 @@ export class LLMService {
     const entries = Object.entries(isArray ? returnType[0] : returnType);
     const a = isArray ? val : [val];
     for (const v of a) {
-      if (
-        !entries.every(([key, type]) => {
-          // key may be '': means { [key]:.. }
-          if (key && !(key in v)) return false;
-          const value = key ? v[key] : Object.values(v)[0];
-          if (
-            value &&
-            (typeof value !== typeof type ||
-              Array.isArray(type) != Array.isArray(value))
-          )
-            return false;
-          return true;
-        })
-      )
-        throw new Error(
-          `Return type error, props=${entries.join(',')}, val=${JSON.stringify(
-            val,
-          )}`,
-        );
+      entries.forEach(([key, type]) => {
+        // key may be '': means { [key]:.. }
+        if (key && !(key in v)) throw new Error(`Json key=${key} is missing`);
+        const value = key ? v[key] : Object.values(v)[0];
+        if (
+          value &&
+          (typeof value !== typeof type ||
+            Array.isArray(type) != Array.isArray(value))
+        )
+          throw new Error(
+            `Value type of json key=${key} should match example value: ${JSON.stringify(type)}}`,
+          );
+      });
     }
   }
 
