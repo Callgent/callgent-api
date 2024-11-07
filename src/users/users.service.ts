@@ -50,6 +50,7 @@ export class UsersService {
 
     let valid = !!ui?.credentials;
     valid = valid && (await Utils.hashCompare(password, ui.credentials));
+    // Utils.hashSalted(password).then((s)=>console.log(s));
 
     if (valid) return ui.user;
     throw new UnauthorizedException();
