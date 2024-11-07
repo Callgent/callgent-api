@@ -2,6 +2,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/library';
 import dotenv from 'dotenv';
 import dotenvExpand from 'dotenv-expand';
+import { create } from 'node:domain';
 
 const myEnv = dotenv.config();
 dotenvExpand.expand(myEnv);
@@ -187,11 +188,20 @@ async function addLlmCache(
   result: string,
 ) {
   const llmCacheDto = { name, prompt, result };
-  return prisma.llmCache
-    .upsert({
-      where: { prompt_name: { name, prompt } },
-      update: llmCacheDto,
-      create: llmCacheDto,
-    })
-    .then((lmCache) => console.log({ lmCache }));
+  const model = 'meta-llama/llama-3.1-70b-instruct:free';
+
+  const ret = await prisma.llmCache.findFirst({
+    where: { prompt, model, name },
+    select: { pk: true },
+  });
+
+  return (
+    ret?.pk
+      ? prisma.llmCache.update({
+          where: { pk: ret.pk },
+          data: llmCacheDto,
+          create: llmCacheDto,
+        })
+      : prisma.llmCache.create({ data: { name, model, prompt, result } })
+  ).then((lmCache) => console.log({ lmCache }));
 }
