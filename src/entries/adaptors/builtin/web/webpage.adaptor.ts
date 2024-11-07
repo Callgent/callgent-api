@@ -6,9 +6,9 @@ import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor } from '../../entry-adaptor.base';
-import { EntryAdaptorName } from '../../entry-adaptor.decorator';
+import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorName('Webpage', 'client')
+@EntryAdaptorDecorator('Webpage', { client: '' })
 export class WebpageAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);

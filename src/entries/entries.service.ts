@@ -43,8 +43,12 @@ export class EntriesService implements OnModuleInit {
     createdBy: false,
     deletedAt: false,
   };
-  private serverAdaptorsList = {};
-  private clientAdaptorsList = {};
+  private readonly serverAdaptors: {
+    [key: string]: { icon: string; serviceToken: InjectionToken };
+  } = {};
+  private readonly clientAdaptors: {
+    [key: string]: { icon: string; serviceToken: InjectionToken };
+  } = {};
 
   onModuleInit() {
     const modules = [...this.modulesContainer.values()];
@@ -52,42 +56,57 @@ export class EntriesService implements OnModuleInit {
     for (const nestModule of modules) {
       for (const [serviceKey, provider] of nestModule.providers) {
         if (!provider.metatype) continue;
-        const name = Reflect.getMetadata(
+        const options: {
+          key: string;
+          types: { client?: string; server?: string; both?: string };
+        } = Reflect.getMetadata(
           IS_CALLGENT_ENDPOINT_ADAPTOR,
           provider.metatype,
         );
-        if (name?.indexOf(':') > 0) {
-          const [key, type] = name.split(/:(?=[^:]*$)/);
-          if (type == 'server' || type == 'both') {
-            this._add2AdaptorsList(key, serviceKey, false);
-          }
-          if (type == 'client' || type == 'both') {
-            this._add2AdaptorsList(key, serviceKey, true);
-          }
-        }
+        if (options?.key && options.types)
+          this._add2AdaptorsMap(options, serviceKey);
       }
     }
   }
 
-  private _add2AdaptorsList(
-    key: string,
-    adaptorKey: InjectionToken,
-    client: boolean,
+  private _add2AdaptorsMap(
+    {
+      key,
+      types,
+    }: {
+      key: string;
+      types: { client?: string; server?: string; both?: string };
+    },
+    serviceToken: InjectionToken,
   ) {
-    const list = client ? this.clientAdaptorsList : this.serverAdaptorsList;
-    if (key in list)
-      throw new Error(
-        `Conflict entry adaptor key ${key}:[${String(adaptorKey)}, ${
-          list[key]
-        }]`,
-      );
-    list[key] = adaptorKey;
+    if ('both' in types || 'client' in types)
+      this.__add2AdaptorsMap(key, this.clientAdaptors, {
+        icon: types.client || types.both,
+        serviceToken,
+      });
+    if ('both' in types || 'server' in types)
+      this.__add2AdaptorsMap(key, this.serverAdaptors, {
+        icon: types.server || types.both,
+        serviceToken,
+      });
   }
 
-  list(client: boolean) {
-    return Object.keys(
-      client ? this.clientAdaptorsList : this.serverAdaptorsList,
+  private __add2AdaptorsMap(key: string, map, value) {
+    if (key in map)
+      throw new Error(
+        `Conflict entry adaptor ${key}:[${String(value.serviceToken)}, ${String(
+          this.clientAdaptors.key.serviceToken,
+        )}]`,
+      );
+    this.clientAdaptors[key] = value;
+  }
+
+  listAdaptors(client: boolean): { [key: string]: string } {
+    const ret = {};
+    Object.entries(client ? this.clientAdaptors : this.serverAdaptors).forEach(
+      ([k, v]) => (ret[k] = v.icon),
     );
+    return ret;
   }
 
   findOne(id: string, select?: Prisma.EntrySelect) {
@@ -157,14 +176,14 @@ export class EntriesService implements OnModuleInit {
 
   getAdaptor(adaptorKey: string, endpointType?: EntryType): EntryAdaptor {
     const list =
-      endpointType == 'SERVER'
-        ? this.serverAdaptorsList
-        : this.clientAdaptorsList;
+      endpointType == 'SERVER' ? this.serverAdaptors : this.clientAdaptors;
     if (adaptorKey in list)
-      return this.moduleRef.get(list[adaptorKey], { strict: false });
+      return this.moduleRef.get(list[adaptorKey].serviceToken, {
+        strict: false,
+      });
 
-    if (endpointType === undefined && adaptorKey in this.serverAdaptorsList)
-      return this.moduleRef.get(this.serverAdaptorsList[adaptorKey], {
+    if (endpointType === undefined && adaptorKey in this.serverAdaptors)
+      return this.moduleRef.get(this.serverAdaptors[adaptorKey].serviceToken, {
         strict: false,
       });
   }

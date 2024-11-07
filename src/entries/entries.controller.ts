@@ -37,9 +37,12 @@ export class EntriesController {
     private readonly entriesService: EntriesService,
   ) {}
 
+  @ApiOkResponse({
+    description: 'returns { [adaptorKey: string]: "icon-url" }'
+  })
   @Get('adaptors')
-  listAdaptors(@Query('client') client?: boolean) {
-    return this.entriesService.list(client);
+  listAdaptors(@Query('client') client?: boolean): { [key: string]: string } {
+    return this.entriesService.listAdaptors(client);
   }
 
   // @ApiOkResponse({ type: EntryConfig })

@@ -10,9 +10,9 @@ import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor } from '../../entry-adaptor.base';
-import { EntryAdaptorName } from '../../entry-adaptor.decorator';
+import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorName('restAPI', 'both')
+@EntryAdaptorDecorator('restAPI', { both: '' })
 export class RestAPIAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
