@@ -26,7 +26,7 @@
     "prisma:studio": "npx prisma studio",
     "prisma:seed": "npx prisma db seed",
     "prisma:seed-test": "ts-node prisma/seed-test.ts",
-    "prepare": "husky",
+    "prepare": "husky install",
     "commit": "git-cz",
     "release": "standard-version"
   },
