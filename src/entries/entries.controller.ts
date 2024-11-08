@@ -38,11 +38,26 @@ export class EntriesController {
   ) {}
 
   @ApiOkResponse({
-    description: 'returns { [adaptorKey: string]: "icon-url" }'
+    description: 'returns { [adaptorKey: string]: "icon-url" }',
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              additionalProperties: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+    },
   })
   @Get('adaptors')
-  listAdaptors(@Query('client') client?: boolean): { [key: string]: string } {
-    return this.entriesService.listAdaptors(client);
+  listAdaptors(@Query('client') client?: boolean) {
+    return { data: this.entriesService.listAdaptors(client) };
   }
 
   // @ApiOkResponse({ type: EntryConfig })

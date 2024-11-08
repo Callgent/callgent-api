@@ -98,7 +98,7 @@ export class EntriesService implements OnModuleInit {
           this.clientAdaptors.key.serviceToken,
         )}]`,
       );
-    this.clientAdaptors[key] = value;
+      map[key] = value;
   }
 
   listAdaptors(client: boolean): { [key: string]: string } {
@@ -370,7 +370,7 @@ export class EntriesService implements OnModuleInit {
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
     const {
-      context: { endpoints, resp },
+      context: { endpoints },
     } = reqEvent;
     if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');

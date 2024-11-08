@@ -10,6 +10,10 @@ import { EventListenersService } from '../event-listeners/event-listeners.servic
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';
 
+function sandbox(functionStr: string): Function {
+  return new Function('return ' + functionStr)();
+}
+
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
 @Injectable()
@@ -92,7 +96,8 @@ export class AgentsService {
         bizKey: id,
         validate: (data) => {
           try {
-            (data as any).args = new Function('return ' + data.req2Args)()(req);
+            const fun = sandbox(data.req2Args);
+            (data as any).args = fun(req);
           } catch (e) {
             throw new Error('error calling `req2Args` function: ' + e.message);
           }
@@ -401,7 +406,9 @@ export class AgentsService {
         (!gen.spec.importedComponents ||
           gen.spec.importedComponents.every((c) => {
             if (data.components.find((comp) => comp.name === c)) return true;
-            throw new Error(`in $.spec.importedComponents: '${c}' isn't a self-defined components, must not listed here!`);
+            throw new Error(
+              `in $.spec.importedComponents: '${c}' isn't a self-defined components, must not listed here!`,
+            );
           })),
     });
 
