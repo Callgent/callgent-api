@@ -44,7 +44,7 @@ export class UsersService {
    * @throws UnauthorizedException
    */
   async login(email: string, password: string) {
-    const ui = await this.findUserIdentity(email, 'local', {
+    const ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
     });
 
@@ -63,7 +63,8 @@ export class UsersService {
    * @param prisma
    * @param options {noTenant: 'true: w/o tenant limitation', evenInvalid: 'true: return deleted or any tenant.statusCode'}
    */
-  async findUserIdentity(
+  @Transactional()
+  async $findUserIdentity(
     uid: string,
     provider: string,
     options?: {
@@ -126,7 +127,7 @@ export class UsersService {
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
 
     const prisma = this.txHost.tx as PrismaClient;
-    let uiInDb = await this.findUserIdentity(ui.uid, ui.provider, {
+    let uiInDb = await this.$findUserIdentity(ui.uid, ui.provider, {
       noTenant: true,
       evenInvalid: true,
     });
@@ -262,7 +263,7 @@ export class UsersService {
   @Transactional()
   async sendValidationEmail(args: ValidationEmailVo, userId: string) {
     const { email, create } = args;
-    const ui = await this.findUserIdentity(email, 'local', {
+    const ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
       evenInvalid: true,
     });
@@ -303,7 +304,7 @@ export class UsersService {
 
     const { sub: email, resetPwd, create, userId } = payload;
 
-    let ui = await this.findUserIdentity(email, 'local', {
+    let ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
       evenInvalid: true,
     });
