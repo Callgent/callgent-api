@@ -33,7 +33,12 @@ export class ClientRequestEvent extends EventObject {
   }
   public declare readonly context: {
     req: any;
-    resp?: any;
+    resp?: {
+      data: any;
+      headers?: { [key: string]: any };
+      status: number;
+      statusText?: string;
+    };
     callgentId: string;
     callgentName: string;
     callerId?: string;

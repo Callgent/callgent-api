@@ -207,7 +207,9 @@ export class RestAPIAdaptor extends EntryAdaptor {
     const { data, headers: rawHeaders, status, statusText } = resp;
     const headers = {};
     Object.entries(rawHeaders).forEach(
-      ([name, val]) => (headers[name.toLowerCase()] = val),
+      ([name, val]) =>
+        name.toLowerCase() == 'content-length' ||
+        (headers[name.toLowerCase()] = val),
     );
     return { data, headers, status, statusText };
   }

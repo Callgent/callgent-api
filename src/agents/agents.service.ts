@@ -221,7 +221,7 @@ export class AgentsService {
       },
     ); // TODO validating `mapping`
 
-    return { statusCode: mapped.statusCode, data: mapped.data };
+    return { status: mapped.statusCode, data: mapped.data };
   }
 
   /**

@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiDefaultResponse,
   ApiHeader,
   ApiOperation,
   ApiParam,
@@ -47,6 +48,14 @@ export class RestApiController {
     description:
       'AI agent will generate code to invoke several functional endpoints to fulfill the requirement.',
   })
+  @ApiDefaultResponse({
+    description:
+      'every response contains request id and conversational task id',
+    headers: {
+      'x-callgent-reqId': { description: 'unique request id' },
+      'x-callgent-taskId': { description: 'conversational task id' },
+    },
+  })
   @ApiHeader({
     name: 'x-callgent-progressive',
     required: false,
@@ -62,7 +71,17 @@ export class RestApiController {
   }
 
   @All('invoke/:callgentId/:entryId/*')
-  @ApiOperation({ summary: 'To invoke the specific functional endpoint.' })
+  @ApiOperation({
+    summary: 'To invoke the specific functional endpoint.',
+  })
+  @ApiDefaultResponse({
+    description:
+      'every response contains request id and conversational task id',
+    headers: {
+      'x-callgent-reqId': { description: 'unique request id' },
+      'x-callgent-taskId': { description: 'conversational task id' },
+    },
+  })
   @ApiParam({
     name: 'callgentId',
     required: true,
@@ -129,13 +148,31 @@ export class RestApiController {
       ),
       parseInt(timeout) || 0, //  sync timeout
     );
-    const ctx = data?.context;
-    // FIXME data
-    const statusCode = code || 200;
-    // code cannot < 0
+
+    const headers = {
+      'x-callgent-reqId': data.id,
+      'x-callgent-taskId': data.taskId,
+    };
+    code && (headers['x-callgent-status'] = code);
+    message && (headers['x-callgent-message'] = message);
+
+    const resp = data?.context.resp;
+    if (resp) {
+      resp.headers && Object.assign(headers, resp.headers);
+      res
+        .status(resp.status)
+        .headers(headers)
+        .statusText(resp.statusText)
+        .send(resp.data);
+      return;
+    }
+
+    // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
+    const statusCode = code ? (code < 0 ? 418 : code < 100 ? 102 : code) : 200;
     res
-      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
-      .send({ data: { ...data, response: ctx.resp }, statusCode, message });
+      .status(statusCode)
+      .headers(headers)
+      .send({ data, statusCode: code, message });
   }
 
   @ApiOperation({

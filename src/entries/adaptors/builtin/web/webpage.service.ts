@@ -278,13 +278,16 @@ export class WebpageService {
     // 6. needn't generate App.vue, main.js
 
     data.context.resp = {
-      packages,
-      files,
-      routes: viewList.map((v) => ({
-        name: v.name,
-        path: v.path,
-        component: v.component,
-      })),
+      data: {
+        packages,
+        files,
+        routes: viewList.map((v) => ({
+          name: v.name,
+          path: v.path,
+          component: v.component,
+        })),
+      },
+      status: 200,
     };
     this.logger.debug(JSON.stringify(data.context.resp));
     return { data };
