@@ -125,10 +125,6 @@ export class EventListenersService {
     try {
       for (; idx < listeners.length; ) {
         if (event.stopPropagation) break;
-        if (event.preventDefault) {
-          event.preventDefault = false;
-          continue;
-        }
 
         const listener = listeners[idx++];
         try {

@@ -605,7 +605,6 @@ model EventStore {
   statusCode      Int     @default(1)
   message         String? @db.VarChar(255)
   stopPropagation Boolean /// @description stop propagation to next listeners
-  preventDefault  Boolean /// @description prevent default action, going to next listeners
   listenerId      String? @db.VarChar(36)
   funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 

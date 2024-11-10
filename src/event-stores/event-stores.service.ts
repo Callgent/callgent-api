@@ -53,7 +53,6 @@ export class EventStoresService {
       ...event,
       context: event.context,
       stopPropagation: event.stopPropagation,
-      preventDefault: event.preventDefault,
       funName,
       listenerId,
     };

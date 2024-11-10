@@ -24,14 +24,9 @@ export class EventObject {
       writable: true,
       enumerable: false,
     });
-    Object.defineProperty(this, 'preventDefault', {
-      value: false,
-      writable: true,
-      enumerable: false,
-    });
   }
   public readonly id: string;
   public declare readonly context: { [key: string]: any };
+  /** if true, the event will not be propagated to other listeners */
   public declare stopPropagation: boolean;
-  public declare preventDefault: boolean;
 }

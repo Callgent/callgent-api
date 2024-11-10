@@ -8,7 +8,7 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorDecorator('Webpage', { client: '' })
+@EntryAdaptorDecorator('Webpage', { client: '/icons/Webpage.svg' })
 export class WebpageAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);

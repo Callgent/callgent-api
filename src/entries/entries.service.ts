@@ -81,12 +81,12 @@ export class EntriesService implements OnModuleInit {
   ) {
     if ('both' in types || 'client' in types)
       this.__add2AdaptorsMap(key, this.clientAdaptors, {
-        icon: types.client || types.both,
+        icon: 'client' in types ? types.client : types.both,
         serviceToken,
       });
     if ('both' in types || 'server' in types)
       this.__add2AdaptorsMap(key, this.serverAdaptors, {
-        icon: types.server || types.both,
+        icon: 'server' in types ? types.server : types.both,
         serviceToken,
       });
   }
@@ -98,7 +98,7 @@ export class EntriesService implements OnModuleInit {
           this.clientAdaptors.key.serviceToken,
         )}]`,
       );
-      map[key] = value;
+    map[key] = value;
   }
 
   listAdaptors(client: boolean): { [key: string]: string } {
@@ -338,22 +338,24 @@ export class EntriesService implements OnModuleInit {
 
   @Transactional()
   async invokeSEP(reqEvent: ClientRequestEvent) {
-    const { map2Endpoints, endpoints } = reqEvent.context;
+    const { map2Endpoints, endpoints, sentry } = reqEvent.context;
     if (!map2Endpoints || !endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = endpoints[0] as EndpointDto;
-    const sen = await this.findOne(func.entryId, {
-      id: true,
-      name: true,
-      type: true,
-      adaptorKey: true,
-      priority: true,
-      host: true,
-      content: true,
-      callgentId: true,
-      callgent: { select: { id: true, name: true } },
-    });
+    const sen =
+      sentry ||
+      (await this.findOne(func.entryId, {
+        id: true,
+        name: true,
+        type: true,
+        adaptorKey: true,
+        priority: true,
+        host: true,
+        content: true,
+        callgentId: true,
+        callgent: { select: { id: true, name: true } },
+      }));
     const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
 
@@ -369,25 +371,25 @@ export class EntriesService implements OnModuleInit {
   /** called after pending invokeSEP, convert resp to formal object */
   @Transactional()
   async postInvokeSEP(reqEvent: ClientRequestEvent) {
-    const {
-      context: { endpoints },
-    } = reqEvent;
+    const { endpoints, sentry } = reqEvent.context;
     if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');
 
     const func = endpoints[0] as EndpointDto;
-    const sep = await this.findOne(func.entryId, {
-      id: true,
-      name: true,
-      type: true,
-      adaptorKey: true,
-      priority: true,
-      host: true,
-      content: true,
-      callgentId: true,
-      callgent: { select: { id: true, name: true } },
-    });
-    const adapter = sep && this.getAdaptor(sep.adaptorKey, EntryType.SERVER);
+    const sen =
+      sentry ||
+      (await this.findOne(func.entryId, {
+        id: true,
+        name: true,
+        type: true,
+        adaptorKey: true,
+        priority: true,
+        host: true,
+        content: true,
+        callgentId: true,
+        callgent: { select: { id: true, name: true } },
+      }));
+    const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
     if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
     await adapter.postprocess(reqEvent, func);
 

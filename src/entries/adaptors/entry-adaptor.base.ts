@@ -150,7 +150,7 @@ export abstract class EntryAdaptor {
   abstract invoke(
     fun: EndpointDto,
     args: object,
-    sep: EntryDto,
+    sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 }

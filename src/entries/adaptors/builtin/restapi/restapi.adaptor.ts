@@ -12,7 +12,7 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorDecorator('restAPI', { both: '' })
+@EntryAdaptorDecorator('restAPI', { both: '/icons/RestAPI.svg' })
 export class RestAPIAdaptor extends EntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);

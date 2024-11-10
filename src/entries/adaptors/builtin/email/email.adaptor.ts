@@ -19,7 +19,7 @@ import { ClientRequestEvent } from '../../../events/client-request.event';
 import { EntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorDecorator('Email', { both: '' })
+@EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
 export class EmailAdaptor extends EntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,
