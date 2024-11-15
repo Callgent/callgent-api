@@ -1,20 +1,18 @@
 import { Inject, NotImplementedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AgentsService } from '../../../../agents/agents.service';
-import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
-import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EntryAdaptor } from '../../entry-adaptor.base';
+import { ClientEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
 @EntryAdaptorDecorator('Webpage', { client: '/icons/Webpage.svg' })
-export class WebpageAdaptor extends EntryAdaptor {
+export class WebpageAdaptor extends ClientEntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
   }
 
-  protected _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
+  _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
     data.host = `/api/webpage/request/${data.callgentId}/${data.id}`;
   }
 
@@ -22,20 +20,12 @@ export class WebpageAdaptor extends EntryAdaptor {
     //
   }
 
-  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
-    //
-  }
-
-  req2Json(req: object) {
+  /** generate a web page entry */
+  initClient(params: object, entry: EntryDto): Promise<string> {
     throw new NotImplementedException('Method not implemented.');
   }
 
-  async invoke(
-    fun: EndpointDto,
-    args: object,
-    sep: Entry,
-    reqEvent: ClientRequestEvent,
-  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
+  callback(resp: any): Promise<boolean> {
     throw new NotImplementedException('Method not implemented.');
   }
 
@@ -88,26 +78,4 @@ export class WebpageAdaptor extends EntryAdaptor {
   //     },
   //   };
   // }
-
-  /** generate a web page entry */
-  initClient(params: object, entry: EntryDto): Promise<string> {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  /** generate operation script based on the Chrome plugin */
-  initServer(initParams: object, entry: EntryDto): Promise<string> {
-    // - scrape the web page
-    const url = entry.host['Page URL'];
-    // - script to operate the page
-    // auth handler
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  readData(name: string, hints?: { [key: string]: any }): Promise<any> {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  callback(resp: any): Promise<boolean> {
-    throw new NotImplementedException('Method not implemented.');
-  }
 }

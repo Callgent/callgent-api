@@ -16,7 +16,7 @@ import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { Utils } from '../infra/libs/utils';
+import { Optional, Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointsChangedEvent } from './events/endpoints-changed.event';
@@ -29,7 +29,7 @@ export class EndpointsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
-    private readonly endpointsService: EntriesService,
+    private readonly entriesService: EntriesService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
     private readonly eventEmitter: EventEmitter2,
@@ -147,12 +147,15 @@ export class EndpointsService {
     }
 
     // validation
-    const actMap = apis.map<Prisma.EndpointUncheckedCreateInput>((f) => {
+    const actMap = apis.map<
+      Omit<Prisma.EndpointUncheckedCreateInput, 'isAsync'>
+    >((f) => {
       const ret = {
         ...f,
         id: Utils.uuid(),
         name: Utils.formalApiName(f.method, f.path),
         entryId: entry.id,
+        adaptorKey: entry.adaptorKey,
         callgentId: entry.callgentId,
         createdBy: createdBy,
       };
@@ -199,9 +202,16 @@ export class EndpointsService {
 
   @Transactional()
   async createMany(
-    data: Prisma.EndpointUncheckedCreateInput[],
+    endpoints: Optional<Prisma.EndpointUncheckedCreateInput, 'isAsync'>[],
     entry: EntryDto,
   ) {
+    const adaptor = this.entriesService.getAdaptor(
+      entry.adaptorKey,
+      EntryType.SERVER,
+    );
+    endpoints.forEach((e) => (e.isAsync = adaptor.isAsync(e as any)));
+    const data: Prisma.EndpointUncheckedCreateInput[] =
+      endpoints as Prisma.EndpointUncheckedCreateInput[];
     const prisma = this.txHost.tx as PrismaClient;
     const { count } = await prisma.endpoint.createMany({ data });
     this._pubEvent({ entry: entry as any, news: data as any[] });
@@ -219,7 +229,7 @@ export class EndpointsService {
         'Function endpoints can only be imported into Server Entry. ',
       );
 
-    const apiSpec = await this.endpointsService.parseApis(entry, apiTxt);
+    const apiSpec = await this.entriesService.parseApis(entry, apiTxt);
     return this.createBatch(entry, apiSpec, createdBy);
   }
 

@@ -9,16 +9,18 @@ import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EntryAdaptor } from '../../entry-adaptor.base';
+import { BothEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
 @EntryAdaptorDecorator('restAPI', { both: '/icons/RestAPI.svg' })
-export class RestAPIAdaptor extends EntryAdaptor {
+export class RestAPIAdaptor extends BothEntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
   }
 
-  protected _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
+  isAsync = () => false;
+
+  _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
     // unstructured request url
     data.host = `/api/rest/request/${data.callgentId}/${data.id}`;
   }
@@ -214,14 +216,10 @@ export class RestAPIAdaptor extends EntryAdaptor {
     return { data, headers, status, statusText };
   }
 
-  async readData(name: string, hints?: { [key: string]: any }) {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
   async invoke(
     fun: EndpointDto,
     args: object,
-    sep: EntryDto,
+    sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
     const resp = await axios.request({
@@ -231,7 +229,7 @@ export class RestAPIAdaptor extends EntryAdaptor {
         host: undefined,
         'content-length': undefined,
       },
-      baseURL: sep.host,
+      baseURL: sen.host,
       withCredentials: !!reqEvent.context.securityItem,
       // httpsAgent: new https.Agent({
       //   rejectUnauthorized: false,

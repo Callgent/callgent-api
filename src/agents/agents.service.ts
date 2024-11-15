@@ -1,6 +1,11 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Endpoint } from '../endpoints/entities/endpoint.entity';
@@ -9,10 +14,7 @@ import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';
-
-function sandbox(functionStr: string): Function {
-  return new Function('return ' + functionStr)();
-}
+import { Utils } from '../infra/libs/utils';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
@@ -48,9 +50,9 @@ export class AgentsService {
   async map2Endpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const endpoints = reqEvent.context.endpoints as unknown as EndpointDto[];
+    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
     if (!endpoints?.length)
-      throw new BadRequestException(
+      throw new NotFoundException(
         'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
       );
 
@@ -58,8 +60,8 @@ export class AgentsService {
 
     // if epName, try find mapArgs function by [cepAdaptor, epName]
     const mapped = await (reqEvent.context.epName
-      ? this._map2Endpoint(reqEvent)
-      : this._map2Endpoints(reqEvent));
+      ? this._map2Endpoint(reqEvent, endpoints)
+      : this._map2Endpoints(reqEvent, endpoints));
     if (!mapped) return;
     if ('data' in mapped) return mapped;
 
@@ -67,14 +69,19 @@ export class AgentsService {
   }
 
   /** progressive not supported for invoking */
-  protected async _map2Endpoint(reqEvent: ClientRequestEvent) {
+  protected async _map2Endpoint(
+    reqEvent: ClientRequestEvent,
+    endpoints: EndpointDto[],
+  ) {
     const {
       id,
       srcId,
       dataType: cenAdaptor,
-      context: { callgentName, epName, endpoints, req, tgtEvents },
+      context: { callgentName, epName, req, tgtEvents },
     } = reqEvent;
-    const endpoint: EndpointDto = endpoints[0];
+    const endpoint: EndpointDto = endpoints.find((e) => e.name == epName);
+    if (!endpoint)
+      throw new NotFoundException('map2Endpoint not found of name:' + epName);
 
     // load existing (srcId, epName)
     const prisma = this.txHost.tx as PrismaClient;
@@ -96,7 +103,7 @@ export class AgentsService {
         bizKey: id,
         validate: (data) => {
           try {
-            const fun = sandbox(data.req2Args);
+            const fun = Utils.toFunction(data.req2Args);
             (data as any).args = fun(req);
           } catch (e) {
             throw new Error('error calling `req2Args` function: ' + e.message);
@@ -108,29 +115,54 @@ export class AgentsService {
     return mapped;
   }
 
-  protected async _map2Endpoints(reqEvent: ClientRequestEvent) {
+  protected async _map2Endpoints(
+    reqEvent: ClientRequestEvent,
+    endpoints: EndpointDto[],
+  ) {
     const {
       id,
       srcId,
       dataType: cenAdaptor,
-      context: { callgentName, epName, progressive, endpoints, req, tgtEvents },
+      context: { callgentName, epName, progressive, req },
     } = reqEvent;
 
+    // remove error responses
+    const [asyncEndpoints, syncEndpoints] = endpoints.reduce<
+      [EndpointDto[], EndpointDto[]]
+    >(
+      (acc, item) => {
+        // remove unsuccess responses
+        const successResponse = {};
+        Object.keys(item.responses).forEach((k) => {
+          if (k.startsWith('2') || k.startsWith('3') || k == 'default')
+            successResponse[k] = item.responses[k];
+        });
+        acc[item.isAsync ? 0 : 1].push({ ...item, responses: successResponse });
+        return acc;
+      },
+      [[], []],
+    );
+
     const mapped = await this.llmService.template(
-      'map2Endpoints',
-      { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
+      asyncEndpoints.length > 0 ? 'map2EndpointsAsync' : 'map2Endpoints',
+      {
+        req,
+        epName,
+        callgentName,
+        cenAdaptor,
+        asyncEndpoints,
+        syncEndpoints,
+      },
       {
         returnType: {
           question: '',
-          summary: '',
-          description: '',
           endpoints: [''],
-          components: [],
-          args: {},
+          summary: '',
+          instruction: '',
+          requestArgs: {},
           macroParams: [],
-          macroResponse: '',
-          invokeEndpoints: '',
-          wrapResp: '',
+          macroResponse: {},
+          memberFunctions: { main: '' },
         },
         bizKey: id,
       },

@@ -60,7 +60,7 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-CEP-AUTH',
+      id: 'CR-CEN-AUTH',
       srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
@@ -68,8 +68,7 @@ function initEventListeners(
       serviceType: 'SERVICE',
       serviceName: 'CallgentRealmsService',
       funName: 'checkCenAuth',
-      description:
-        'Auth-check before cep invocation. current security: reqEvent.context.security: RealmSecurityVO[]',
+      description: 'Auth-check before centry invocation.',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
@@ -129,45 +128,18 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-SEP-AUTH',
-      srcId: '*',
-      tenantPk: 0,
-      eventType: 'CLIENT_REQUEST',
-      dataType: '*',
-      serviceType: 'SERVICE',
-      serviceName: 'CallgentRealmsService',
-      funName: 'checkSepAuth',
-      description:
-        'Auth-check before sep invocation. current security: reqEvent.context.security: RealmSecurityVO[]',
-      createdBy: 'GLOBAL',
-      priority: (priority += 100),
-    },
-    {
       id: 'CR-INVOKE-SEP',
       srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'EntriesService',
-      funName: 'invokeSEP',
+      serviceName: 'InvokeService',
+      funName: 'invokeSEPs',
       description: 'Do actual invocation through the SEP adaptor',
       createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
-    // {
-    //   pk: elId++,
-    //   id: 'PR-MAP-2-ARGS',
-    //   srcId: '*',
-    //   tenantPk: 0,
-    //   eventType: 'CLIENT_REQUEST',
-    //   dataType: '*',
-    //   serviceType: 'SERVICE',
-    //   serviceName: 'SandBoxService',
-    //   funName: 'map2Args',
-    //   createdBy: 'GLOBAL',
-    //   priority: (priority = 0),
-    // },
   ];
 
   return els.map((el) =>
@@ -211,38 +183,74 @@ Please generate js function req2Args(request) to map below request into endpoint
 const request_object = {{=JSON.stringify(it.req)}};
 
 output single-line json object below:
-{ "req2Args": "Full code of js function req2Args(request_object):ArgsMap, to map request into endpoint args. ArgsMap is a k-v map of vars in endpoint.params(no conflict keys, no more props than it, especially requestBody's key is '$requestBody$'), all values just extracted from request_object, but no direct constant in code from request_object, all calculated from request_object props as variables!" },
+{ "req2Args": "Full code of js function req2Args(request_object):ArgsMap, to map request into endpoint args. ArgsMap is a k-v map of vars in endpoint.params(no conflict keys, no more props than it), all values just extracted from request_object, but no direct constant in code from request_object, all calculated from request_object props as variables!" },
 output just json no explanation`,
     },
     {
-      name: 'map2Endpoints',
-      prompt: `given below service endpoints:
-service \`{{=it.callgentName}}\` { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
-{{~}}}
+      name: 'map2EndpointsAsync',
+      prompt: `# Task goal:
+generating js service class to orchestrate the given service endpoints to fulfill a user request
 
-Please choose relevant endpoints to fulfill below request:
+## user request:
 const request = {
 {{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
-{{ } }}"request from": "{{=it.cepAdaptor}}",
+{{ } }}"requested from": "{{=it.cenAdaptor}}",
 "request_object": {{=JSON.stringify(it.req)}},
-},
-using the js macro function:
-\`\`\`typescript
-async function macro(macroParams) {
-  const ctx = {}; // context vars across endpoint invocations to final response
-  // logic script which uses \`callServerEndpoint(epId, epParams)\` to get final result
-  // NOTE: macroParams/epParams are k-v map of needed vars, especially requestBody's key is '$requestBody$'
-  const result = await invokeEndpoints(macroParams, ctx)
-  // wrap result into response
-  const resp = wrapResp(ctx, macroParams, result);
-  return resp;
 }
-// implementation of: invokeEndpoints/wrapResp
+
+## service endpoints:
+service \`{{=it.callgentName}}\` { "async": {{{~ it.asyncEndpoints :ep }}
+    "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
+  {{~}}},{{ if (it.syncEndpoints) { }} "sync": {{{~ it.syncEndpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
+{{~}}}{{ } }}
+}
+
+## generated js class template:
+\`\`\`javascript
+/** stateless class */
+class RequestMacro {
+  /** @param serviceInvoke - function to invoke a service endpoint */
+  constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
+  /** must have this starting member function */
+  main = (request, requestArgs) => {
+    // ...
+
+    // every endpoint invocation goes like this:
+    const r = await this.serviceInvoke(epName, ..);
+    if (r.statusCode == 2) return {...r, callbackName: 'RequestMacro member function name'}
+
+    // else go on with r.data ...
+  };
+
+  // ... more member functions for service async endpoints to callback, better named \`xxxEpCb\`
+}
 \`\`\`
 
-output single-line json object below:
-{ "question": "question to ask the caller if anything not sure or missing for request to args mapping, *no* guess or assumption of the mapping. '' if the args mapping is crystal clear. if question not empty, all subsequent props(endpoints, macroParams,..) left empty", "endpoints": ["the chosen API endpoints to be invoked"], "summary":"short summary", "description":"Description help using this macro", "macroParams":"object of formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}, macro incoming params", "macroResponse": "object of formal openAPI format json {[http-code]:any}, final macro response", "args": "k-v map of needed args in \`macro-params\`(no conflict keys, no more props than it, '$requestBody$' is key for requestBody arg), all values just extracted from request.request_object, this is the actual args value to call \`const resp=await macro(args)\`", "invokeEndpoints": "full code of async js function(macroParams:MacroParams, ctx). no direct constant extracted from request.request_object", "wrapResp": "full code of js function(ctx, macroParams, result) to get resp matching \`macroResponse\` schema. No direct constant extracted from request.request_object" }`,
+## serviceInvoke signature:
+function(endpointName, args, sentryConfig): Promise<{statusCode:2, message}|{data}>}
+@returns:
+- {data}: endpoint response object
+- {statusCode:2, message}: only return this when epName is async endpoint, meaning you must immediately return {callbackName:'member function to receive epName response object'}, service will call it back later
+- any invocation failures just throw errors
+
+## all member functions(including \`main\`) have same signature:
+function(request: { context:{ [varName:string]:any }}, asyncResponse: any): Promise<{callbackName,message}|{data?,statusCode?,message?}>
+@param request: the same object passes through out all invocations, keeping request.context as shared state
+@param asyncResponse
+- for RequestMacro.main: it means requestArgs, matching macroParams schema
+- for any other member functions: received async endpoint response object
+@returns
+- {callbackName,message}: tell async endpoint to callback \`callbackName\` later
+- {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
+
+## generated code output json format:
+{ "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
+  "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
+  "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
+  "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
+  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoint callback to these functions with real response" }
+}`,
     },
     {
       name: 'convert2Response',
@@ -359,23 +367,23 @@ After design before output, please redesign to meet rules:
 - if \`endpoints\` empty, please describe brief store actions logic in \`instruction\`
 - describe interactive dynamics between components in \`instruction\``,
     },
-//     {
-//       name: 'genVue3Apis',
-//       prompt: `Given proposed UI components of a Vue3+Pinia app: [{{~ it.compsList :comp }}
-//   { "name": "{{=comp.name}}", "props": {{=JSON.stringify(comp.props)}}, "summary":"{{=comp.summary}}", "instruction": "{{=comp.instruction}}" },{{~}}
-// ],
+    //     {
+    //       name: 'genVue3Apis',
+    //       prompt: `Given proposed UI components of a Vue3+Pinia app: [{{~ it.compsList :comp }}
+    //   { "name": "{{=comp.name}}", "props": {{=JSON.stringify(comp.props)}}, "summary":"{{=comp.summary}}", "instruction": "{{=comp.instruction}}" },{{~}}
+    // ],
 
-// Back-ended with the following service APIs:
-// Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": [{{~ it.endpoints :ep }}
-//   { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters": {{=JSON.stringify(ep.params)}} },{{~}}
-//   ]
-// },
+    // Back-ended with the following service APIs:
+    // Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": [{{~ it.endpoints :ep }}
+    //   { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters": {{=JSON.stringify(ep.params)}} },{{~}}
+    //   ]
+    // },
 
-// As world-class frontend expert, please adjust/remove components to fit APIs params, even if it means reducing the required functionality!
-// Note: all API params are totally listed above!
-// output a single-lined json object:
-// {[ComponentName: string]: {"endpoints":["endpoint ids(METHOD /resource/url), which \`may\` be used by the component", ..], "removed": "mark current component as removed if APIs can't fulfill the functionality, then set component's other attributes to empty.", "props": ["similar to function params. please use store state as possible", "must remove unsupported props, may empty", ..], "summary":"Adjusted summary", "instruction": "Adjusted instruction"} }`,
-//     },
+    // As world-class frontend expert, please adjust/remove components to fit APIs params, even if it means reducing the required functionality!
+    // Note: all API params are totally listed above!
+    // output a single-lined json object:
+    // {[ComponentName: string]: {"endpoints":["endpoint ids(METHOD /resource/url), which \`may\` be used by the component", ..], "removed": "mark current component as removed if APIs can't fulfill the functionality, then set component's other attributes to empty.", "props": ["similar to function params. please use store state as possible", "must remove unsupported props, may empty", ..], "summary":"Adjusted summary", "instruction": "Adjusted instruction"} }`,
+    //     },
     {
       name: 'genVue3Component',
       prompt: `For Vue3+Pinia app with components structure:
@@ -437,13 +445,12 @@ NOTE
   ];
 
   return llmTemplates.map((llmTpl) =>
-    prisma.llmTemplate
-      .upsert({
-        where: { name: llmTpl.name },
-        update: llmTpl,
-        create: llmTpl,
-      })
-      .then((llmTpl) => console.log({ llmTpl })),
+    (console.log(llmTpl.name, 'llmTemplate.length,', llmTpl.prompt.length),
+    prisma.llmTemplate.upsert({
+      where: { name: llmTpl.name },
+      update: llmTpl,
+      create: llmTpl,
+    })).then((llmTpl) => console.log({ llmTpl })),
   );
 }
 function initTags(

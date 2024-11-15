@@ -5,19 +5,20 @@ import { AgentsModule } from './agents/agents.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
-import { BffEndpointsModule } from './bff/endpoints/bff-endpoints.module';
 import { CallgentTreeModule } from './bff/callgent-tree/callgent-tree.module';
-import { EndpointsModule } from './endpoints/endpoints.module';
+import { BffEndpointsModule } from './bff/endpoints/bff-endpoints.module';
 import { CallgentHubModule } from './callgent-hub/callgent-hub.module';
 import { CallgentRealmsModule } from './callgent-realms/callgent-realms.module';
 import { CallgentsModule } from './callgents/callgents.module';
 import { EmailsModule } from './emails/emails.module';
+import { EndpointsModule } from './endpoints/endpoints.module';
 import { EntriesModule } from './entries/entries.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
 import { EventStoresModule } from './event-stores/event-stores.module';
 import { AuthModule } from './infra/auth/auth.module';
 import { LoggingModule } from './infra/logging/logging.module';
 import { ReposModule } from './infra/repo/repos.module';
+import { InvokeModule } from './invoke/invoke.module';
 import { SandboxModule } from './sandbox/sandbox.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -51,6 +52,7 @@ import { UsersModule } from './users/users.module';
     SandboxModule,
     CallgentHubModule,
     CallgentRealmsModule,
+    InvokeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

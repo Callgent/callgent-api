@@ -326,6 +326,15 @@ model Endpoint {
   /// @description An endpoint is bound to a server entry
   /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infra/repo/validators/entity-exists.validator)
   entryId    String? @db.VarChar(36)
+  /// @description whether async endpoint, e.g. invoked by email adaptor
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  isAsync    Boolean @db.Boolean
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  adaptorKey String  @db.VarChar(127) /// @description entry adaptor key
 
   /// @DtoReadOnly
   /// @DtoEntityHidden

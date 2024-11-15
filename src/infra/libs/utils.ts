@@ -77,6 +77,17 @@ export class Utils {
 
   static formalApiName = (method: string, path: string) =>
     `${method.toUpperCase()} ${path.toLowerCase()}`;
+
+  static toFunction<T extends Function>(funCode: string): T {
+    try {
+      const fun = new Function('return ' + funCode)();
+      const type = typeof fun;
+      if (type === 'function') return fun;
+      throw new Error('code is not a function, but a ' + type);
+    } catch (e) {
+      throw new Error('Invalid function code, msg: ' + e.message);
+    }
+  }
 }
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */

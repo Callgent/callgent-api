@@ -16,11 +16,11 @@ import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EntryAdaptor } from '../../entry-adaptor.base';
+import { BothEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
 @EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
-export class EmailAdaptor extends EntryAdaptor {
+export class EmailAdaptor extends BothEntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,
     private readonly emailsService: EmailsService,
@@ -28,7 +28,9 @@ export class EmailAdaptor extends EntryAdaptor {
     super(agentsService);
   }
 
-  protected _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
+  isAsync = () => true;
+
+  _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
     data.host = `invoke+${data.id}@my.callgent.com`;
   }
 
@@ -57,7 +59,7 @@ export class EmailAdaptor extends EntryAdaptor {
 
   @Transactional()
   async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
-    const resp = reqEvent?.context?.resp as unknown as RelayEmail;
+    const resp: RelayEmail = reqEvent?.context?.resp as any;
     if (!resp?.content?.html)
       throw new BadRequestException(
         'Missing response for reqEvent#' + reqEvent.id,
@@ -70,14 +72,6 @@ export class EmailAdaptor extends EntryAdaptor {
       fun,
       reqEvent.id,
     );
-  }
-
-  readData(name: string, hints?: { [key: string]: any }): Promise<any> {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  req2Json(req: object) {
-    throw new NotImplementedException('Method not implemented.');
   }
 
   callback(resp: any): Promise<boolean> {
@@ -133,7 +127,7 @@ export class EmailAdaptor extends EntryAdaptor {
     if (requestBody) {
       const item: any = { name: 'requestBody' };
       // item.content = this._formatMediaType(requestBody.content);
-      item.value = args['$requestBody$'];
+      item.value = args['requestBody'];
       if (requestBody.required) item.required = requestBody.required;
       if (requestBody.description) item.description = requestBody.description;
       ret.push(item);

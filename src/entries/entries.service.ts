@@ -20,7 +20,10 @@ import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Optional, Utils } from '../infra/libs/utils';
 import { selectHelper } from '../infra/repo/select.helper';
 import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { EntryAdaptor } from './adaptors/entry-adaptor.base';
+import {
+  ClientEntryAdaptor,
+  ServerEntryAdaptor,
+} from './adaptors/entry-adaptor.base';
 import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/entry-adaptor.decorator';
 import { EntryDto } from './dto/entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
@@ -174,7 +177,10 @@ export class EntriesService implements OnModuleInit {
     );
   }
 
-  getAdaptor(adaptorKey: string, endpointType?: EntryType): EntryAdaptor {
+  getAdaptor<T extends EntryType>(
+    adaptorKey: string,
+    endpointType?: T,
+  ): T extends 'SERVER' ? ServerEntryAdaptor : ClientEntryAdaptor {
     const list =
       endpointType == 'SERVER' ? this.serverAdaptors : this.clientAdaptors;
     if (adaptorKey in list)
@@ -315,7 +321,7 @@ export class EntriesService implements OnModuleInit {
     entry: EntryDto,
     apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
   ) {
-    const adaptor = this.getAdaptor(entry.adaptorKey, entry.type);
+    const adaptor = this.getAdaptor(entry.adaptorKey, EntryType.SERVER);
     // TODO read entry.components
     return adaptor.parseApis(apiTxt); //, entry.components);
   }
@@ -336,8 +342,10 @@ export class EntriesService implements OnModuleInit {
     await adaptor.preprocess(reqEvent, entry as any);
   }
 
+  /** invoke SEPs based on macro service */
   @Transactional()
-  async invokeSEP(reqEvent: ClientRequestEvent) {
+  async invokeSEPs(reqEvent: ClientRequestEvent) {
+    // map2Endpoints: { req2Args: string; args?: {}; }
     const { map2Endpoints, endpoints, sentry } = reqEvent.context;
     if (!map2Endpoints || !endpoints?.length)
       throw new Error('Failed to invoke, No mapping function found');

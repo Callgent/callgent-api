@@ -133,8 +133,8 @@ export async function bootstrapForTest(
 /**
  * swagger doc is enabled only in dev mode, when devDocVersion is not empty.
  *
- * @param testUserId used on dev swagger doc
- * @returns { defaultApiVersion, devDocVersion }
+ * @param {sting} testUserId used on dev swagger doc
+ * @returns {{ defaultApiVersion, devDocVersion }} api/doc versions
  */
 function registerApi(
   app: NestFastifyApplication,
