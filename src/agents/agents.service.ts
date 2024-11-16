@@ -14,7 +14,7 @@ import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMService } from './llm.service';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
@@ -93,7 +93,7 @@ export class AgentsService {
 
     // generate
     if (!endpoint.params || Object.keys(endpoint.params).length == 0)
-      return { req2Args: '() => ({})', args: {} }; // no params
+      return { req2Args: '() => ({})', requestArgs: {} }; // no params
 
     const mapped = await this.llmService.template(
       'map2Endpoint',
@@ -104,9 +104,12 @@ export class AgentsService {
         validate: (data) => {
           try {
             const fun = Utils.toFunction(data.req2Args);
-            (data as any).args = fun(req);
+            (data as any).requestArgs = fun(req);
           } catch (e) {
-            throw new Error('error calling `req2Args` function: ' + e.message);
+            throw new Error(
+              '[map2Endpoint] Wrong generation `req2Args` function: ' +
+                e.message,
+            );
           }
           return true;
         },
@@ -126,32 +129,26 @@ export class AgentsService {
       context: { callgentName, epName, progressive, req },
     } = reqEvent;
 
-    // remove error responses
-    const [asyncEndpoints, syncEndpoints] = endpoints.reduce<
-      [EndpointDto[], EndpointDto[]]
-    >(
-      (acc, item) => {
-        // remove unsuccess responses
-        const successResponse = {};
-        Object.keys(item.responses).forEach((k) => {
-          if (k.startsWith('2') || k.startsWith('3') || k == 'default')
-            successResponse[k] = item.responses[k];
-        });
-        acc[item.isAsync ? 0 : 1].push({ ...item, responses: successResponse });
-        return acc;
-      },
-      [[], []],
-    );
+    // remove unsuccess responses
+    endpoints = endpoints.map((item) => {
+      const r = { ...item };
+      const successResponse = {};
+      Object.entries(item.responses).forEach(([k, v]) => {
+        if (k.startsWith('2') || k.startsWith('3') || k == 'default')
+          successResponse[k] = v;
+      });
+      r.responses = successResponse;
+      return r;
+    });
 
     const mapped = await this.llmService.template(
-      asyncEndpoints.length > 0 ? 'map2EndpointsAsync' : 'map2Endpoints',
+      'map2Endpoints',
       {
         req,
         epName,
         callgentName,
         cenAdaptor,
-        asyncEndpoints,
-        syncEndpoints,
+        endpoints,
       },
       {
         returnType: {

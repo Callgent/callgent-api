@@ -187,7 +187,7 @@ output single-line json object below:
 output just json no explanation`,
     },
     {
-      name: 'map2EndpointsAsync',
+      name: 'map2Endpoints',
       prompt: `# Task goal:
 generating js service class to orchestrate the given service endpoints to fulfill a user request
 
@@ -199,11 +199,8 @@ const request = {
 }
 
 ## service endpoints:
-service \`{{=it.callgentName}}\` { "async": {{{~ it.asyncEndpoints :ep }}
-    "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
-  {{~}}},{{ if (it.syncEndpoints) { }} "sync": {{{~ it.syncEndpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
-{{~}}}{{ } }}
+service \`{{=it.callgentName}}\` {{{~ it.endpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 }
 
 ## generated js class template:
@@ -213,35 +210,37 @@ class RequestMacro {
   /** @param serviceInvoke - function to invoke a service endpoint */
   constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
   /** must have this starting member function */
-  main = (request, requestArgs) => {
+  main = (context, requestArgs) => {
     // ...
 
     // every endpoint invocation goes like this:
     const r = await this.serviceInvoke(epName, ..);
-    if (r.statusCode == 2) return {...r, callbackName: 'RequestMacro member function name'}
-
-    // else go on with r.data ...
+    const callbackName = \`some\${epName}Cb\`; // a RequestMacro member function name
+    if (r.statusCode == 2) return {...r, callbackName}
+    // else sync call the same logic
+    return this[callbackName](context, r.data)
   };
 
-  // ... more member functions for service async endpoints to callback, better named \`xxxEpCb\`
+  // ... more member functions for service endpoints to callback
 }
 \`\`\`
 
 ## serviceInvoke signature:
 function(endpointName, args, sentryConfig): Promise<{statusCode:2, message}|{data}>}
 @returns:
-- {data}: endpoint response object
-- {statusCode:2, message}: only return this when epName is async endpoint, meaning you must immediately return {callbackName:'member function to receive epName response object'}, service will call it back later
-- any invocation failures just throw errors
+- {statusCode:2, message}: means async endpoint invocation, you must immediately return {callbackName:'function which will be async called back by endpoint with successful response object'}
+- {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
+
+**note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
-function(request: { context:{ [varName:string]:any }}, asyncResponse: any): Promise<{callbackName,message}|{data?,statusCode?,message?}>
-@param request: the same object passes through out all invocations, keeping request.context as shared state
+function(context:{ [varName:string]:any }, asyncResponse: any): Promise<{callbackName,message}|{data?,statusCode?,message?}>
+@param context: the same context object passes through out all member invocations, keeping shared state
 @param asyncResponse
 - for RequestMacro.main: it means requestArgs, matching macroParams schema
-- for any other member functions: received async endpoint response object
+- for any other member functions: received endpoint async response object
 @returns
-- {callbackName,message}: tell async endpoint to callback \`callbackName\` later
+- {callbackName,message}: tell endpoint to callback \`callbackName\` later
 - {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
 
 ## generated code output json format:
@@ -249,7 +248,7 @@ function(request: { context:{ [varName:string]:any }}, asyncResponse: any): Prom
   "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
   "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
   "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
-  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoint callback to these functions with real response" }
+  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
 }`,
     },
     {
@@ -259,7 +258,7 @@ function(request: { context:{ [varName:string]:any }}, asyncResponse: any): Prom
 
 invoked with the following request:
 <--- request begin ---
-{{=JSON.stringify(it.args)}}
+{{=JSON.stringify(it.requestArgs)}}
 --- request end --->
 
 we receive below response content:

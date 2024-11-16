@@ -3,11 +3,13 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Inject, Injectable } from '@nestjs/common';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
+import { InvokeChainService } from './invoke-chain.service';
 import { RequestMacro } from './request.macro';
 
 @Injectable()
 export class InvokeService {
   constructor(
+    private readonly invokeChainService: InvokeChainService,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
@@ -21,25 +23,25 @@ export class InvokeService {
     if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping endpoint found');
 
-    const invocation: { currentFun: string; args: any; context: {} } =
+    const invocation: { currentFun: string; response: any; context: {} } =
       reqEvent.context.invocation ||
       (reqEvent.context.invocation = {
         currentFun: 'main',
-        args: map2Endpoints.requestArgs,
+        response: map2Endpoints.requestArgs,
         context: {},
       });
 
     const requestMacro = new RequestMacro(
       map2Endpoints.memberFunctions as { [name: string]: string },
+      this.invokeChainService,
       reqEvent,
-      this.entriesService,
     ).getProxy();
     const fun = requestMacro[invocation.currentFun];
     try {
-      const ret = await fun(invocation.context, invocation.args);
-      const resp = { statusText: ret.message };
+      const ret = await fun(invocation.context, invocation.response);
+      if (!ret) return;
       if ('callbackName' in ret) {
-        // will callback with response in invocation.args
+        // will callback with response in invocation.response
         invocation.currentFun = ret.callbackName;
         reqEvent.context.resp = {
           statusText: ret.message,

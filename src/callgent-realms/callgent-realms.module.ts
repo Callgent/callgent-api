@@ -9,11 +9,10 @@ import { HttpAuthProcessor } from './processors/http-auth.processor';
 @Module({
   imports: [EntriesModule, UsersModule],
   providers: [
-    { provide: 'CallgentRealmsService', useClass: CallgentRealmsService },
     { provide: 'apiKey-authProcessor', useClass: ApiKeyAuthProcessor },
     { provide: 'http-authProcessor', useClass: HttpAuthProcessor },
+    CallgentRealmsService,
   ],
-  exports: ['CallgentRealmsService'],
   controllers: [CallgentRealmsController],
 })
 export class CallgentRealmsModule {}

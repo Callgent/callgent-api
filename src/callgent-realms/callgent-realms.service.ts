@@ -11,6 +11,7 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { EntryDto } from '../entries/dto/entry.dto';
@@ -180,30 +181,17 @@ export class CallgentRealmsService implements OnModuleInit {
    * may callback to cep for user credentials.
    */
   async checkSepAuth(
+    endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // check all endpoints securities
-    // FIXME all endpoints must have auth!
-    for (const endpoint of reqEvent.context.endpoints) {
-      const result = this.checkSecurities(
-        reqEvent,
-        (endpoint as Endpoint).securities,
-        true,
-      );
-      if (result) return result; // FIXME: resume after post auth action
-    }
+    const result = this.checkSecurities(
+      reqEvent,
+      (endpoint as Endpoint).securities,
+      true,
+    );
+    if (result) return result; // FIXME: resume after post auth action
 
-    // FIXME: there may be multiple entries to check
-    const { entryId: senId } =
-      reqEvent.context.endpoints?.length && reqEvent.context.endpoints[0];
-
-    const sen = senId && (await this.entriesService.findOne(senId));
-    if (!sen)
-      throw new NotFoundException(
-        'Server entry not found, id: ' + reqEvent.srcId,
-      );
-    reqEvent.context.sentry = sen;
-
+    const sen = await this.entriesService.findOne(endpoint.entryId);
     return this.checkSecurities(reqEvent, sen.securities as any, true);
   }
 
