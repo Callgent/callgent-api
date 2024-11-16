@@ -1,4 +1,4 @@
-import compression from '@fastify/compress';
+// import compression from '@fastify/compress';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -38,7 +38,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   app.register(helmet);
   app.register(fastifyIp);
   app.register(fastifyMultipart);
-  app.register(compression, { encodings: ['gzip', 'deflate'] });
+  // app.register(compression);
 
   // express compatibility
   const fastifyInstance = app.getHttpAdapter().getInstance();
@@ -107,7 +107,7 @@ export async function bootstrapForProd(): Promise<NestFastifyApplication> {
   const app: NestFastifyApplication =
     await NestFactory.create<NestFastifyApplication>(
       AppModule,
-      new FastifyAdapter(),
+      new FastifyAdapter({ trustProxy: true }),
       {
         abortOnError: false,
         bufferLogs: true,

@@ -342,67 +342,67 @@ export class EntriesService implements OnModuleInit {
     await adaptor.preprocess(reqEvent, entry as any);
   }
 
-  /** invoke SEPs based on macro service */
-  @Transactional()
-  async invokeSEPs(reqEvent: ClientRequestEvent) {
-    // map2Endpoints: { req2Args: string; args?: {}; }
-    const { map2Endpoints, endpoints, sentry } = reqEvent.context;
-    if (!map2Endpoints || !endpoints?.length)
-      throw new Error('Failed to invoke, No mapping function found');
+  // /** invoke SEPs based on macro service */
+  // @Transactional()
+  // async invokeSEPs(reqEvent: ClientRequestEvent) {
+  //   // map2Endpoints: { req2Args: string; args?: {}; }
+  //   const { map2Endpoints, endpoints, sentry } = reqEvent.context;
+  //   if (!map2Endpoints || !endpoints?.length)
+  //     throw new Error('Failed to invoke, No mapping function found');
 
-    const func = endpoints[0] as EndpointDto;
-    const sen =
-      sentry ||
-      (await this.findOne(func.entryId, {
-        id: true,
-        name: true,
-        type: true,
-        adaptorKey: true,
-        priority: true,
-        host: true,
-        content: true,
-        callgentId: true,
-        callgent: { select: { id: true, name: true } },
-      }));
-    const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
-    if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
+  //   const func = endpoints[0] as EndpointDto;
+  //   const sen =
+  //     sentry ||
+  //     (await this.findOne(func.entryId, {
+  //       id: true,
+  //       name: true,
+  //       type: true,
+  //       adaptorKey: true,
+  //       priority: true,
+  //       host: true,
+  //       content: true,
+  //       callgentId: true,
+  //       callgent: { select: { id: true, name: true } },
+  //     }));
+  //   const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
+  //   if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
 
-    // may returns pending result
-    return adapter
-      .invoke(func, map2Endpoints.args, sen as any, reqEvent)
-      .then((res) => {
-        if (res && res.resumeFunName) return res;
-        return this.postInvokeSEP((res && res.data) || reqEvent);
-      });
-  }
+  //   // may returns pending result
+  //   return adapter
+  //     .invoke(func, map2Endpoints.args, sen as any, reqEvent)
+  //     .then((res) => {
+  //       if (res && res.resumeFunName) return res;
+  //       return this.postInvokeSEP((res && res.data) || reqEvent);
+  //     });
+  // }
 
-  /** called after pending invokeSEP, convert resp to formal object */
-  @Transactional()
-  async postInvokeSEP(reqEvent: ClientRequestEvent) {
-    const { endpoints, sentry } = reqEvent.context;
-    if (!endpoints?.length)
-      throw new Error('Failed to invoke, No mapping function found');
+  // /** called after pending invokeSEP, convert resp to formal object */
+  // @Transactional()
+  // async postInvokeSEP(reqEvent: ClientRequestEvent) {
+  //   const { endpoints, sentry } = reqEvent.context;
+  //   if (!endpoints?.length)
+  //     throw new Error('Failed to invoke, No mapping function found');
 
-    const func = endpoints[0] as EndpointDto;
-    const sen =
-      sentry ||
-      (await this.findOne(func.entryId, {
-        id: true,
-        name: true,
-        type: true,
-        adaptorKey: true,
-        priority: true,
-        host: true,
-        content: true,
-        callgentId: true,
-        callgent: { select: { id: true, name: true } },
-      }));
-    const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
-    if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-    await adapter.postprocess(reqEvent, func);
+  //   const func = endpoints[0] as EndpointDto;
+  //   const sen =
+  //     sentry ||
+  //     (await this.findOne(func.entryId, {
+  //       id: true,
+  //       name: true,
+  //       type: true,
+  //       adaptorKey: true,
+  //       priority: true,
+  //       host: true,
+  //       content: true,
+  //       callgentId: true,
+  //       callgent: { select: { id: true, name: true } },
+  //     }));
+  //   const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
+  //   if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
+  //   await adapter.postprocess(reqEvent, func);
 
-    return { data: reqEvent }; // do nothing
-  }
+  //   return { data: reqEvent }; // do nothing
+  // }
 
   @Transactional()
   async updateSecurities(id: string, securities: RealmSecurityVO[]) {

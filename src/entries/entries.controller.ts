@@ -29,7 +29,6 @@ import { EntriesService } from './entries.service';
 @ApiTags('Entries')
 @ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(EntryDto)
-@UseGuards(JwtGuard)
 @Controller('entries')
 export class EntriesController {
   constructor(
@@ -77,6 +76,7 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Post(':adaptorKey/create')
   async createEntry(
     @Req() req,
@@ -100,6 +100,7 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Put(':id')
   async updateEntry(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
     return {
@@ -120,12 +121,14 @@ export class EntriesController {
   // }
 
   @Post(':id/init')
+  @UseGuards(JwtGuard)
   initEntry(@Param('id') id: string, @Body() initParams: object) {
     this.entriesService.init(id, initParams);
   }
 
   /** manual test entry */
   @Post(':id/test')
+  @UseGuards(JwtGuard)
   testEntry(@Param('id') id: string, @Body() any: any) {
     //
   }
@@ -142,6 +145,7 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Delete('/:id')
   async remove(@Param('id') id: string) {
     return { data: await this.entriesService.delete(id) };
