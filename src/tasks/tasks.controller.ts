@@ -18,8 +18,8 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { JwtPayload } from '../infra/auth/jwt/jwt.service';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { JwtPayload } from '../infras/auth/jwt/jwt.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskDto } from './dto/task.dto';

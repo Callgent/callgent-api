@@ -19,7 +19,7 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { EntryDto } from './dto/entry.dto';

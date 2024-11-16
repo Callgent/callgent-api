@@ -22,8 +22,8 @@ import {
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
 import { EntryDto } from '../entries/dto/entry.dto';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
 import { EndpointsService } from './endpoints.service';
 import { EndpointDto } from './dto/endpoint.dto';

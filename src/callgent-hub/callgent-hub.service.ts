@@ -13,8 +13,8 @@ import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { CallgentsService } from '../callgents/callgents.service';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
 import { EntriesService } from '../entries/entries.service';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
-import { Utils } from '../infra/libs/utils';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { Utils } from '../infras/libs/utils';
 
 @Injectable()
 export class CallgentHubService {

@@ -17,7 +17,7 @@ import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
 import { EntriesService } from '../../entries/entries.service';
-import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
+import { JwtGuard } from '../../infras/auth/jwt/jwt.guard';
 
 @ApiTags('BFF')
 @ApiSecurity('defaultBearerAuth')

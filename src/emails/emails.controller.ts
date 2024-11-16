@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags } from '@nestjs/swagger';
-import { JwtAuthService } from '../infra/auth/jwt/jwt.service';
+import { JwtAuthService } from '../infras/auth/jwt/jwt.service';
 import { EmailRelayObject } from './dto/sparkpost-relay-object.interface';
 import { EmailsService } from './emails.service';
 

@@ -17,9 +17,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { Optional, Utils } from '../infra/libs/utils';
-import { selectHelper } from '../infra/repo/select.helper';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { Optional, Utils } from '../infras/libs/utils';
+import { selectHelper } from '../infras/repo/select.helper';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 import {
   ClientEntryAdaptor,
   ServerEntryAdaptor,

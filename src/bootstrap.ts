@@ -20,8 +20,8 @@ import { FastifyRequest } from 'fastify';
 import fastifyIp from 'fastify-ip';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { AppModule } from './app.module';
-import { AuthUtils } from './infra/auth/auth.utils';
-import { JwtAuthService } from './infra/auth/jwt/jwt.service';
+import { AuthUtils } from './infras/auth/auth.utils';
+import { JwtAuthService } from './infras/auth/jwt/jwt.service';
 
 async function bootstrap(app: NestFastifyApplication, port: string) {
   // (BigInt.prototype as any).toJSON = function () {

@@ -1,5 +1,5 @@
 import { EventCallbackType } from '@prisma/client';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 
 export class EventObject {
   constructor(

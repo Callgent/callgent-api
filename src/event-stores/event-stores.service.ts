@@ -3,7 +3,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { EventObject } from '../event-listeners/event-object';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 
 @Injectable()
 export class EventStoresService {

@@ -12,12 +12,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
 import { EmailsService } from '../emails/emails.service';
-import { AuthLoginEvent } from '../infra/auth/events/auth-login.event';
-import { AuthLoginedEvent } from '../infra/auth/events/auth-logined.event';
-import { JwtPayload } from '../infra/auth/jwt/jwt.service';
-import { Utils } from '../infra/libs/utils';
-import { selectHelper } from '../infra/repo/select.helper';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { AuthLoginEvent } from '../infras/auth/events/auth-login.event';
+import { AuthLoginedEvent } from '../infras/auth/events/auth-logined.event';
+import { JwtPayload } from '../infras/auth/jwt/jwt.service';
+import { Utils } from '../infras/libs/utils';
+import { selectHelper } from '../infras/repo/select.helper';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';
 

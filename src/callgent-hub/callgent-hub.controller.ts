@@ -20,10 +20,10 @@ import {
 import { IsInt, IsNotEmpty } from 'class-validator';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentHubService } from './callgent-hub.service';
-import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 
 export class CreateCallgentDtoEx extends CreateCallgentDto {
   @ApiProperty({

@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import axios from 'axios';
-import { AuthLoginEvent } from '../../infra/auth/events/auth-login.event';
-import { JwtPayload } from '../../infra/auth/jwt/jwt.service';
+import { AuthLoginEvent } from '../../infras/auth/events/auth-login.event';
+import { JwtPayload } from '../../infras/auth/jwt/jwt.service';
 import { CreateUserIdentityDto } from '../../user-identities/dto/create-user-identity.dto';
 import { UserDto } from '../dto/user.dto';
 import { UsersService } from '../users.service';

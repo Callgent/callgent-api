@@ -19,7 +19,7 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentsService } from './callgents.service';
 import { CallgentDto } from './dto/callgent.dto';

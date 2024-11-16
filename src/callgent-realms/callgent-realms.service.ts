@@ -16,7 +16,7 @@ import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { selectHelper } from '../infra/repo/select.helper';
+import { selectHelper } from '../infras/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
 import {

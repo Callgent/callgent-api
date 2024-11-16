@@ -10,8 +10,8 @@ import { bootstrapForTest } from '../src/bootstrap';
 import {
   TENANTED_PRISMA_SERVICE,
   prismaTenancyUseFactory,
-} from '../src/infra/repo/tenancy/prisma-tenancy.provider';
-import { PrismaTenancyService } from '../src/infra/repo/tenancy/prisma-tenancy.service';
+} from '../src/infras/repo/tenancy/prisma-tenancy.provider';
+import { PrismaTenancyService } from '../src/infras/repo/tenancy/prisma-tenancy.service';
 import { ConfigService } from '@nestjs/config';
 
 export let testApp: NestFastifyApplication;

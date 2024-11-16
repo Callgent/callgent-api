@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 import * as dot from 'dot';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 import { LlmCompletionEvent } from './events/llm-completion.event';
 
 @Injectable()

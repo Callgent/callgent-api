@@ -15,7 +15,7 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { EventStore, Prisma, PrismaClient, ServiceType } from '@prisma/client';
 import { EventStoresService } from '../event-stores/event-stores.service';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 import { CreateEventListenerDto } from './dto/create-event-listener.dto';
 import { UpdateEventListenerDto } from './dto/update-event-listener.dto';
 import { EventListener } from './entities/event-listener.entity';

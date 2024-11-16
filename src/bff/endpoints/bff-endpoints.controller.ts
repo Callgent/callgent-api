@@ -3,8 +3,8 @@ import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CallgentApiText } from '../../endpoints/endpoints.controller';
 import { EndpointsService } from '../../endpoints/endpoints.service';
 import { EntryDto } from '../../entries/dto/entry.dto';
-import { JwtGuard } from '../../infra/auth/jwt/jwt.guard';
-import { EntityIdExists } from '../../infra/repo/validators/entity-exists.validator';
+import { JwtGuard } from '../../infras/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../../infras/repo/validators/entity-exists.validator';
 @ApiTags('BFF')
 @ApiSecurity('defaultBearerAuth')
 @UseGuards(JwtGuard)
