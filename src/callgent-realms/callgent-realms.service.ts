@@ -184,7 +184,7 @@ export class CallgentRealmsService implements OnModuleInit {
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const result = this.checkSecurities(
+    const result = await this.checkSecurities(
       reqEvent,
       (endpoint as Endpoint).securities,
       true,

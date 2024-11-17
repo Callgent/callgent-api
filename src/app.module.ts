@@ -21,7 +21,6 @@ import { AuthModule } from './infras/auth/auth.module';
 import { LoggingModule } from './infras/logging/logging.module';
 import { ReposModule } from './infras/repo/repos.module';
 import { InvokeModule } from './invoke/invoke.module';
-import { SandboxModule } from './sandbox/sandbox.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
@@ -68,7 +67,6 @@ import { UsersModule } from './users/users.module';
     EmailsModule,
     CallgentTreeModule,
     BffEndpointsModule,
-    SandboxModule,
     CallgentHubModule,
     CallgentRealmsModule,
     CachedModule,

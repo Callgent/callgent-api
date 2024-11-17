@@ -104,7 +104,13 @@ export class EmailAdaptor extends BothEntryAdaptor {
       .sendTemplateEmail(
         emailTo,
         'relay-sep-invoke',
-        { relayId: reqEvent.id, endpoint, sentry, params, responses },
+        {
+          relayId: reqEvent.id,
+          callgentName: reqEvent.context.callgentName,
+          endpoint,
+          params,
+          responses,
+        },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
       .then((res) => ({

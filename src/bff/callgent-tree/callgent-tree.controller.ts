@@ -11,11 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { EndpointsService } from '../../endpoints/endpoints.service';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
+import { EndpointsService } from '../../endpoints/endpoints.service';
 import { EntriesService } from '../../entries/entries.service';
 import { JwtGuard } from '../../infras/auth/jwt/jwt.guard';
 

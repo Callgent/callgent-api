@@ -214,7 +214,7 @@ class RequestMacro {
     // ...
 
     // every endpoint invocation goes like this:
-    const r = await this.serviceInvoke(epName, ..);
+    const r = await this.serviceInvoke(epName, epArgs);
     const callbackName = \`some\${epName}Cb\`; // a RequestMacro member function name
     if (r.statusCode == 2) return {...r, callbackName}
     // else sync call the same logic
@@ -226,7 +226,7 @@ class RequestMacro {
 \`\`\`
 
 ## serviceInvoke signature:
-function(endpointName, args, sentryConfig): Promise<{statusCode:2, message}|{data}>}
+function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
 @returns:
 - {statusCode:2, message}: means async endpoint invocation, you must immediately return {callbackName:'function which will be async called back by endpoint with successful response object'}
 - {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here

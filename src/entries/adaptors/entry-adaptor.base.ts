@@ -52,7 +52,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
   abstract invoke(
     fun: EndpointDto,
     args: object,
-    sen: EntryDto,
+    sentry: EntryDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 

@@ -21,6 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
+import { FastifyReply } from 'fastify';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infras/auth/jwt/jwt.guard';
@@ -110,7 +111,7 @@ export class RestApiController {
   @ApiUnauthorizedResponse()
   async invoke(
     @Req() req,
-    @Res() res,
+    @Res() res: FastifyReply,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
     // @Headers('x-callgent-taskId') taskId?: string,
@@ -154,21 +155,20 @@ export class RestApiController {
       'x-callgent-taskId': data.taskId,
     };
     code && (headers['x-callgent-status'] = code);
-    message && (headers['x-callgent-message'] = message);
 
     const resp = data?.context.resp;
     if (resp) {
+      resp.statusText && (headers['x-callgent-message'] = resp.statusText);
       resp.headers && Object.assign(headers, resp.headers);
       res
-        .status(resp.status)
+        .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
         .headers(headers)
-        .statusText(resp.statusText)
         .send(resp.data);
       return;
     }
 
     // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
-    const statusCode = code ? (code < 0 ? 418 : code < 100 ? 102 : code) : 200;
+    const statusCode = code ? (code < 0 ? 418 : code < 200 ? 202 : code) : 200;
     res
       .status(statusCode)
       .headers(headers)

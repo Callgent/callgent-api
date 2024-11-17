@@ -3,7 +3,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Inject, Injectable } from '@nestjs/common';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { InvokeChainService } from './invoke-chain.service';
+import { InvokeChainService } from './chain/invoke-chain.service';
 import { RequestMacro } from './request.macro';
 
 @Injectable()
@@ -46,7 +46,7 @@ export class InvokeService {
         reqEvent.context.resp = {
           statusText: ret.message,
           status: 2,
-          data: null,
+          data: undefined,
         };
         // still go into invokeSEPs
         return { data: reqEvent, resumeFunName: 'invokeSEPs' };

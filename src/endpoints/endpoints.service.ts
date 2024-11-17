@@ -19,8 +19,8 @@ import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
-import { EndpointsChangedEvent } from './events/endpoints-changed.event';
 import { Endpoint } from './entities/endpoint.entity';
+import { EndpointsChangedEvent } from './events/endpoints-changed.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 

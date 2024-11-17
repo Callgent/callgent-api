@@ -1,9 +1,6 @@
-import { BadRequestException } from '@nestjs/common';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { EntryDto } from '../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infras/libs/utils';
-import { ChainCtx, InvokeChainService } from './invoke-chain.service';
+import { ChainCtx, InvokeChainService } from './chain/invoke-chain.service';
 
 export class RequestMacro<T extends { [name: string]: string }> {
   constructor(
@@ -14,10 +11,6 @@ export class RequestMacro<T extends { [name: string]: string }> {
     // single ep to invoke
     const { epName } = reqEvent.context;
     if (!epName) return; // multiple eps invocation
-    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
-    const endpoint = endpoints.find((e) => e.name == epName);
-    if (!endpoint)
-      throw new BadRequestException('Endpoint not exists: ' + epName);
 
     // default main function, for
     this.main = async (
@@ -33,7 +26,7 @@ export class RequestMacro<T extends { [name: string]: string }> {
       if ('data' in r) return this.$defaultEpCb({}, r.data); // succeed
       return r;
     };
-    this.main = this.chainify(this.main);
+    // this.main = this.chainify(this.main); // main is not chained
     this.$defaultEpCb = () => null; // needn't process, resp already in reqEvent
   }
 
@@ -58,7 +51,7 @@ export class RequestMacro<T extends { [name: string]: string }> {
   ): Promise<{ statusCode: 2; message: string } | { data: any }> {
     // init chain ctx
     const invocation: ChainCtx = this.reqEvent.context.invocation;
-    invocation.sepInvoke = { epName };
+    invocation.sepInvoke = { epName, args };
     return this.invokeChainService.run(invocation, this.reqEvent);
   }
 
@@ -85,11 +78,12 @@ export class RequestMacro<T extends { [name: string]: string }> {
 
   /** wrap member function with invoke chain */
   private chainify(fun: MemberFunction): MemberFunction {
+    const self = this;
     return async function (args: any, context: { [varName: string]: any }) {
-      const invocation: ChainCtx = this.reqEvent.context.invocation;
-      const r = await this.invokeChainService.run(
-        this.reqEvent.context.invocation,
-        this.reqEvent,
+      const invocation: ChainCtx = self.reqEvent.context.invocation;
+      const r = await self.invokeChainService.run(
+        self.reqEvent.context.invocation,
+        self.reqEvent,
       );
       if (r) {
         if ('statusCode' in r) {
