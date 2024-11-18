@@ -32,6 +32,7 @@ export class JwtAuthService {
   }
 
   sign(payload: JwtPayload) {
+    // TODO emit event to revoke old tokens
     const n = Date.now();
     payload.iat = Math.floor(n / 1000);
     payload.jti = Utils.intToBase64(n) + Utils.uuid(2);
@@ -43,6 +44,7 @@ export class JwtAuthService {
    * @throws UnauthorizedException
    */
   verify(token: string): JwtPayload {
+    // TODO emit event to invalidate revoked token
     try {
       return this.jwtService.verify(token, { complete: true })?.payload;
     } catch (error) {

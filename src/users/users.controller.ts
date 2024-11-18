@@ -24,7 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthUtils } from '../infras/auth/auth.utils';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
-import { JwtAuthService } from '../infras/auth/jwt/jwt.service';
+import { JwtAuthService } from '../infras/auth/jwt/jwt-auth.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';

@@ -2,7 +2,7 @@ import { Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBody, ApiCreatedResponse } from '@nestjs/swagger';
 import { AuthUtils } from '../auth.utils';
-import { JwtAuthService } from '../jwt/jwt.service';
+import { JwtAuthService } from '../jwt/jwt-auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 
 // @ApiTags('Authentication')

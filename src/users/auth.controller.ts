@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse, ApiTags, getSchemaPath } from '@nestjs/swagger';
-import { JwtAuthService } from '../infras/auth/jwt/jwt.service';
+import { JwtAuthService } from '../infras/auth/jwt/jwt-auth.service';
 import { LocalAuthController } from '../infras/auth/local/local-auth.controller';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';

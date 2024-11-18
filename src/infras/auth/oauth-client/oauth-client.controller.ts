@@ -18,7 +18,7 @@ import { StateService } from 'nestjs-oauth2/dist/state/state.service';
 import { AuthUtils } from '../auth.utils';
 import { AuthLoginEvent } from '../events/auth-login.event';
 import { AuthLoginedEvent } from '../events/auth-logined.event';
-import { JwtAuthService } from '../jwt/jwt.service';
+import { JwtAuthService } from '../jwt/jwt-auth.service';
 
 /** oauth for root user */
 @CacheTTL(-1)

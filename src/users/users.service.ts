@@ -14,7 +14,7 @@ import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
 import { EmailsService } from '../emails/emails.service';
 import { AuthLoginEvent } from '../infras/auth/events/auth-login.event';
 import { AuthLoginedEvent } from '../infras/auth/events/auth-logined.event';
-import { JwtPayload } from '../infras/auth/jwt/jwt.service';
+import { JwtPayload } from '../infras/auth/jwt/jwt-auth.service';
 import { Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';

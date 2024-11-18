@@ -19,7 +19,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
-import { JwtPayload } from '../infras/auth/jwt/jwt.service';
+import { JwtPayload } from '../infras/auth/jwt/jwt-auth.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskDto } from './dto/task.dto';
