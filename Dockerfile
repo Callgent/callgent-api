@@ -1,4 +1,4 @@
-FROM node:18.19.1 AS builder
+FROM node:18.20.5 AS builder
 
 # Create app directory
 WORKDIR /app
@@ -18,7 +18,7 @@ COPY . .
 RUN npx prisma generate
 RUN pnpm build
 
-FROM node:18.19.1
+FROM node:18.20.5
 RUN npm install -g pnpm
 
 WORKDIR /app
