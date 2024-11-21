@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { ChainCtx } from './invoke-chain.service';
+import { ChainCtx } from '../invoke-chain.service';
 import { InvokeProcessor } from './invoke.processor';
 
 @Injectable()
@@ -36,6 +36,6 @@ export class InvokeAuthProcessor extends InvokeProcessor {
       };
     }
 
-    delete ctx.sepInvoke.processor.fun; // to next processor
+    this.next(ctx);
   }
 }

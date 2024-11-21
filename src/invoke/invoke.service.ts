@@ -3,7 +3,7 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Inject, Injectable } from '@nestjs/common';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { InvokeChainService } from './chain/invoke-chain.service';
+import { InvokeChainService } from './invoke-chain.service';
 import { RequestMacro } from './request.macro';
 
 @Injectable()
@@ -44,14 +44,15 @@ export class InvokeService {
         // will callback with response in invocation.response
         invocation.currentFun = ret.callbackName;
         reqEvent.context.resp = {
-          statusText: ret.message,
           status: 2,
+          statusText: ret.message,
           data: undefined,
         };
         // still go into invokeSEPs
         return { data: reqEvent, resumeFunName: 'invokeSEPs' };
       }
       // final response
+      delete reqEvent.context.invocation;
       // reqEvent.context.resp = ret.data; // postprocess has done this
     } catch (e) {
       // FIXME

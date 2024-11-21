@@ -58,20 +58,24 @@ export class EmailAdaptor extends BothEntryAdaptor {
   }
 
   @Transactional()
-  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
-    const resp: RelayEmail = reqEvent?.context?.resp as any;
+  async postprocess(
+    resp: RelayEmail,
+    reqEvent: ClientRequestEvent,
+    fun: EndpointDto,
+  ) {
     if (!resp?.content?.html)
       throw new BadRequestException(
         'Missing response for reqEvent#' + reqEvent.id,
       );
 
     // convert resp to api format
-    reqEvent.context.resp = await this.agentsService.convert2Response(
+    const data = await this.agentsService.convert2Response(
       reqEvent?.context?.map2Endpoints?.requestArgs,
       resp.content.text || resp.content.html,
       fun,
       reqEvent.id,
     );
+    return { data };
   }
 
   callback(resp: any): Promise<boolean> {
@@ -113,14 +117,21 @@ export class EmailAdaptor extends BothEntryAdaptor {
         },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
-      .then((res) => ({
-        statusCode: res ? 2 : 500, // pending or error
-        data: reqEvent,
-        resumeFunName: 'postInvokeSEP',
-        message: res
-          ? 'Service called via email, please wait for async response'
-          : 'Failed to call service via email',
-      }));
+      .then((res): { data: any } | { statusCode: 2; message: string } => {
+        if (!res)
+          // as normal response
+          return {
+            data: {
+              statusCode: 500,
+              message: 'Failed to call service via email ' + emailTo,
+            },
+          };
+
+        return {
+          statusCode: 2, // pending or error
+          message: 'Service called via email, please wait for async response',
+        };
+      });
   }
 
   /** openAPI 3.0.x */

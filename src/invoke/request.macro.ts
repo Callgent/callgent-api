@@ -1,6 +1,6 @@
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infras/libs/utils';
-import { ChainCtx, InvokeChainService } from './chain/invoke-chain.service';
+import { ChainCtx, InvokeChainService } from './invoke-chain.service';
 
 export class RequestMacro<T extends { [name: string]: string }> {
   constructor(

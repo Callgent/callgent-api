@@ -11,6 +11,7 @@ import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../dto/entry.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
+import { RestApiResponse } from '../../restapi/response.interface';
 
 export abstract class EntryAdaptor {
   protected readonly agentsService: AgentsService;
@@ -49,18 +50,20 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
   /** init the entry. result in generated content */
   abstract initServer(initParams: object, entry: EntryDto): Promise<string>;
 
+  /** invoke server, returns 2 or real response */
   abstract invoke(
     fun: EndpointDto,
     args: object,
     sentry: EntryDto,
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
+  ): Promise<{ data: any } | { statusCode: 2; message: string }>;
 
   /** postprocess response */
   abstract postprocess(
+    resp: any,
     reqEvent: ClientRequestEvent,
     fun: EndpointDto,
-  ): Promise<void>;
+  ): Promise<RestApiResponse<any>>;
 
   /**
    * parse APIs to openAPI.json format

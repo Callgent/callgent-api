@@ -1,6 +1,6 @@
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { ChainCtx } from './invoke-chain.service';
+import { ChainCtx } from '../invoke-chain.service';
 
 export abstract class InvokeProcessor {
   abstract getName(): string;
@@ -11,6 +11,18 @@ export abstract class InvokeProcessor {
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<{ statusCode: 2; message: string } | { data: any }>;
+
+  /** to next processor */
+  next(ctx: ChainCtx) {
+    delete ctx.sepInvoke.processor.fun;
+  }
+
+  /** end whole chain */
+  end(ctx: ChainCtx) {
+    this.next(ctx);
+    ctx.sepInvoke.stopPropagation = true;
+    delete ctx.sepInvoke.processor.name;
+  }
 
   /**
    * invoking process. dispatch processorFun

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { ChainCtx } from './invoke-chain.service';
+import { ChainCtx } from '../invoke-chain.service';
 import { InvokeProcessor } from './invoke.processor';
 import { EntriesService } from '../../entries/entries.service';
 import { EntryType } from '@prisma/client';
@@ -31,14 +31,10 @@ export class InvokeSepProcessor extends InvokeProcessor {
       sentry as any,
       reqEvent,
     );
-    if (!r || !r.resumeFunName) return; // got response
 
-    // invoke, resp|async,postprocess
-    // ctx.sepInvoke.processor.ctx = r.resumeFunName;
-    delete ctx.sepInvoke.processor.fun; // next processor
-    return {
-      statusCode: 2,
-      message: `Server endpoint async invocation will callback later`,
-    };
+    // whether async or not, go on to next processor
+    this.next(ctx);
+    ctx.response = r;
+    return; // do not return r, because even async resp, we go on to cache
   }
 }

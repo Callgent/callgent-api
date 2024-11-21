@@ -5,9 +5,9 @@ import { ChainCtx } from '../invoke-chain.service';
 import { InvokeProcessor } from './invoke.processor';
 import { CachedService } from '../../cached/cached.service';
 
-/** update response cache: resolved or not */
+/** resolve async response callback */
 @Injectable()
-export class InvokeCacheProcessor extends InvokeProcessor {
+export class InvokeCallbackProcessor extends InvokeProcessor {
   getName = (): string => 'InvokeCache';
   constructor(private readonly cachedService: CachedService) {
     super();
@@ -18,14 +18,18 @@ export class InvokeCacheProcessor extends InvokeProcessor {
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<{ statusCode: 2; message: string } | { data: any }> {
+    delete ctx.sepInvoke; // sep invocation finished
     this.next(ctx);
-    // stop chain, only async goes to next via callback
-    ctx.sepInvoke.stopPropagation = true;
 
-    // invoke done, remove invocation ctx
-    if (ctx.response.statusCode != 2) delete ctx.sepInvoke;
+    const { data, statusCode, message } = ctx.response;
+    if (statusCode == 2)
+      throw new Error(
+        `Must not callback with status code 2, msg=${message}, id=${reqEvent.id}`,
+      );
+
     // if cache-able
-    await this.cachedService.toCache(ctx.response, ctx.sepInvoke, endpoint);
+    // if async, update cache, and inform callers
+    await this.cachedService.updateCache(ctx.response, ctx.sepInvoke, endpoint);
     return ctx.response;
   }
 }

@@ -68,11 +68,14 @@ export class EventListenersService {
   @Transactional()
   async resume<T extends EventObject>(
     event: string | EventStore,
+    update?: (event: EventStore) => Promise<EventStore>,
   ): Promise<{ data: T; statusCode?: number; message?: string }> {
     if (typeof event === 'string')
       event = (await this.loadEvent(event)) || event;
     if (!event || typeof event === 'string')
       throw new NotFoundException('Event not found, id=' + event);
+
+    if (update) event = await update(event);
 
     // 1: processing, 0: done, 2: pending, <0: error
     if (event.statusCode != 2)

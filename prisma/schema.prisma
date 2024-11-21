@@ -7,7 +7,7 @@ generator nestjsDto {
   provider                        = "prisma-generator-nestjs-dto"
   output                          = "../src"
   outputToNestJsResourceStructure = "true"
-  exportRelationModifierClasses   = "true"
+  exportRelationModifierClasses   = "false"
   reExport                        = "false"
   createDtoPrefix                 = "Create"
   updateDtoPrefix                 = "Update"
@@ -626,4 +626,25 @@ model EventStore {
 
   @@index([srcId])
   @@index([taskId])
+}
+
+/// @DtoSingularModel
+model Cached {
+  /// @DtoEntityHidden
+  pk BigInt @id @default(autoincrement())
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  cacheKey String   @unique @db.VarChar(511)
+  /// @DtoCastType(RestApiResponse<any>, ../../restapi/response.interface)
+  response Json     @db.Json
+  eventIds String[] @db.VarChar(36)
+
+  createdAt DateTime @default(now())
+  /// @description updated when async callback
+  updatedAt DateTime @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // deletedAt DateTime? /// @description logical deletion.
 }

@@ -1,9 +1,12 @@
-import { Transactional } from '@nestjs-cls/transactional';
-import { Inject, Injectable } from '@nestjs/common';
-import { EntryType } from '@prisma/client';
+import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
+import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
-import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
+import { EventListenersService } from '../event-listeners/event-listeners.service';
+import { RestApiResponse } from '../restapi/response.interface';
+import { CachedDto } from './dto/cached.dto';
 
 /**
  * cache service for server endpoint invocations. especially for async invocations,
@@ -12,8 +15,8 @@ import { ClientRequestEvent } from '../entries/events/client-request.event';
 @Injectable()
 export class CachedService {
   constructor(
-    @Inject('EntriesService')
-    private readonly entriesService: EntriesService,
+    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    protected readonly eventListenersService: EventListenersService,
   ) {}
 
   /**
@@ -23,30 +26,156 @@ export class CachedService {
   async fromCached(
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
-  ): Promise<{ data: any }> {
-    // retrieve cache config(CacheKey/CacheTTL), from ep/entry/adaptor
-    // const { endpoints, sentry } = reqEvent.context;
-    // const func = endpoints[0] as EndpointDto;
+  ): Promise<{
+    cacheKey?: string;
+    cacheTtl?: number;
+    response?: RestApiResponse<any>;
+  }> {
+    // -> load:key(default get key), ttl
+    const r = this._loadCacheConfig(endpoint, reqEvent);
+    // -> realKey = key and (ttl or async), if !realKey: no-cache
+    if (!this._reallyCache(r.cacheKey, r.cacheTtl, endpoint)) return r;
 
-    // const sen = sentry || (await this.entriesService.findOne(func.entryId));
-    // const adapter =
-    //   sen && this.entriesService.getAdaptor(sen.adaptorKey, EntryType.SERVER);
-    // if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
+    // else find cached,
+    //   -> find c=cached[key], if (c and
+    let c = await this.findOne(r.cacheKey);
+    if (!c) return r; // no cache
+    //     -> and (tll-expires or async-cache-done)): delete cache[key],c=null
+    let expired = false;
+    if (r.cacheTtl) {
+      // check expires
+      // if async expires, inform observers expired error
+    } else if (endpoint.isAsync) {
+      // not pending
+      expired = c.response?.statusCode != 2;
+    } else expired = true;
+    if (expired) {
+      await this.delete({ pk: c.pk });
+      c = null;
+    }
+    if (!c) return r; // no cache
 
-    // get from cache
-    // if exists, return
-    // reqEvent.stopPropagation = true;
-    return null;
+    //   -> if c-not-done: reg event-id, observe c.event-id
+    if (endpoint.isAsync && c.response?.statusCode == 2)
+      await this.addObserver(c.pk, reqEvent.id);
+
+    //   -> return c
+    return Object.assign(r, { response: c.response });
   }
 
   /**
-   * try to get invoking response from cache
+   * save to cache
+   * @param {boolean} needUpdate whether cache need callback update
    */
   @Transactional()
-  async toCache(endpoint: EndpointDto, reqEvent: ClientRequestEvent) {
-    // retrieve cache config(CacheKey/CacheTTL), from ep/entry/adaptor
-    // get from cache
-    // if exists, return
-    // reqEvent.stopPropagation = true;
+  async toCache(
+    response: { statusCode?: 2; message?: string; data?: any },
+    { cacheKey, cacheTtl }: { cacheKey?: string; cacheTtl?: number },
+    endpoint: EndpointDto,
+  ) {
+    //   -> if realKey(key and (ttl or async)), cached[key] = resp
+    if (!this._reallyCache(cacheKey, cacheTtl, endpoint)) return false;
+
+    // save to cache
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.cached
+      .create({ data: { cacheKey, response, eventIds: [] } })
+      .then((d) => !!d);
+  }
+
+  /**
+   * update async response and inform observers, even expired.
+   * @returns false if cache not found
+   */
+  @Transactional()
+  async updateCache(
+    response: { data: any },
+    { cacheKey, cacheTtl }: { cacheKey?: string; cacheTtl?: number },
+    endpoint: EndpointDto,
+  ) {
+    if (!this._reallyCache(cacheKey, cacheTtl, endpoint)) return false;
+
+    //   -> get key from event, cached[key] = response
+    const c = await this.findOne(cacheKey);
+    if (!c) return false;
+    c.response = response;
+    this.update(c.pk, response);
+
+    //   -> inform all observer events:[resume processing], bound to current event-id
+    this.notifyObservers(c); // no await
+    return true;
+  }
+
+  async findOne(cacheKey: string): Promise<CachedDto & { pk: bigint }> {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.cached.findUnique({
+      where: { cacheKey },
+    }) as any;
+  }
+
+  async addObserver(pk: bigint, eventId: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.cached.update({
+      where: { pk },
+      data: { eventIds: { push: eventId } },
+    });
+  }
+
+  /** notify observer event to resume processing */
+  async notifyObservers(c: CachedDto & { pk: bigint }) {
+    const { eventIds, response } = c;
+
+    // trigger resume processing, needn't await
+    // grouped notify, preventing resource exhaustion
+    const groups = this._group(eventIds, 6);
+    for (const eIds of groups) {
+      await Promise.all(
+        eIds.map((eId) =>
+          this.eventListenersService.resume(eId, async (event) => {
+            event.statusCode = response.statusCode;
+            event.message = response.message as string;
+            // update response
+            (event.context as any).resp = response.data;
+            return event;
+          }),
+        ),
+      );
+    }
+  }
+
+  /**
+   * @returns string[][:10]
+   */
+  private _group(eventIds: string[], chunkSize = 10) {
+    const ids = [...new Set(eventIds)];
+    const result: string[][] = [];
+    for (let i = 0; i < ids.length; i += chunkSize)
+      result.push(eventIds.slice(i, i + chunkSize));
+    return result;
+  }
+
+  async update(pk: bigint, response: any) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.cached.update({ where: { pk }, data: { response } });
+  }
+
+  async delete(where: { pk: bigint } | { cacheKey: string }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.cached.delete({ where });
+  }
+
+  private _loadCacheConfig(
+    endpoint: EndpointDto,
+    reqEvent: ClientRequestEvent,
+  ): { cacheKey: any; cacheTtl: any } {
+    throw new Error('Method not implemented.');
+  }
+
+  protected _reallyCache(
+    cacheKey: string,
+    cacheTtl: number,
+    endpoint: EndpointDto,
+  ) {
+    return cacheKey && (cacheTtl || endpoint.isAsync);
   }
 }
