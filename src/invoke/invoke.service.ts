@@ -3,19 +3,19 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { Inject, Injectable } from '@nestjs/common';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { InvokeChainService } from './invoke-chain.service';
+import { InvokeSepCtx, InvokeSepService } from './invoke-sep.service';
 import { RequestMacro } from './request.macro';
 
 @Injectable()
 export class InvokeService {
   constructor(
-    private readonly invokeChainService: InvokeChainService,
+    private readonly invokeChainService: InvokeSepService,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
   ) {}
 
-  /** invoke SEPs based on generated RequestService */
+  /** invoke SEPs based on generated RequestMacro. macro{ ...fun{ ..sepInvoke[] } } */
   @Transactional()
   async invokeSEPs(reqEvent: ClientRequestEvent) {
     // map2Endpoints: { endpoints, requestArgs, macroParams, macroResponse, memberFunctions }
@@ -23,11 +23,11 @@ export class InvokeService {
     if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping endpoint found');
 
-    const invocation: { currentFun: string; response: any; context: {} } =
+    const invocation: InvokeCtx =
       reqEvent.context.invocation ||
       (reqEvent.context.invocation = {
         currentFun: 'main',
-        response: map2Endpoints.requestArgs,
+        sepInvoke: { response: map2Endpoints.requestArgs },
         context: {},
       });
 
@@ -38,11 +38,11 @@ export class InvokeService {
     ).getProxy();
     const fun = requestMacro[invocation.currentFun];
     try {
-      const ret = await fun(invocation.context, invocation.response);
-      if (!ret) return;
-      if ('callbackName' in ret) {
+      const ret = await fun(invocation.sepInvoke.response, invocation.context);
+      // if (!ret) return; // should not happen
+      if ('cbMemberFun' in ret) {
         // will callback with response in invocation.response
-        invocation.currentFun = ret.callbackName;
+        invocation.currentFun = ret.cbMemberFun;
         reqEvent.context.resp = {
           status: 2,
           statusText: ret.message,
@@ -51,7 +51,9 @@ export class InvokeService {
         // still go into invokeSEPs
         return { data: reqEvent, resumeFunName: 'invokeSEPs' };
       }
+
       // final response
+      ret && (reqEvent.context.resp = ret.data);
       delete reqEvent.context.invocation;
       // reqEvent.context.resp = ret.data; // postprocess has done this
     } catch (e) {
@@ -84,4 +86,13 @@ export class InvokeService {
     //     return this.postInvokeSEP((res && res.data) || reqEvent);
     //   });
   }
+}
+
+// TODO remove when invocation all done
+export class InvokeCtx {
+  /** context throughout invocation */
+  context: { [name: string]: any };
+  /** macro member function name */
+  currentFun: string;
+  sepInvoke: InvokeSepCtx;
 }

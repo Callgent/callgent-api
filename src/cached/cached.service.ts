@@ -7,6 +7,7 @@ import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CachedDto } from './dto/cached.dto';
+import { InvokeCtx } from '../invoke/invoke.service';
 
 /**
  * cache service for server endpoint invocations. especially for async invocations,
@@ -134,8 +135,9 @@ export class CachedService {
           this.eventListenersService.resume(eId, async (event) => {
             event.statusCode = response.statusCode;
             event.message = response.message as string;
-            // update response
-            (event.context as any).resp = response.data;
+            // update sep response
+            const invocation: InvokeCtx = (event.context as any).invocation;
+            invocation.sepInvoke.response = response.data;
             return event;
           }),
         ),
@@ -164,18 +166,19 @@ export class CachedService {
     return prisma.cached.delete({ where });
   }
 
-  private _loadCacheConfig(
-    endpoint: EndpointDto,
-    reqEvent: ClientRequestEvent,
-  ): { cacheKey: any; cacheTtl: any } {
-    throw new Error('Method not implemented.');
-  }
-
   protected _reallyCache(
     cacheKey: string,
     cacheTtl: number,
     endpoint: EndpointDto,
   ) {
     return cacheKey && (cacheTtl || endpoint.isAsync);
+  }
+
+  /** load cache config from sentry/adaptor/sep */
+  private _loadCacheConfig(
+    endpoint: EndpointDto,
+    reqEvent: ClientRequestEvent,
+  ): { cacheKey: any; cacheTtl: any } {
+    throw new Error('Method not implemented.');
   }
 }

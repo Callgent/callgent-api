@@ -1,11 +1,12 @@
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infras/libs/utils';
-import { ChainCtx, InvokeChainService } from './invoke-chain.service';
+import { InvokeSepCtx, InvokeSepService } from './invoke-sep.service';
+import { InvokeCtx } from './invoke.service';
 
 export class RequestMacro<T extends { [name: string]: string }> {
   constructor(
     private readonly memberFunctions: T,
-    private invokeChainService: InvokeChainService,
+    private invokeSepService: InvokeSepService,
     private readonly reqEvent: ClientRequestEvent,
   ) {
     // single ep to invoke
@@ -17,12 +18,12 @@ export class RequestMacro<T extends { [name: string]: string }> {
       args: any,
       // context: { [varName: string]: any },
     ): Promise<
-      | { callbackName: string; message: string }
+      | { cbMemberFun: string; message: string }
       | { data?: any; statusCode?: number; message?: string }
     > => {
       const r = await this.serviceInvoke(epName, args);
       if ('statusCode' in r && r.statusCode == 2)
-        return { ...r, callbackName: '$defaultEpCb' };
+        return { ...r, cbMemberFun: '$defaultEpCb' };
       if ('data' in r) return this.$defaultEpCb({}, r.data); // succeed
       return r;
     };
@@ -50,9 +51,9 @@ export class RequestMacro<T extends { [name: string]: string }> {
     // config: EntryDto,
   ): Promise<{ statusCode: 2; message: string } | { data: any }> {
     // init chain ctx
-    const invocation: ChainCtx = this.reqEvent.context.invocation;
+    const invocation: InvokeCtx = this.reqEvent.context.invocation;
     invocation.sepInvoke = { epName, args };
-    return this.invokeChainService.run(invocation, this.reqEvent);
+    return this.invokeSepService.chain(invocation.sepInvoke, this.reqEvent);
   }
 
   public getProxy(): {
@@ -76,20 +77,18 @@ export class RequestMacro<T extends { [name: string]: string }> {
     },
   };
 
-  /** wrap member function with invoke chain */
+  /** wrap member function with invoke chain, to continue async sep invocation */
   private chainify(fun: MemberFunction): MemberFunction {
     const self = this;
     return async function (args: any, context: { [varName: string]: any }) {
-      const invocation: ChainCtx = self.reqEvent.context.invocation;
-      const r = await self.invokeChainService.run(
-        self.reqEvent.context.invocation,
-        self.reqEvent,
-      );
+      const ctx: InvokeCtx = self.reqEvent.context.invocation;
+      // chain result
+      const r = await self.invokeSepService.chain(ctx.sepInvoke, self.reqEvent);
       if (r) {
         if ('statusCode' in r) {
           // statusCode always 2
           return {
-            callbackName: invocation.callbackName,
+            cbMemberFun: ctx.currentFun,
             message: r.message,
           };
         }
@@ -104,6 +103,6 @@ type MemberFunction = (
   args: any,
   context: { [varName: string]: any },
 ) => Promise<
-  | { callbackName: string; message: string }
+  | { cbMemberFun: string; message: string }
   | { data?: any; statusCode?: number; message?: string }
 >;

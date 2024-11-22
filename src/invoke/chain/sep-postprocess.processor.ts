@@ -3,11 +3,11 @@ import { EntryType } from '@prisma/client';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { EntriesService } from '../../entries/entries.service';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { ChainCtx } from '../invoke-chain.service';
-import { InvokeProcessor } from './invoke.processor';
+import { InvokeSepCtx } from '../invoke-sep.service';
+import { SepProcessor } from './sep.processor';
 
 @Injectable()
-export class InvokePostprocessProcessor extends InvokeProcessor {
+export class SepPostprocessProcessor extends SepProcessor {
   getName = (): string => 'InvokePostprocess';
   constructor(
     @Inject('EntriesService') private readonly entriesService: EntriesService,
@@ -16,7 +16,7 @@ export class InvokePostprocessProcessor extends InvokeProcessor {
   }
 
   async start(
-    ctx: ChainCtx,
+    ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<{ statusCode: 2; message: string } | { data: any }> {

@@ -210,15 +210,15 @@ class RequestMacro {
   /** @param serviceInvoke - function to invoke a service endpoint */
   constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
   /** must have this starting member function */
-  main = (context, requestArgs) => {
+  main = (requestArgs, context) => {
     // ...
 
     // every endpoint invocation goes like this:
     const r = await this.serviceInvoke(epName, epArgs);
-    const callbackName = \`some\${epName}Cb\`; // a RequestMacro member function name
-    if (r.statusCode == 2) return {...r, callbackName}
+    const cbMemberFun = \`some\${epName}Cb\`; // a RequestMacro member function name
+    if (r.statusCode == 2) return {...r, cbMemberFun}
     // else sync call the same logic
-    return this[callbackName](context, r.data)
+    return this[cbMemberFun](r.data, context)
   };
 
   // ... more member functions for service endpoints to callback
@@ -228,19 +228,19 @@ class RequestMacro {
 ## serviceInvoke signature:
 function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
 @returns:
-- {statusCode:2, message}: means async endpoint invocation, you must immediately return {callbackName:'function which will be async called back by endpoint with successful response object'}
+- {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
 - {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
 
 **note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
-function(context:{ [varName:string]:any }, asyncResponse: any): Promise<{callbackName,message}|{data?,statusCode?,message?}>
-@param context: the same context object passes through out all member invocations, keeping shared state
+function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
 @param asyncResponse
 - for RequestMacro.main: it means requestArgs, matching macroParams schema
-- for any other member functions: received endpoint async response object
+- for any other member functions: received endpoint successful response object
+@param context: the same context object passes through out all member invocations, keeping shared state
 @returns
-- {callbackName,message}: tell endpoint to callback \`callbackName\` later
+- {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
 - {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
 
 ## generated code output json format:

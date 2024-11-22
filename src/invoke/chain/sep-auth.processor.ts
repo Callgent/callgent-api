@@ -2,11 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { ChainCtx } from '../invoke-chain.service';
-import { InvokeProcessor } from './invoke.processor';
+import { InvokeSepCtx } from '../invoke-sep.service';
+import { SepProcessor } from './sep.processor';
 
 @Injectable()
-export class InvokeAuthProcessor extends InvokeProcessor {
+export class SepAuthProcessor extends SepProcessor {
   getName = (): string => 'InvokeAuth';
   constructor(
     @Inject('CallgentRealmsService')
@@ -16,12 +16,12 @@ export class InvokeAuthProcessor extends InvokeProcessor {
   }
 
   async start(
-    ctx: ChainCtx,
+    ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<{ statusCode: 2; message: string } | { data: any }> {
     const fun: Function =
-      this.callgentRealmsService[ctx.sepInvoke.processor.ctx || 'checkSepAuth'];
+      this.callgentRealmsService[ctx.processor.ctx || 'checkSepAuth'];
     const r: { resumeFunName?: string } = await fun.call(
       this.callgentRealmsService,
       endpoint,
@@ -29,7 +29,7 @@ export class InvokeAuthProcessor extends InvokeProcessor {
     );
 
     if (r?.resumeFunName) {
-      ctx.sepInvoke.processor.ctx = r.resumeFunName;
+      ctx.processor.ctx = r.resumeFunName;
       return {
         statusCode: 2,
         message: 'Server endpoint authentication: ' + r.resumeFunName,
