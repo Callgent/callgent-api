@@ -16,8 +16,9 @@ import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
-import { BothEntryAdaptor } from '../../entry-adaptor.base';
+import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
+import { InvokeCtx } from '../../../../invoke/invoke.service';
 
 @EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
 export class EmailAdaptor extends BothEntryAdaptor {
@@ -69,13 +70,14 @@ export class EmailAdaptor extends BothEntryAdaptor {
       );
 
     // convert resp to api format
+    const invocation: InvokeCtx = reqEvent.context.invocation;
     const data = await this.agentsService.convert2Response(
-      reqEvent?.context?.map2Endpoints?.requestArgs,
+      invocation.sepInvoke.args,
       resp.content.text || resp.content.html,
       fun,
       reqEvent.id,
     );
-    return { data };
+    return data;
   }
 
   callback(resp: any): Promise<boolean> {
@@ -117,7 +119,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
         },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
-      .then((res): { data: any } | { statusCode: 2; message: string } => {
+      .then((res): PendingOrResponse => {
         if (!res)
           // as normal response
           return {
@@ -129,7 +131,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
 
         return {
           statusCode: 2, // pending or error
-          message: 'Service called via email, please wait for async response',
+          message: 'Service called via email, please wait for reply.',
         };
       });
   }

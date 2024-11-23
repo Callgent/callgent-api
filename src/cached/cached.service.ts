@@ -178,7 +178,7 @@ export class CachedService {
   private _loadCacheConfig(
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
-  ): { cacheKey: any; cacheTtl: any } {
-    throw new Error('Method not implemented.');
+  ): { cacheKey?: any; cacheTtl?: any } {
+    return {};
   }
 }

@@ -55,6 +55,8 @@ export class EventStoresService {
       stopPropagation: event.stopPropagation,
       funName,
       listenerId,
+      statusCode,
+      // FIXME message,
     };
     return prisma.eventStore.upsert({
       where: { id: event.id },

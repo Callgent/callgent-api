@@ -44,6 +44,11 @@ interface _ClientEntryAdaptor {
   preprocess(reqEvent: ClientRequestEvent, entry: EntryDto): Promise<void>;
 }
 
+/** result pending, or response data */
+export type PendingOrResponse =
+  | { data: any }
+  | { statusCode: 2; message: string };
+
 export abstract class ServerEntryAdaptor extends EntryAdaptor {
   abstract isAsync(endpoint: EndpointDto): boolean;
 
@@ -56,7 +61,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
     args: object,
     sentry: EntryDto,
     reqEvent: ClientRequestEvent,
-  ): Promise<{ data: any } | { statusCode: 2; message: string }>;
+  ): Promise<PendingOrResponse>;
 
   /** postprocess response */
   abstract postprocess(

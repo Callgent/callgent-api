@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EntryType } from '@prisma/client';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
 import { EntriesService } from '../../entries/entries.service';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { InvokeSepCtx } from '../invoke-sep.service';
@@ -19,7 +20,7 @@ export class SepPostprocessProcessor extends SepProcessor {
     ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }> {
+  ): Promise<PendingOrResponse> {
     this.next(ctx);
 
     // sep response: { statusCode: 2; message: string } | { data: any }

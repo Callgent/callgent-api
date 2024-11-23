@@ -1,6 +1,7 @@
+import { PendingOrResponse } from '../entries/adaptors/entry-adaptor.base';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Utils } from '../infras/libs/utils';
-import { InvokeSepCtx, InvokeSepService } from './invoke-sep.service';
+import { InvokeSepService } from './invoke-sep.service';
 import { InvokeCtx } from './invoke.service';
 
 export class RequestMacro<T extends { [name: string]: string }> {
@@ -22,13 +23,13 @@ export class RequestMacro<T extends { [name: string]: string }> {
       | { data?: any; statusCode?: number; message?: string }
     > => {
       const r = await this.serviceInvoke(epName, args);
-      if ('statusCode' in r && r.statusCode == 2)
+      if ((r as any).statusCode == 2)
         return { ...r, cbMemberFun: '$defaultEpCb' };
       if ('data' in r) return this.$defaultEpCb({}, r.data); // succeed
       return r;
     };
     // this.main = this.chainify(this.main); // main is not chained
-    this.$defaultEpCb = () => null; // needn't process, resp already in reqEvent
+    this.$defaultEpCb = this.chainify((d) => d); // needn't process, resp already in reqEvent
   }
 
   /** process starting point */
@@ -49,10 +50,12 @@ export class RequestMacro<T extends { [name: string]: string }> {
     epName: string,
     args: any,
     // config: EntryDto,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }> {
+  ): Promise<PendingOrResponse> {
     // init chain ctx
     const invocation: InvokeCtx = this.reqEvent.context.invocation;
-    invocation.sepInvoke = { epName, args };
+    if (invocation.sepInvoke)
+      Object.assign(invocation.sepInvoke, { epName, args });
+    else invocation.sepInvoke = { epName, args };
     return this.invokeSepService.chain(invocation.sepInvoke, this.reqEvent);
   }
 

@@ -5,6 +5,7 @@ import { JsonObject } from '@prisma/client/runtime/library';
 import { EventListenersService } from '../../event-listeners/event-listeners.service';
 import { EmailRelayKey } from '../emails.service';
 import { EmailRelayEvent } from '../events/email-relay.event';
+import { InvokeCtx } from '../../invoke/invoke.service';
 
 @Injectable()
 export class RequestRelayListener {
@@ -19,16 +20,11 @@ export class RequestRelayListener {
     const { relayId: reqEventId, email } = event;
     // extract resp from msg
     const resp = email as object;
-    const reqEvent = await this.eventListenersService.loadEvent(reqEventId);
-    if (!reqEvent || reqEvent.eventType != 'CLIENT_REQUEST')
-      return this.logger.error(
-        'CLIENT_REQUEST event not found: %s',
-        reqEventId,
-      );
-
-    (reqEvent.context as JsonObject).resp = resp;
-
-    // resuming event chain
-    await this.eventListenersService.resume(reqEvent);
+    await this.eventListenersService.resume(reqEventId, async (event) => {
+      // update sep response
+      const invocation: InvokeCtx = (event.context as any).invocation;
+      invocation.sepInvoke.response = { data: resp };
+      return event;
+    });
   }
 }

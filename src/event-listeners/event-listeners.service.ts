@@ -106,6 +106,7 @@ export class EventListenersService {
   ): Promise<{ data: T; statusCode?: number; message?: string }> {
     if (result.statusCode) return result; // not done, no cb
 
+    // FIXME
     const {
       data: { callbackType, callback },
     } = result;

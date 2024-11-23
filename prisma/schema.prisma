@@ -111,7 +111,8 @@ model UserIdentity {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  info           Json?   @map("info") /// @description  authentication info from realm
+  /// @description  authentication info from realm
+  info           Json?   @db.Json
 
   user   User   @relation(fields: [userPk], references: [pk])
   userPk Int
@@ -195,7 +196,7 @@ model Callgent {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   forkedPk  Int? /// @description forked from
-  /// @CustomValidator(EntityIdExists, 'tag', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'tag', 'id', ../../infras/repo/validators/entity-exists.validator)
   mainTagId Int?
 
   /// @DtoReadOnly
@@ -274,7 +275,7 @@ model Entry {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   /// @DtoRelationIncludeId
   callgentId String   @db.VarChar(36) /// @description callgent owning the entry
   callgent   Callgent @relation(fields: [callgentId], references: [id])
@@ -321,10 +322,10 @@ model Endpoint {
   rawJson     Json    @db.Json
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   callgentId String  @db.VarChar(36)
   /// @description An endpoint is bound to a server entry
-  /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infras/repo/validators/entity-exists.validator)
   entryId    String? @db.VarChar(36)
   /// @description whether async endpoint, e.g. invoked by email adaptor
   /// @DtoCreateApiResponse
@@ -364,7 +365,7 @@ model CallgentRealm {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   callgentId String @db.VarChar(36)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -460,7 +461,7 @@ model TaskAction {
   message    String? @db.VarChar(255) /// @description error message
 
   // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   taskId String @db.VarChar(36)
 
   /// @DtoReadOnly
@@ -485,7 +486,7 @@ model AuthToken {
 
   token   String  @unique @db.VarChar(36)
   type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
-  /// @DtoCastType(JwtPayload, ../infra/auth/jwt/jwt.service)
+  /// @DtoCastType(JwtPayload, ../infras/auth/jwt/jwt.service)
   payload Json
   revoked Boolean @default(false)
 

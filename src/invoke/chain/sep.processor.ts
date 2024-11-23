@@ -1,4 +1,5 @@
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { InvokeSepCtx } from '../invoke-sep.service';
 
@@ -11,7 +12,7 @@ export abstract class SepProcessor {
     ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }>;
+  ): Promise<PendingOrResponse>;
 
   /** to next processor */
   next(ctx: InvokeSepCtx) {
@@ -33,7 +34,7 @@ export abstract class SepProcessor {
     ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }> {
+  ): Promise<PendingOrResponse> {
     const { processor } = ctx;
     const fun: Function = this[processor.fun];
     if (!fun)

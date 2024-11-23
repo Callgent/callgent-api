@@ -40,20 +40,27 @@ export class InvokeService {
     try {
       const ret = await fun(invocation.sepInvoke.response, invocation.context);
       // if (!ret) return; // should not happen
-      if ('cbMemberFun' in ret) {
-        // will callback with response in invocation.response
-        invocation.currentFun = ret.cbMemberFun;
+      if (ret) {
+        if ('cbMemberFun' in ret) {
+          // will callback with response in invocation.response
+          invocation.currentFun = ret.cbMemberFun;
+          reqEvent.context.resp = {
+            status: 2,
+            statusText: ret.message,
+            data: undefined,
+          };
+          // still go into invokeSEPs
+          return { data: reqEvent, resumeFunName: 'invokeSEPs' };
+        }
+
         reqEvent.context.resp = {
-          status: 2,
-          statusText: ret.message,
-          data: undefined,
+          ...ret,
+          data: ret.data,
+          status: ret.statusCode,
         };
-        // still go into invokeSEPs
-        return { data: reqEvent, resumeFunName: 'invokeSEPs' };
       }
 
       // final response
-      ret && (reqEvent.context.resp = ret.data);
       delete reqEvent.context.invocation;
       // reqEvent.context.resp = ret.data; // postprocess has done this
     } catch (e) {

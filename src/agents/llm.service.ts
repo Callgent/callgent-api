@@ -119,6 +119,7 @@ export class LLMService {
     const a = isArray ? val : [val];
     for (const v of a) {
       entries.forEach(([key, type]) => {
+        if (!type) return; // any type
         // key may be '': means { [key]:.. }
         if (key && !(key in v)) throw new Error(`Json key=${key} is missing`);
         const value = key ? v[key] : Object.values(v)[0];
@@ -128,7 +129,7 @@ export class LLMService {
             Array.isArray(type) != Array.isArray(value))
         )
           throw new Error(
-            `Value type of json key=${key} should match example value: ${JSON.stringify(type)}}`,
+            `Value type of json key=${key} should match example value: ${JSON.stringify(type)}, got: ${JSON.stringify(value)}}`,
           );
       });
     }

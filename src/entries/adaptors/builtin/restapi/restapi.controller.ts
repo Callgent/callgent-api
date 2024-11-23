@@ -163,7 +163,9 @@ export class RestApiController {
       res
         .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
         .headers(headers)
-        .send(resp.data);
+        .send(
+          resp.data || { statusCode: resp.status, message: resp.statusText },
+        );
       return;
     }
 

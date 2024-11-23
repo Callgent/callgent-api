@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { PendingOrResponse } from '../entries/adaptors/entry-adaptor.base';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
+import { RestApiResponse } from '../restapi/response.interface';
 import { SepProcessor } from './chain/sep.processor';
 
 export const INVOKE_CHAIN_LIST = Symbol('INVOKE_CHAIN_LIST');
@@ -16,16 +18,16 @@ export class InvokeSepService {
   async chain(
     ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }> {
-    if (!ctx) throw new Error('[sepInvoke] ctx not found, id=' + reqEvent.id);
-    if (!ctx.epName) return; // no specific ep, just return
+  ): Promise<PendingOrResponse> {
+    if (!ctx?.epName)
+      throw new Error('[sepInvoke] epName not specified, id=' + reqEvent.id);
 
     // for each chained, process and edit event, may return async,
     const endpoints: EndpointDto[] = reqEvent.context.endpoints;
     const endpoint = endpoints.find((e) => e.name == ctx.epName);
 
     let switchProcessor = false,
-      result: { statusCode: 2; message: string } | { data: any } = null;
+      result: PendingOrResponse = null;
     if (!ctx.processor || ctx.processor.fun || ctx.processor.name) {
       switchProcessor = !ctx.processor; // first
       for (let i = 0; i < this.processors.length; i++) {
@@ -58,9 +60,9 @@ export class InvokeSepService {
 
 export class InvokeSepCtx {
   readonly epName: string;
-  readonly args: any;
+  readonly args: { [name: string]: any };
   /** sep response */
-  response?: any;
+  response?: { data?: any; statusCode?: 2; message?: string };
   /** stop chain execution */
   stopPropagation?: true;
   /** if(!processor) chain start; elif(!name && !fun) end chain */
