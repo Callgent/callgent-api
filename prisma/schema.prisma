@@ -336,6 +336,8 @@ model Endpoint {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   adaptorKey String  @db.VarChar(127) /// @description entry adaptor key
+  cacheKey   String? @db.VarChar(511) /// @description {string | (endpoint, request)=> string}; if empty&method=='get': cache by name, else no cache
+  cacheTtl   Int?    @default(0) @db.Integer /// @description in seconds. < 0 means no cache, 0&isAsync means cache pending response, else >0 cache
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
@@ -636,7 +638,14 @@ model Cached {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  cacheKey String   @unique @db.VarChar(511)
+  sepId    String   @db.VarChar(36)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @description source event id
+  sourceId String   @db.VarChar(36)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  cacheKey String   @db.VarChar(511)
   /// @DtoCastType(RestApiResponse<any>, ../../restapi/response.interface)
   response Json     @db.Json
   eventIds String[] @db.VarChar(36)
@@ -648,4 +657,6 @@ model Cached {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // deletedAt DateTime? /// @description logical deletion.
+
+  @@unique([sepId, cacheKey])
 }

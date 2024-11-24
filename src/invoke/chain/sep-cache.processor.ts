@@ -26,7 +26,7 @@ export class SepCacheProcessor extends SepProcessor {
     // invoke done, remove invocation ctx
     if (ctx.response.statusCode != 2) this.clearSepCtx(reqEvent);
     // if cache-able
-    await this.cachedService.toCache(ctx.response, ctx, endpoint);
+    await this.cachedService.toCache(ctx, ctx.response, endpoint, reqEvent);
     return ctx.response as any;
   }
 }

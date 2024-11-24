@@ -254,7 +254,7 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
     {
       name: 'convert2Response',
       prompt: `Given the openAPI endpoint:
-{"endpoint": "{{=it.ep.name}}", "summary":"{{=it.ep.summary}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"params":{{=JSON.stringify(it.ep.params)}}, "responses":{{=JSON.stringify(it.ep.responses)}} }
+{"endpoint": "{{=it.ep.name}}""{{=it.ep.summary?', "summary":'+it.ep.summary:''}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"params":{{=JSON.stringify(it.ep.params)}}, "responses":{{=JSON.stringify(it.ep.responses)}} }
 
 invoked with the following request:
 <--- request begin ---

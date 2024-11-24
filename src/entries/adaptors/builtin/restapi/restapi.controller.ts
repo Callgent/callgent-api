@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiDefaultResponse,
   ApiHeader,
   ApiOperation,
@@ -109,6 +110,10 @@ export class RestApiController {
   @ApiHeader({ name: 'x-callgent-callback', required: false })
   @ApiHeader({ name: 'x-callgent-timeout', required: false })
   @ApiUnauthorizedResponse()
+  @ApiAcceptedResponse({
+    description:
+      'You may retrieve response result by `/api/rest/result/{requestId}` or `x-callgent-callback`',
+  })
   async invoke(
     @Req() req,
     @Res() res: FastifyReply,
@@ -160,21 +165,22 @@ export class RestApiController {
     if (resp) {
       resp.statusText && (headers['x-callgent-message'] = resp.statusText);
       resp.headers && Object.assign(headers, resp.headers);
+      const body = resp.data || {
+        statusCode: resp.status,
+        message: resp.statusText,
+      };
       res
         .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
         .headers(headers)
-        .send(
-          resp.data || { statusCode: resp.status, message: resp.statusText },
-        );
-      return;
+        .send(body);
+      return body;
     }
 
     // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
     const statusCode = code ? (code < 0 ? 418 : code < 200 ? 202 : code) : 200;
-    res
-      .status(statusCode)
-      .headers(headers)
-      .send({ data, statusCode: code, message });
+    const body = { data, statusCode: code, message };
+    res.status(statusCode).headers(headers).send(body);
+    return body;
   }
 
   @ApiOperation({

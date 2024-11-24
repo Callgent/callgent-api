@@ -50,7 +50,7 @@ export class InvokeSepService {
       }
     } else {
       // skip all processors, sep invoke done, @see processor.end()
-      result = { data: reqEvent.context.resp };
+      result = ctx.response as any;
       delete reqEvent.context.sepInvoke;
     }
 

@@ -1,13 +1,19 @@
-import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
+import {
+  Propagation,
+  Transactional,
+  TransactionHost,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
+import { Utils } from '../infras/libs/utils';
+import { InvokeCtx } from '../invoke/invoke.service';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CachedDto } from './dto/cached.dto';
-import { InvokeCtx } from '../invoke/invoke.service';
 
 /**
  * cache service for server endpoint invocations. especially for async invocations,
@@ -18,6 +24,8 @@ export class CachedService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     protected readonly eventListenersService: EventListenersService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
   ) {}
 
   /**
@@ -33,19 +41,23 @@ export class CachedService {
     response?: RestApiResponse<any>;
   }> {
     // -> load:key(default get key), ttl
-    const r = this._loadCacheConfig(endpoint, reqEvent);
+    const r = this._loadCacheConfig(endpoint, reqEvent) || {};
     // -> realKey = key and (ttl or async), if !realKey: no-cache
     if (!this._reallyCache(r.cacheKey, r.cacheTtl, endpoint)) return r;
 
     // else find cached,
     //   -> find c=cached[key], if (c and
-    let c = await this.findOne(r.cacheKey);
+    let c = await this.findOne(r.cacheKey, endpoint.id);
     if (!c) return r; // no cache
     //     -> and (tll-expires or async-cache-done)): delete cache[key],c=null
     let expired = false;
     if (r.cacheTtl) {
       // check expires
+      expired = c.createdAt.getTime() + r.cacheTtl * 1000 < Date.now();
       // if async expires, inform observers expired error
+      if (expired && endpoint.isAsync) {
+        // FIXME this.notifyObservers()
+      }
     } else if (endpoint.isAsync) {
       // not pending
       expired = c.response?.statusCode != 2;
@@ -70,9 +82,10 @@ export class CachedService {
    */
   @Transactional()
   async toCache(
-    response: { statusCode?: 2; message?: string; data?: any },
     { cacheKey, cacheTtl }: { cacheKey?: string; cacheTtl?: number },
+    response: { statusCode?: 2; message?: string; data?: any },
     endpoint: EndpointDto,
+    reqEvent: ClientRequestEvent,
   ) {
     //   -> if realKey(key and (ttl or async)), cached[key] = resp
     if (!this._reallyCache(cacheKey, cacheTtl, endpoint)) return false;
@@ -80,7 +93,15 @@ export class CachedService {
     // save to cache
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.cached
-      .create({ data: { cacheKey, response, eventIds: [] } })
+      .create({
+        data: {
+          sepId: endpoint.id,
+          cacheKey,
+          response,
+          sourceId: reqEvent.id,
+          eventIds: [],
+        },
+      })
       .then((d) => !!d);
   }
 
@@ -97,7 +118,7 @@ export class CachedService {
     if (!this._reallyCache(cacheKey, cacheTtl, endpoint)) return false;
 
     //   -> get key from event, cached[key] = response
-    const c = await this.findOne(cacheKey);
+    const c = await this.findOne(cacheKey, endpoint.id);
     if (!c) return false;
     c.response = response;
     this.update(c.pk, response);
@@ -107,10 +128,13 @@ export class CachedService {
     return true;
   }
 
-  async findOne(cacheKey: string): Promise<CachedDto & { pk: bigint }> {
+  async findOne(
+    cacheKey: string,
+    sepId: string,
+  ): Promise<CachedDto & { pk: bigint }> {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.cached.findUnique({
-      where: { cacheKey },
+      where: { sepId_cacheKey: { sepId, cacheKey } },
     }) as any;
   }
 
@@ -122,6 +146,7 @@ export class CachedService {
     });
   }
 
+  @Transactional(Propagation.RequiresNew)
   /** notify observer event to resume processing */
   async notifyObservers(c: CachedDto & { pk: bigint }) {
     const { eventIds, response } = c;
@@ -132,14 +157,22 @@ export class CachedService {
     for (const eIds of groups) {
       await Promise.all(
         eIds.map((eId) =>
-          this.eventListenersService.resume(eId, async (event) => {
-            event.statusCode = response.statusCode;
-            event.message = response.message as string;
-            // update sep response
-            const invocation: InvokeCtx = (event.context as any).invocation;
-            invocation.sepInvoke.response = response.data;
-            return event;
-          }),
+          this.eventListenersService
+            .resume(eId, async (event) => {
+              // event.statusCode = response.statusCode;
+              // event.message = response.message as string;
+              // update sep response
+              const invocation: InvokeCtx = (event.context as any).invocation;
+              invocation.sepInvoke.response = response as any;
+              return event;
+            })
+            .catch((e) =>
+              console.error(
+                'Error on notify cached observers, eid=%s, error=%j',
+                eId,
+                e,
+              ),
+            ),
         ),
       );
     }
@@ -161,24 +194,50 @@ export class CachedService {
     return prisma.cached.update({ where: { pk }, data: { response } });
   }
 
-  async delete(where: { pk: bigint } | { cacheKey: string }) {
+  async delete(
+    uniqueWhere: { pk: bigint } | { cacheKey: string; sepId: string },
+  ) {
+    const where =
+      'cacheKey' in uniqueWhere ? { sepId_cacheKey: uniqueWhere } : uniqueWhere;
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.cached.delete({ where });
   }
 
+  /** @returns cacheKey && (endpoint.isAsync || cacheTtl > 0) */
   protected _reallyCache(
     cacheKey: string,
     cacheTtl: number,
     endpoint: EndpointDto,
   ) {
-    return cacheKey && (cacheTtl || endpoint.isAsync);
+    return cacheKey && (endpoint.isAsync || cacheTtl > 0);
   }
 
-  /** load cache config from sentry/adaptor/sep */
-  private _loadCacheConfig(
+  /** load cache config from sep/sentry/adaptor */
+  protected _loadCacheConfig(
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
-  ): { cacheKey?: any; cacheTtl?: any } {
-    return {};
+  ): { cacheKey?: any; cacheTtl?: number } {
+    const { cacheTtl } = endpoint;
+    if (cacheTtl < 0) return;
+    const cacheKey = this._getCacheKey(endpoint, reqEvent);
+    if (!cacheKey) return;
+
+    return { cacheKey, cacheTtl };
+  }
+
+  protected _getCacheKey(endpoint: EndpointDto, reqEvent: ClientRequestEvent) {
+    let cacheKey = endpoint.cacheKey?.trim();
+    if (!cacheKey) return endpoint.method == 'GET' ? endpoint.name : undefined;
+    if (cacheKey.search(/^(function\s*\(|\([^\)]*\)\s*=>).+/i) == 0) {
+      try {
+        const fun = Utils.toFunction(cacheKey);
+        cacheKey = fun(endpoint, reqEvent);
+      } catch (e) {
+        throw new BadRequestException(
+          `Invalid cacheKey for callgent#${endpoint.callgentId}, endpoint#${endpoint.id}: ${cacheKey}`,
+        );
+      }
+    }
+    return cacheKey;
   }
 }

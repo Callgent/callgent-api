@@ -235,17 +235,17 @@ export class AgentsService {
 
   /** convert resp content into one of fun.responses */
   async convert2Response(
-    args: { [name: string]: any },
+    requestArgs: { [name: string]: any },
     resp: string,
     ep: EndpointDto,
     eventId: string,
   ) {
-    args = args
-      ? Object.entries(args).map(([name, value]) => ({ name, value }))
+    requestArgs = requestArgs
+      ? Object.entries(requestArgs).map(([name, value]) => ({ name, value }))
       : [];
     const mapped = await this.llmService.template(
       'convert2Response',
-      { args, resp, ep },
+      { requestArgs, resp, ep },
       {
         returnType: { statusCode: 200, data: null },
         bizKey: eventId,
