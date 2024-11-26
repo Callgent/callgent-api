@@ -204,7 +204,7 @@ export class RestApiController {
     );
     if (!entry)
       throw new NotFoundException(
-        'Entry not found for callgent: ' + callgentId,
+        '`restAPI` Client Entry not found for callgent: ' + callgentId,
       );
     this.tenancyService.setTenantId(entry.tenantPk);
 

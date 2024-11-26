@@ -63,7 +63,7 @@ export class EndpointsService {
     });
     if (!eps.length)
       throw new NotFoundException(
-        `No service endpoints found on callgent#${callgentId}${
+        `No service endpoints found for callgent#${callgentId}${
           epName ? ' name=' + epName : ''
         }`,
       );

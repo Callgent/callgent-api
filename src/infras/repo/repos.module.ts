@@ -71,14 +71,16 @@ export class ReposModule implements OnModuleInit {
   onModuleInit() {
     this.prismaService.$on('query', (e) => {
       const sql = e.query.trim().toLowerCase();
-      if (
-        sql.startsWith('select') ||
-        sql.startsWith('insert') ||
-        sql.startsWith('update') ||
-        sql.startsWith('delete')
-      )
+      const type = sql.startsWith('select')
+        ? 1
+        : sql.startsWith('insert') ||
+            sql.startsWith('update') ||
+            sql.startsWith('delete')
+          ? 2
+          : 0;
+      if (type)
         this.logger.debug(
-          `${e.query.replace(/\s+/g, ' ')}; \x1b[34m${e.params}\x1b[0m`,
+          `\x1b[${type == 1 ? '32m' : '35m'}${e.query.replace(/\s+/g, ' ')}; \x1b[34m${e.params}\x1b[0m`,
         );
     });
   }

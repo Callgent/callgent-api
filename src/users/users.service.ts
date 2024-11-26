@@ -115,6 +115,7 @@ export class UsersService {
 
   /**
    * register a new user if identity not existing; return user if existing and valid;
+   * Note: tenant ctx will be set
    * @param ui - { email?, uid, provider, name?, credentials }
    * @returns user. undefined if existing but pending
    * @throws ForbiddenException if any of userIdentity/user/tenant is softly deleted
@@ -155,6 +156,7 @@ export class UsersService {
           } statusCode, please try again later.`,
         );
       }
+      this.tenancyService.setTenantId(uiInDb.user.tenant.pk);
     } else {
       // register tenant from email host
       const tenant = await this.registerTenant(emailHost);
@@ -182,6 +184,7 @@ export class UsersService {
       };
 
       // create user and identity
+      this.tenancyService.setTenantId(tenant.pk);
       if (ui.provider === 'local' && ui.credentials)
         ui.credentials = await this.updateLocalPassword(ui.credentials);
       uiInDb = await prisma.userIdentity.create({
@@ -241,6 +244,7 @@ export class UsersService {
         },
       });
     }
+    this.tenancyService.setTenantId(tenant.pk);
     return tenant;
   }
 
@@ -297,6 +301,7 @@ export class UsersService {
     );
   }
 
+  /** tenant ctx will be set */
   @Transactional()
   async validateEmail(token: string, pwd?: string) {
     const payload = await this.authTokensService.verify(token, 'API_KEY', true);
@@ -320,11 +325,13 @@ export class UsersService {
       if (resetPwd) await this.updateLocalPassword(pwd, ui.pk);
       else if (ui.email_verified)
         throw new BadRequestException(email + ' is already verified');
-      else
+      else {
+        this.tenancyService.setTenantId(ui.user.tenant.pk);
         prisma.userIdentity.update({
           where: { pk: ui.pk },
           data: { email_verified: true },
         });
+      }
     } else {
       if (!create)
         throw new BadRequestException(

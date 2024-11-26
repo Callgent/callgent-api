@@ -180,7 +180,7 @@ export class WebpageController {
     );
     if (!entry)
       throw new NotFoundException(
-        'Entry not found for callgent: ' + callgentId,
+        '`Webpage` Client Entry not found for callgent: ' + callgentId,
       );
     this.tenancyService.setTenantId(entry.tenantPk);
 

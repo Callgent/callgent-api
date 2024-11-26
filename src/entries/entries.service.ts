@@ -203,7 +203,7 @@ export class EntriesService implements OnModuleInit {
     const adaptor = this.getAdaptor(dto.adaptorKey, dto.type);
     if (!adaptor)
       throw new BadRequestException(
-        'Invalid entry adaptor key=' + dto.adaptorKey,
+        `Invalid ${dto.type} entry adaptor key=${dto.adaptorKey}`,
       );
 
     dto.id = Utils.uuid();
