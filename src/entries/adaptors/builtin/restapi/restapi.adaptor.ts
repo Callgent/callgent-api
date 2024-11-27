@@ -88,7 +88,9 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     return { data };
   }
 
-  postprocess: () => null;
+  async postprocess(resp: any) {
+    return resp;
+  }
 
   async getCallback(callback: string, reqEntry?: EntryDto) {
     // FIXME

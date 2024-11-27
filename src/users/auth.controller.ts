@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiOkResponse, ApiTags, getSchemaPath } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiTags, getSchemaPath } from '@nestjs/swagger';
 import { JwtAuthService } from '../infras/auth/jwt/jwt-auth.service';
 import { LocalAuthController } from '../infras/auth/local/local-auth.controller';
 import { RestApiResponse } from '../restapi/response.interface';
@@ -29,7 +29,7 @@ export class AuthController extends LocalAuthController {
     super(configService, jwtService);
   }
 
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     schema: {
       allOf: [
         { $ref: getSchemaPath(RestApiResponse) },

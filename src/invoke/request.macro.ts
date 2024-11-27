@@ -25,7 +25,7 @@ export class RequestMacro<T extends { [name: string]: string }> {
       const r = await this.serviceInvoke(epName, args);
       if ((r as any).statusCode == 2)
         return { ...r, cbMemberFun: '$defaultEpCb' };
-      if ('data' in r) return this.$defaultEpCb({}, r.data); // succeed
+      if ('data' in r) return this.$defaultEpCb(r.data, {}); // succeed
       return r;
     };
     // this.main = this.chainify(this.main); // main is not chained

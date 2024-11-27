@@ -54,9 +54,9 @@ export class InvokeService {
         }
 
         reqEvent.context.resp = {
+          status: ret.statusCode,
           ...ret,
           data: ret.data,
-          status: ret.statusCode,
         };
       }
 

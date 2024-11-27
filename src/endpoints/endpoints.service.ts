@@ -106,7 +106,7 @@ export class EndpointsService {
     const prisma = this.txHost.tx as PrismaClient;
     const id = Utils.uuid();
     const ep = await prisma.endpoint.create({ data: { ...data, id } });
-    this._pubEvent({ entry: { id: ep.entryId }, news: [ep] });
+    await this._pubEvent({ entry: { id: ep.entryId }, news: [ep] });
     return ep;
   }
 
@@ -158,6 +158,7 @@ export class EndpointsService {
         adaptorKey: entry.adaptorKey,
         callgentId: entry.callgentId,
         createdBy: createdBy,
+        servers: f.servers as any,
       };
       if (securities?.length || ret.securities?.length) {
         const securitiesMerged = [
@@ -214,7 +215,7 @@ export class EndpointsService {
       endpoints as Prisma.EndpointUncheckedCreateInput[];
     const prisma = this.txHost.tx as PrismaClient;
     const { count } = await prisma.endpoint.createMany({ data });
-    this._pubEvent({ entry: entry as any, news: data as any[] });
+    await this._pubEvent({ entry: entry as any, news: data as any[] });
     return count;
   }
 
@@ -292,7 +293,7 @@ export class EndpointsService {
     const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.delete({ select, where: { id } }),
     );
-    this._pubEvent({ entry: { id: ret.entryId }, olds: [ret] });
+    await this._pubEvent({ entry: { id: ret.entryId }, olds: [ret] });
     return ret;
   }
 
@@ -309,7 +310,7 @@ export class EndpointsService {
         data: dto as any,
       }),
     );
-    this._pubEvent({ entry: { id: ret.entryId }, news: [ret], olds: [old] });
+    await this._pubEvent({ entry: { id: ret.entryId }, news: [ret], olds: [old] });
     return ret;
   }
 

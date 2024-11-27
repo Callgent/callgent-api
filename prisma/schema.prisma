@@ -315,6 +315,7 @@ model Endpoint {
   method      String  @db.VarChar(15) /// @description openAPI method
   summary     String? @db.VarChar(2047)
   description String? @db.VarChar(4095)
+  servers     Json[]  @db.Json /// @description openAPI servers
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
   securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?   @db.Json /// @description declaration of API params

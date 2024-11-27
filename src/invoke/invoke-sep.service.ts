@@ -19,7 +19,8 @@ export class InvokeSepService {
     ctx: InvokeSepCtx,
     reqEvent: ClientRequestEvent,
   ): Promise<PendingOrResponse> {
-    if (!ctx?.epName)
+    if (!ctx) return; // skip sep invoke
+    if (!ctx.epName)
       throw new Error('[sepInvoke] epName not specified, id=' + reqEvent.id);
 
     // for each chained, process and edit event, may return async,

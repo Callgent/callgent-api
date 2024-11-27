@@ -12,6 +12,7 @@ import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../dto/entry.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
 import { RestApiResponse } from '../../restapi/response.interface';
+import postmanToOpenApi from '@pond918/postman-to-openapi';
 
 export abstract class EntryAdaptor {
   protected readonly agentsService: AgentsService;
@@ -85,10 +86,24 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
 
     let json: any;
     try {
-      if (format == 'yaml') {
-        json = yaml.parse(text);
-      } else if (format == 'json') {
+      if (
+        (!format || format == 'json') &&
+        text.startsWith('{') &&
+        text.indexOf('https://schema.getpostman.com/json/collection') > 0
+      ) {
+        // convert postman collection to openAPI.JSON
+        text = await postmanToOpenApi(text, null, {
+          outputFormat: 'json',
+          itemServers: true,
+          replaceVars: true,
+        });
+        format = 'json';
+      }
+
+      if (format == 'json') {
         json = JSON.parse(text);
+      } else if (format == 'yaml') {
+        json = yaml.parse(text);
       } else {
         try {
           json = JSON.parse(text);
@@ -141,6 +156,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
             requestBody: restApi.requestBody,
           };
           const securities = restApi.security;
+          const servers = restApi.servers;
 
           // TODO restApi.callbacks
 
@@ -150,6 +166,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
             summary,
             description,
             securities,
+            servers,
             params,
             responses,
             rawJson: restApi,
@@ -204,6 +221,7 @@ export class ApiSpec {
     description: string;
     /** array with or-relation, SecurityRequirementObject with and-relation */
     securities?: SecurityRequirementObject[];
+    servers?: ServerObject[];
     params: Prisma.JsonObject;
     responses: Prisma.JsonObject;
     rawJson: Prisma.JsonObject;

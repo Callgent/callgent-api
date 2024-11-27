@@ -98,11 +98,14 @@ export class CallgentHubService {
         id: true,
         name: true,
         summary: true,
+        instruction: true,
         entries: {
           select: {
             id: true,
             name: true,
             type: true,
+            summary: true,
+            instruction: true,
             adaptorKey: true,
             priority: true,
             host: true,
@@ -180,6 +183,7 @@ export class CallgentHubService {
               summary: true,
               description: true,
               securities: true,
+              adaptorKey: true,
               params: true,
               responses: true,
               rawJson: true,
