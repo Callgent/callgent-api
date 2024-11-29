@@ -20,6 +20,9 @@
 <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" height="20px">
 </p>
 
+*Please, help our community project. Star on GitHub!*
+**Exciting News (November, 2024):** Discover what is new in Callgent [here](https://docs.callgent.com/blog)!
+
 Callgent API is an open-source SaaS project built using NestJS, Prisma, PostgreSQL, and Swagger. It is licensed under the Apache-2.0 License.
 
 ## Table of Contents
