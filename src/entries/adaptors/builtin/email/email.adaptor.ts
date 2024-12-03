@@ -13,12 +13,12 @@ import {
   EmailsService,
 } from '../../../../emails/emails.service';
 import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
+import { InvokeCtx } from '../../../../invoke/invoke.service';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
-import { InvokeCtx } from '../../../../invoke/invoke.service';
 
 @EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
 export class EmailAdaptor extends BothEntryAdaptor {
@@ -32,7 +32,10 @@ export class EmailAdaptor extends BothEntryAdaptor {
   isAsync = () => true;
 
   _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
-    data.host = `invoke+${data.id}@my.callgent.com`;
+    data.host = this.emailsService.getRelayAddress(
+      data.callgentId,
+      EmailRelayKey.callgent,
+    );
   }
 
   getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {

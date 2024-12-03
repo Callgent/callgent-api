@@ -310,7 +310,11 @@ export class EndpointsService {
         data: dto as any,
       }),
     );
-    await this._pubEvent({ entry: { id: ret.entryId }, news: [ret], olds: [old] });
+    await this._pubEvent({
+      entry: { id: ret.entryId },
+      news: [ret],
+      olds: [old],
+    });
     return ret;
   }
 

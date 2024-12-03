@@ -5,14 +5,14 @@ import {
   SecuritySchemeObject,
   ServerObject,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { Prisma } from '@prisma/client';
+import postmanToOpenApi from '@pond918/postman-to-openapi';
+import { EntryType, Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { RestApiResponse } from '../../restapi/response.interface';
 import { EntryDto } from '../dto/entry.dto';
 import { ClientRequestEvent } from '../events/client-request.event';
-import { RestApiResponse } from '../../restapi/response.interface';
-import postmanToOpenApi from '@pond918/postman-to-openapi';
 
 export abstract class EntryAdaptor {
   protected readonly agentsService: AgentsService;
@@ -22,6 +22,7 @@ export abstract class EntryAdaptor {
 
   preCreate(data: Prisma.EntryUncheckedCreateInput) {
     if (!data.host) throw new BadRequestException('host is required');
+    data.host = data.host.replace('{id}', data.id);
     // init entry name
     data.name || (data.name = data.host);
   }
@@ -201,8 +202,9 @@ export abstract class BothEntryAdaptor
   implements _ClientEntryAdaptor
 {
   preCreate(data: Prisma.EntryUncheckedCreateInput): void {
-    if (data.type == 'CLIENT') this._genClientHost(data);
-    else super.preCreate(data);
+    // gen client host to be called
+    if (data.type !== EntryType.SERVER) this._genClientHost(data);
+    super.preCreate(data);
   }
 
   abstract _genClientHost(entry: Prisma.EntryUncheckedCreateInput);

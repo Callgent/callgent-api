@@ -164,6 +164,6 @@ export class EmailsService implements OnModuleInit {
 export enum EmailRelayKey {
   /** ClientRequestEvent callback from email SEP */
   request = 'request',
-  /** callgent email CEP */
+  /** callgent email CEN */
   callgent = 'callgent',
 }

@@ -3,7 +3,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { CallgentCreatedEvent } from '../../callgents/events/callgent-created.event';
 import { EntriesService } from '../entries.service';
-import { EmailRelayKey, EmailsService } from '../../emails/emails.service';
 
 @Injectable()
 export class CallgentCreatedListener {
@@ -11,7 +10,6 @@ export class CallgentCreatedListener {
   constructor(
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
-    private readonly emailsService: EmailsService,
   ) {}
 
   /** create a callgent with default api client entry, and Email client/server entry */
@@ -31,7 +29,6 @@ export class CallgentCreatedListener {
           callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'restAPI',
-          host: `/api/rest/invoke/${callgent.id}/{id}/`,
           createdBy: callgent.createdBy,
         })
         .then((entry) => {
@@ -48,10 +45,6 @@ export class CallgentCreatedListener {
           callgentId: callgent.id,
           type: 'CLIENT',
           adaptorKey: 'Email',
-          host: this.emailsService.getRelayAddress(
-            callgent.id,
-            EmailRelayKey.callgent,
-          ),
           createdBy: callgent.createdBy,
         })
         .then((entry) => {
