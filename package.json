@@ -38,6 +38,7 @@
     "@fastify/helmet": "^11.1.1",
     "@fastify/multipart": "8.3.0",
     "@fastify/static": "^7.0.4",
+    "@nest-lab/fastify-multer": "^1.2.0",
     "@nestjs-cls/transactional": "^2.4.2",
     "@nestjs-cls/transactional-adapter-prisma": "^1.2.4",
     "@nestjs/axios": "^3.1.2",

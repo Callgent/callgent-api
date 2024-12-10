@@ -16,7 +16,7 @@ export class CallgentCreatedListener {
   @Transactional()
   @OnEvent(CallgentCreatedEvent.eventName)
   async handleEvent(event: CallgentCreatedEvent) {
-    this.logger.debug('Handling event: %j', event);
+    this.logger.debug('%j: Handling event,', event);
 
     const callgent = event.callgent;
     if (callgent.forkedPk) return; // forked callgent

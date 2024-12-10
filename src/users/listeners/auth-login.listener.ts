@@ -14,7 +14,7 @@ export class AuthLoginListener {
 
   @OnEvent(AuthLoginEvent.eventName)
   async handleEvent(event: AuthLoginEvent) {
-    this.logger.debug('Handling event: %j', {
+    this.logger.debug('%j: Handling event,', {
       ...event,
       request: undefined,
       credentials: '***',

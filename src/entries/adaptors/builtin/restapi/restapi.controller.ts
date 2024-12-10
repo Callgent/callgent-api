@@ -1,3 +1,4 @@
+import { File, FilesInterceptor } from '@nest-lab/fastify-multer';
 import {
   All,
   Body,
@@ -10,10 +11,13 @@ import {
   Post,
   Req,
   Res,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
+  ApiConsumes,
   ApiDefaultResponse,
   ApiHeader,
   ApiOperation,
@@ -63,12 +67,28 @@ export class RestApiController {
     required: false,
     description: 'progressive request responder',
   })
-  @Post('request/:callgentId/:entryId')
+  @ApiParam({
+    name: 'callgentId',
+    required: true,
+    description: 'Callgent id',
+  })
+  @ApiParam({
+    name: 'entryId',
+    required: false,
+    description: 'Client entry id, mey empty: "/rest/invoke/:callgent-id`/`"',
+  })
+  @ApiConsumes('multipart/form-data')
   @ApiUnauthorizedResponse()
+  @UseInterceptors(FilesInterceptor('files', 8))
+  @Post('request/:callgentId/:entryId')
   async request(
     @Body() req: RequestRequirement,
+    @Param('callgentId') callgentId: string,
+    @Param('entryId') entryId?: string,
+    @UploadedFiles() files?: Array<File>,
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
+    // req.files = files;
     // TODO
   }
 

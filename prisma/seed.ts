@@ -236,8 +236,8 @@ function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
 ## all member functions(including \`main\`) have same signature:
 function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
 @param asyncResponse
-- for RequestMacro.main: it means requestArgs, matching macroParams schema
-- for any other member functions: received endpoint successful response object
+- for RequestMacro.main: it's requestArgs, matching macroParams schema
+- for any other member functions: it's received endpoint successful response object of previous endpoint invocation
 @param context: the same context object passes through out all member invocations, keeping shared state
 @returns
 - {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
@@ -287,9 +287,9 @@ Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
     },{{ } }}
   }{{ } }}
 };
-Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more meaningful to users):,
 output a single-lined JSON object:
-{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true." }`,
+{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: all core concepts explained, operations described, etc. leave empty if \`totally\` is true." }`,
     },
     {
       name: 'summarizeCallgent',
@@ -482,7 +482,7 @@ function initTags(
     {
       name: 'Database',
       description:
-        'Find database APIs on the Postman Public API Network. Discover public APIs to retrieve data and work with databases',
+        'Discover public APIs to retrieve data and work with databases',
     },
     {
       name: 'Developer Productivity',
@@ -492,7 +492,7 @@ function initTags(
     {
       name: 'DevOps',
       description:
-        'APIs recommended by Postman to enable quick CI/CD, build automation, containerization, config management during code deployment process',
+        'APIs to enable quick CI/CD, build automation, containerization, config management during code deployment process',
     },
     {
       name: 'E-commerce',
@@ -517,7 +517,7 @@ function initTags(
     {
       name: 'Travel',
       description:
-        'Exciting Travel APIs handpicked by Postman for seamless retrieval of real',
+        'Exciting Travel APIs for seamless retrieval of real',
     },
   ];
 

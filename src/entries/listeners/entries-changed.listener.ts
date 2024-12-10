@@ -5,6 +5,7 @@ import { AgentsService } from '../../agents/agents.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { EntriesService } from '../../entries/entries.service';
 import { EntriesChangedEvent } from '../../entries/events/entries-changed.event';
+import { Utils } from '../../infras/libs/utils';
 
 /** summarize callgent when entries changed */
 @Injectable()
@@ -20,9 +21,10 @@ export class EntriesChangedSumCallgentListener {
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EntriesChangedEvent.eventName)
+  @OnEvent(EntriesChangedEvent.eventName, { async: true })
   async handleEvent(event: EntriesChangedEvent) {
-    this.logger.debug('Handling event: %j', event);
+    await Utils.sleep(1000); // wait for entries change committed
+    this.logger.debug('%j: Handling event,', event);
 
     // re-summarize summary/instruction
     let { callgent } = event.data;

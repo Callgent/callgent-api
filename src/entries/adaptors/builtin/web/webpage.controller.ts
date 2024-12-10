@@ -92,9 +92,7 @@ export class WebpageController {
     } = await this.eventListenersService.emit(e);
     // event listeners:
     // preprocess, c-auth, load target events, load eps, (choose eps?),
-
     // [gen view/model/view-model from summary, response]
-
     // remove: | map2Endpoints,s-auth for all eps/entries, invoke-service
 
     // return generated webpage

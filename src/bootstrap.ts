@@ -97,7 +97,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   if (AuthUtils.getAuthCookieName(configService))
     await app.register(fastifyCookie);
 
-  await app.listen(port, '0.0.0.0', () =>
+  await app.listen(port, '::', () =>
     logger.warn('Application is listening on port ' + port),
   );
   return app;

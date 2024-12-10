@@ -15,7 +15,7 @@ export class RequestRelayListener {
   @Transactional(Propagation.RequiresNew)
   @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request, { async: true }) // always async
   async handleEvent(event: EmailRelayEvent) {
-    this.logger.debug('Handling event: %j', event);
+    this.logger.debug('%j: Handling event,', event);
 
     const { relayId: reqEventId, email } = event;
     // extract resp from msg

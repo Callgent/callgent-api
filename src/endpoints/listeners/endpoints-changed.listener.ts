@@ -4,6 +4,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { AgentsService } from '../../agents/agents.service';
 import { EntriesService } from '../../entries/entries.service';
 import { EntriesChangedEvent } from '../../entries/events/entries-changed.event';
+import { Utils } from '../../infras/libs/utils';
 import { EndpointsService } from '../endpoints.service';
 import { EndpointsChangedEvent } from '../events/endpoints-changed.event';
 
@@ -23,9 +24,10 @@ export class EndpointsChangedSumEntryListener {
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EndpointsChangedEvent.eventName)
+  @OnEvent(EndpointsChangedEvent.eventName, { async: true })
   async handleEvent(event: EndpointsChangedEvent) {
-    this.logger.debug('Handling event: %j', event);
+    await Utils.sleep(1000); // wait for entries change committed
+    this.logger.debug('%j: Handling event,', event);
 
     // re-summarize entry summary/instruction
     let { entry: oldEntry } = event.data;

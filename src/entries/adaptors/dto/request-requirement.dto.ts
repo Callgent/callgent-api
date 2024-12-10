@@ -1,5 +1,12 @@
+import { File } from '@nest-lab/fastify-multer';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString
+} from 'class-validator';
 
 /** request with requirement description */
 export class RequestRequirement {
@@ -16,16 +23,40 @@ export class RequestRequirement {
   @ApiProperty({
     description:
       'When extract service invoking args from requirement, whether ignore optional or nullable service params if absent',
+    type: 'boolean',
     default: true,
+    nullable: true,
+    required: false,
   })
+  @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
   ignoreOptionalOrNullableParamsIfAbsentInRequirement = true;
 
   @ApiProperty({
     description:
       'When extract service invoking args from requirement, whether to use default value of service params if absent',
+    type: 'boolean',
     default: true,
+    nullable: true,
+    required: false,
   })
+  @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
   useDefaultParamValuesIfAbsentInRequirement = true;
+
+  @ApiProperty({
+    type: 'array',
+    items: {
+      type: 'string',
+      format: 'binary',
+    },
+    description: 'Files to be uploaded',
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  // @IsArray()
+  files?: File[];
 }
