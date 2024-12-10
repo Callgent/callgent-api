@@ -1,16 +1,12 @@
 import { File } from '@nest-lab/fastify-multer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsOptional,
-  IsString
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /** request with requirement description */
 export class RequestRequirement {
   @ApiProperty({
+    type: 'object',
     description: 'Requirement for callgent to fulfill.',
     example:
       'I want to apply for the Senior Algorithm Engineer based in Singapore.',

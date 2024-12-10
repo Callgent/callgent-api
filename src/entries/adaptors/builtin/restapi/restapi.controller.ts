@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UploadedFiles,
@@ -22,6 +23,7 @@ import {
   ApiHeader,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -77,19 +79,77 @@ export class RestApiController {
     required: false,
     description: 'Client entry id, mey empty: "/rest/invoke/:callgent-id`/`"',
   })
+  @ApiQuery({
+    name: 'taskId',
+    required: false,
+    description: 'Conversation Id',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiUnauthorizedResponse()
   @UseInterceptors(FilesInterceptor('files', 8))
   @Post('request/:callgentId/:entryId')
   async request(
-    @Body() req: RequestRequirement,
+    @Req() req,
+    @Res() res,
+    @Body() requirement: RequestRequirement,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
+    @Query('taskId') taskId?: string,
     @UploadedFiles() files?: Array<File>,
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
-    // req.files = files;
-    // TODO
+    requirement.files = files;
+
+    const { entry, callgent } = await this._load(callgentId, entryId);
+
+    const e = new ClientRequestEvent(
+      entry.id,
+      entry.adaptorKey,
+      requirement,
+      taskId,
+      {
+        callgentId,
+        callgentName: callgent.name,
+        callerId: req.user?.sub,
+        progressive,
+      },
+      // callback, // 是否需要异步返回结果
+    );
+    e.context.callgent = callgent;
+    const {
+      statusCode: code,
+      data,
+      message,
+    } = await this.eventListenersService.emit(e);
+    // preprocess, c-auth, load target events, load eps,
+    // map2Endpoints(s-auth for all eps/entries, invoke-SEPs)
+
+    const headers = {
+      'x-callgent-reqId': data.id,
+      'x-callgent-taskId': data.taskId,
+    };
+    code && (headers['x-callgent-status'] = code);
+
+    const resp = data?.context.resp;
+    if (resp) {
+      resp.statusText && (headers['x-callgent-message'] = resp.statusText);
+      resp.headers && Object.assign(headers, resp.headers);
+      const body = resp.data || {
+        statusCode: resp.status,
+        message: resp.statusText,
+      };
+      res
+        .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
+        .headers(headers)
+        .send(body);
+      return body;
+    }
+
+    // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
+    const statusCode = code ? (code < 0 ? 418 : code < 200 ? 202 : code) : 200;
+    const body = { data, statusCode: code, message };
+    res.status(statusCode).headers(headers).send(body);
+    return body;
   }
 
   @All('invoke/:callgentId/:entryId/*')
@@ -148,10 +208,10 @@ export class RestApiController {
     let epName = req.url.substr(req.url.indexOf(basePath) + basePath.length);
     if (epName) epName = Utils.formalApiName(req.method, '/' + epName);
 
-    const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
-    // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
     const { entry, callgent } = await this._load(callgentId, entryId);
+    // TODO owner defaults to caller callgent
+    const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
 
     const {
       statusCode: code,
