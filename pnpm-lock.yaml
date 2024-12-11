@@ -22,9 +22,6 @@ dependencies:
   '@fastify/static':
     specifier: ^7.0.4
     version: 7.0.4
-  '@nest-lab/fastify-multer':
-    specifier: ^1.2.0
-    version: 1.2.0(@nestjs/common@10.4.4)(@nestjs/platform-fastify@10.3.4)(rxjs@7.8.1)
   '@nestjs-cls/transactional':
     specifier: ^2.4.2
     version: 2.4.2(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(nestjs-cls@4.4.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -103,6 +100,9 @@ dependencies:
   fastify-ip:
     specifier: ^1.1.0
     version: 1.1.0
+  fastify-multer:
+    specifier: ^2.0.3
+    version: 2.0.3
   glob:
     specifier: ^10.4.5
     version: 10.4.5
@@ -124,6 +124,9 @@ dependencies:
   nanoid:
     specifier: 3.3.7
     version: 3.3.7
+  nest-fastify-multer:
+    specifier: ^2.0.0
+    version: 2.0.0(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)
   nestjs-cls:
     specifier: ^4.4.1
     version: 4.4.1(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -1412,19 +1415,6 @@ packages:
 
   /@microsoft/tsdoc@0.15.0:
     resolution: {integrity: sha512-HZpPoABogPvjeJOdzCOSJsXeL/SMCBgBZMVC3X3d7YYp2gf31MfxhUoYUNwf1ERPJOnQc0wkFn9trqI6ZEdZuA==}
-    dev: false
-
-  /@nest-lab/fastify-multer@1.2.0(@nestjs/common@10.4.4)(@nestjs/platform-fastify@10.3.4)(rxjs@7.8.1):
-    resolution: {integrity: sha512-VTDNtoPj7j540Qfmc/2KAhG68EQEKqfFKdH8k067W2MELIuDpClkfTbmZIo6HFUZOf27vPw/NxPoFb5y4uvcCg==}
-    peerDependencies:
-      '@nestjs/common': ^9.0.0 || ^10.0.0
-      '@nestjs/platform-fastify': ^9.0.0 || ^10.0.0
-      rxjs: ^7.0.0
-    dependencies:
-      '@nestjs/common': 10.4.4(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@nestjs/platform-fastify': 10.3.4(@fastify/static@7.0.4)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)
-      fastify-multer: 2.0.3
-      rxjs: 7.8.1
     dev: false
 
   /@nestjs-cls/transactional-adapter-prisma@1.2.4(@nestjs-cls/transactional@2.4.2)(@prisma/client@5.20.0)(nestjs-cls@4.4.1)(prisma@5.20.0):
@@ -6673,6 +6663,18 @@ packages:
   /neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
     dev: true
+
+  /nest-fastify-multer@2.0.0(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2):
+    resolution: {integrity: sha512-moKbpbePeEB/LH5ppXgQM/znBAfpCgzwdzRfGmmqkIRb8CZXj90IhqmyjU8diH4Vg3ovgubihLuaT89wzpjANw==}
+    dependencies:
+      '@nestjs/common': 10.4.4(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      fastify-multer: 2.0.3
+      rxjs: 7.8.1
+    transitivePeerDependencies:
+      - class-transformer
+      - class-validator
+      - reflect-metadata
+    dev: false
 
   /nestjs-cls@4.4.1(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(reflect-metadata@0.2.2)(rxjs@7.8.1):
     resolution: {integrity: sha512-4yhldwm/cJ02lQ8ZAdM8KQ7gMfjAc1z3fo5QAQgXNyN4N6X5So9BCwv+BTLRugDCkELUo3qtzQHnKhGYL/ftPg==}

@@ -1,7 +1,7 @@
-import { File } from '@nest-lab/fastify-multer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { File } from 'fastify-multer/lib/interfaces';
 
 /** request with requirement description */
 export class RequestRequirement {

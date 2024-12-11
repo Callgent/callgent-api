@@ -46,7 +46,6 @@ export class EventStoresService {
       funName || (funName = undefined);
       listenerId || (listenerId = undefined);
     }
-    if (!event.taskId) event.taskId = event.id;
 
     const prisma = this.txHost.tx as PrismaClient;
     const data: Prisma.EventStoreCreateInput = {

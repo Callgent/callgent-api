@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiProperty,
   ApiQuery,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -21,9 +22,9 @@ import { IsInt, IsNotEmpty } from 'class-validator';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentHubService } from './callgent-hub.service';
-import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 
 export class CreateCallgentDtoEx extends CreateCallgentDto {
   @ApiProperty({
@@ -38,6 +39,7 @@ export class CreateCallgentDtoEx extends CreateCallgentDto {
 }
 
 @ApiTags('Hub')
+@ApiSecurity('defaultBearerAuth')
 @Controller('hub')
 export class CallgentHubController {
   constructor(private readonly callgentHubService: CallgentHubService) {}

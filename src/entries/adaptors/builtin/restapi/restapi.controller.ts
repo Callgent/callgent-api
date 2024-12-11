@@ -1,4 +1,3 @@
-import { File, FilesInterceptor } from '@nest-lab/fastify-multer';
 import {
   All,
   Body,
@@ -14,7 +13,7 @@ import {
   Res,
   UploadedFiles,
   UseGuards,
-  UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
@@ -29,14 +28,18 @@ import {
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
 import { FastifyReply } from 'fastify';
+import { FastifyFilesInterceptor } from 'nest-fastify-multer';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
+import { FilesService } from '../../../../files/files.service';
 import { JwtGuard } from '../../../../infras/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infras/libs/utils';
 import { PrismaTenancyService } from '../../../../infras/repo/tenancy/prisma-tenancy.service';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RequestRequirement } from '../../dto/request-requirement.dto';
+import { diskStorage } from 'fastify-multer';
+import { File } from 'fastify-multer/lib/interfaces';
 
 /** global rest-api entry entry */
 @ApiTags('Client Entry: Rest-API')
@@ -49,6 +52,7 @@ export class RestApiController {
     protected readonly entriesService: EntriesService,
     protected readonly eventListenersService: EventListenersService,
     private readonly tenancyService: PrismaTenancyService,
+    private readonly filesService: FilesService,
   ) {}
 
   @ApiOperation({
@@ -86,20 +90,19 @@ export class RestApiController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiUnauthorizedResponse()
-  @UseInterceptors(FilesInterceptor('files', 8))
+  // write into tmp file
+  @FastifyFilesInterceptor('files', 8, { storage: diskStorage({}) })
   @Post('request/:callgentId/:entryId')
   async request(
     @Req() req,
     @Res() res,
-    @Body() requirement: RequestRequirement,
+    @Body(new ValidationPipe()) requirement: RequestRequirement,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
     @Query('taskId') taskId?: string,
-    @UploadedFiles() files?: Array<File>,
+    @UploadedFiles() tmpFiles?: File[],
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
-    requirement.files = files;
-
     const { entry, callgent } = await this._load(callgentId, entryId);
 
     const e = new ClientRequestEvent(
@@ -116,6 +119,8 @@ export class RestApiController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
+    requirement.files = await this.filesService.save(tmpFiles, e.taskId);
+
     const {
       statusCode: code,
       data,

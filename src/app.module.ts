@@ -24,6 +24,7 @@ import { InvokeModule } from './invoke/invoke.module';
 import { TaskActionsModule } from './task-actions/task-actions.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { UsersModule } from './users/users.module';
     CachedModule,
     InvokeModule,
     HealthModule,
+    FilesModule,
   ],
   providers: [
     {

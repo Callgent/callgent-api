@@ -1,5 +1,6 @@
 # compiled output
 /dist
+/upload
 /node_modules
 
 # generated files

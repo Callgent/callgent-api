@@ -24,6 +24,8 @@ import { AuthUtils } from './infras/auth/auth.utils';
 import { JwtAuthService } from './infras/auth/jwt/jwt-auth.service';
 
 async function bootstrap(app: NestFastifyApplication, port: string) {
+  const configService = app.get(ConfigService);
+
   // (BigInt.prototype as any).toJSON = function () {
   //   return this.toString();
   // };
@@ -37,7 +39,11 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
 
   app.register(helmet);
   app.register(fastifyIp);
-  app.register(fastifyMultipart);
+  const fileSize = configService.get('REQUEST_BODY_LIMIT', 1048576); // 1M
+  app.register(fastifyMultipart, {
+    throwFileSizeLimit: true,
+    limits: { fileSize: parseInt(fileSize), files: 8 },
+  });
   // app.register(compression);
 
   // express compatibility
@@ -81,7 +87,6 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   ///// validator injection: e.g. EntityIdExistsRule
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  const configService = app.get(ConfigService);
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
       origin: [
@@ -104,14 +109,15 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
 }
 
 export async function bootstrapForProd(): Promise<NestFastifyApplication> {
+  const bodyLimit = parseInt(process.env.REQUEST_BODY_LIMIT) || 1048576;
   const app: NestFastifyApplication =
     await NestFactory.create<NestFastifyApplication>(
       AppModule,
-      new FastifyAdapter({ trustProxy: true }),
-      {
-        abortOnError: false,
-        bufferLogs: true,
-      },
+      new FastifyAdapter({
+        trustProxy: true,
+        bodyLimit,
+      }),
+      { abortOnError: false, bufferLogs: true },
     );
   return bootstrap(app, process.env.PORT || '3000');
 }
