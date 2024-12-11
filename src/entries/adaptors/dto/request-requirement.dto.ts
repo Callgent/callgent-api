@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { File } from 'fastify-multer/lib/interfaces';
 
 /** request with requirement description */
 export class RequestRequirement {
@@ -54,5 +53,10 @@ export class RequestRequirement {
   })
   @IsOptional()
   // @IsArray()
-  files?: File[];
+  files?: {
+    filename: string;
+    encoding: string;
+    mimetype: string;
+    size?: number;
+  }[];
 }

@@ -177,7 +177,7 @@ export class AgentsService {
         statusCode,
         message,
       } = await this.eventListenersService.emit(
-        new ProgressiveRequestEvent(srcId, id, cenAdaptor, {
+        new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
           progressive,
           // mapped,
         }),

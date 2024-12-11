@@ -119,7 +119,7 @@ export class RestApiController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
-    requirement.files = await this.filesService.save(tmpFiles, e.taskId);
+    requirement.files = await this.filesService.save(tmpFiles, e.pwd);
 
     const {
       statusCode: code,

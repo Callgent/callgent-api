@@ -4,7 +4,7 @@ export class ProgressiveRequestEvent extends EventObject {
   constructor(
     srcId: string,
     /** parent event id in event chain */
-    fromEvent: string,
+    fromEvent: EventObject,
     dataType: string,
     public readonly data: {
       /** url template for progressive requesting, `callgent:epName[@callgent]` to invoke callgent */
@@ -15,8 +15,8 @@ export class ProgressiveRequestEvent extends EventObject {
       srcId,
       'PROGRESSIVE_REQUEST',
       dataType,
-      undefined,
-      fromEvent,
+      fromEvent.taskId,
+      fromEvent.id,
       'EVENT',
     );
   }
