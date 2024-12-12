@@ -93,7 +93,7 @@ export class WebpageController {
     // event listeners:
     // preprocess, c-auth, load target events, load eps, (choose eps?),
     // [gen view/model/view-model from summary, response]
-    // remove: | map2Endpoints,s-auth for all eps/entries, invoke-service
+    // remove: | chooseEndpoints, map2Endpoints,s-auth for all eps/entries, invoke-service
 
     // return generated webpage
 

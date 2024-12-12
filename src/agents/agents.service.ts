@@ -157,7 +157,7 @@ export class AgentsService {
           summary: '',
           instruction: '',
           requestArgs: {},
-          macroParams: [],
+          macroParams: { parameters: [], requestBody: {} },
           macroResponse: {},
           memberFunctions: { main: '' },
         },

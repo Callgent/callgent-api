@@ -62,7 +62,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     if (!progressive) {
     }
 
-    reqEvent.context.req = this.req2Json(req);
+    // reqEvent.context.req = this.req2Json(req);
   }
 
   async invoke(
@@ -98,26 +98,15 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
   }
 
   req2Json(request) {
-    const { method, headers: rawHeaders, query, body, raw } = request;
-    if (request.url.indexOf('/rest/invoke/') < 0)
+    const { method, headers: rawHeaders, query, body, url: url0 } = request;
+    if (url0.indexOf('/rest/invoke/') < 0)
       throw new Error(
         'Unsupported URL, should be /rest/invoke/:callgentId/:entry/*',
       );
-    let idx = request.url.indexOf('/rest/invoke/');
-    idx = request.url.indexOf('/', idx + 13);
-    idx = request.url.indexOf('/', idx + 1);
-    const url = request.url.substr(idx);
-
-    // FIXME https://www.npmjs.com/package/@fastify/multipart
-    // request.file()
-    // let files: Record<string, any> = {};
-    // if (request.file) {
-    //   files[request.file.fieldname] = request.file;
-    // } else if (raw.files) {
-    //   for (const [key, value] of Object.entries(raw.files)) {
-    //     files[key] = value;
-    //   }
-    // } else files = undefined;
+    let idx = url0.indexOf('/rest/invoke/');
+    idx = url0.indexOf('/', idx + 13);
+    idx = url0.indexOf('/', idx + 1);
+    const url = url0.substr(idx);
 
     // const type = request.isFormSubmission ? 'form' : 'body';
 

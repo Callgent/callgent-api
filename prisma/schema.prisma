@@ -112,7 +112,7 @@ model UserIdentity {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @description  authentication info from realm
-  info           Json?   @db.Json
+  info           Json?
 
   user   User   @relation(fields: [userPk], references: [pk])
   userPk Int
@@ -504,7 +504,7 @@ model LlmTemplate {
   pk Int @id @default(autoincrement())
 
   name   String @db.VarChar(32)
-  prompt String @db.VarChar(4096)
+  prompt String @db.VarChar(8191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -519,8 +519,8 @@ model LlmCache {
 
   name   String @db.VarChar(32)
   model  String @db.VarChar(127)
-  prompt String @db.VarChar(8192)
-  result String @db.VarChar(8192)
+  prompt String @db.VarChar(8191)
+  result String @db.VarChar(8191)
 
   createdAt DateTime @default(now())
 
@@ -603,7 +603,7 @@ model EventStore {
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)
   /// @Description target id to relate several events
-  taskId       String?           @db.VarChar(36)
+  taskId       String            @db.VarChar(36)
   eventType    String            @db.VarChar(36)
   dataType     String            @db.VarChar(36)
   /// @Description callback url or parent event id to invoke

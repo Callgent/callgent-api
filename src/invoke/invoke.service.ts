@@ -19,7 +19,10 @@ export class InvokeService {
   @Transactional()
   async invokeSEPs(reqEvent: ClientRequestEvent) {
     // map2Endpoints: { endpoints, requestArgs, macroParams, macroResponse, memberFunctions }
-    const { map2Endpoints, endpoints } = reqEvent.context;
+    const {
+      map2Endpoints: { requestArgs, memberFunctions },
+      endpoints,
+    } = reqEvent.context;
     if (!endpoints?.length)
       throw new Error('Failed to invoke, No mapping endpoint found');
 
@@ -27,18 +30,20 @@ export class InvokeService {
       reqEvent.context.invocation ||
       (reqEvent.context.invocation = {
         currentFun: 'main',
-        sepInvoke: { response: map2Endpoints.requestArgs },
-        context: {},
+        // sepInvoke: { response: requestArgs }, must unset, means no pre sepInvoke
+        context: { requestArgs },
       });
 
     const requestMacro = new RequestMacro(
-      map2Endpoints.memberFunctions as { [name: string]: string },
+      memberFunctions as { [name: string]: string },
       this.invokeChainService,
       reqEvent,
     ).getProxy();
     const fun = requestMacro[invocation.currentFun];
     try {
-      const ret = await fun(invocation.sepInvoke.response, invocation.context);
+      const args =
+        'sepInvoke' in invocation ? invocation.sepInvoke.response : requestArgs;
+      const ret = await fun(args, invocation.context);
       // if (!ret) return; // should not happen
       if (ret) {
         if ('cbMemberFun' in ret) {

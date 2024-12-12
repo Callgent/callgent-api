@@ -187,21 +187,26 @@ output single-line json object below:
 output just json no explanation`,
     },
     {
-      name: 'map2Endpoints',
+      name: 'chooseEndpoints',
       prompt: `# Task goal:
-generating js service class to orchestrate the given service endpoints to fulfill a user request
+generating js macro class to orchestrate the given service API endpoints to fulfill the user request
 
 ## user request:
+\`\`\`javascript
 const request = {
 {{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
 {{ } }}"requested from": "{{=it.cenAdaptor}}",
 "request_object": {{=JSON.stringify(it.req)}},
 }
-
+\`\`\`
+{{ if (it.req.files?.length) { }}> Note: the files are in current dir, you may access them if needed.
+{{ } }}
 ## service endpoints:
-service \`{{=it.callgentName}}\` {{{~ it.endpoints :ep }}
+\`\`\`pseudo-openAPI-3-doc
+{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 }
+\`\`\`
 
 ## generated js class template:
 \`\`\`javascript
@@ -215,7 +220,7 @@ class RequestMacro {
 
     // every endpoint invocation goes like this:
     const r = await this.serviceInvoke(epName, epArgs);
-    const cbMemberFun = \`some\${epName}Cb\`; // a RequestMacro member function name
+    const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
     if (r.statusCode == 2) return {...r, cbMemberFun}
     // else sync call the same logic
     return this[cbMemberFun](r.data, context)
@@ -244,12 +249,198 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
 - {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
 
 ## generated code output json format:
+\`\`\`json
 { "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
   "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
   "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
   "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
   "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
-}`,
+}
+\`\`\`
+**note:**
+1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
+2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
+   - try best to retrieve the info by invoking service endpoints if possible
+   - or ask user to provide from $.question
+   - before asking user, double check if it's really not possible to retrieve from request_object or endpoints invocations!
+3. if $.question is not empty, set all other prop values empty!
+4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
+5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
+6. each member function should have only 0 or 1 \`serviceInvoke\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
+7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
+8. member functions signature is fixed, please don't change it, use context to pass states!
+9. robust code to handle errors/abnormal vars/timeout/retries`,
+    },
+    {
+      name: 'designProcess',
+      prompt: `# Task goal:
+generating js macro class to orchestrate the given service API endpoints to fulfill the user request
+
+## user request:
+\`\`\`javascript
+const request = {
+{{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
+{{ } }}"requested from": "{{=it.cenAdaptor}}",
+"request_object": {{=JSON.stringify(it.req)}},
+}
+\`\`\`
+{{ if (it.req.files?.length) { }}> Note: the files are in current dir, you may access them if needed.
+{{ } }}
+## service endpoints:
+\`\`\`pseudo-openAPI-3-doc
+{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+}
+\`\`\`
+
+## generated js class template:
+\`\`\`javascript
+/** stateless class */
+class RequestMacro {
+  /** @param serviceInvoke - function to invoke a service endpoint */
+  constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
+  /** must have this starting member function */
+  main = (requestArgs, context) => {
+    // ...
+
+    // every endpoint invocation goes like this:
+    const r = await this.serviceInvoke(epName, epArgs);
+    const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
+    if (r.statusCode == 2) return {...r, cbMemberFun}
+    // else sync call the same logic
+    return this[cbMemberFun](r.data, context)
+  };
+
+  // ... more member functions for service endpoints to callback
+}
+\`\`\`
+
+## serviceInvoke signature:
+function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
+@returns:
+- {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
+- {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
+
+**note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+
+## all member functions(including \`main\`) have same signature:
+function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
+@param asyncResponse
+- for RequestMacro.main: it's requestArgs, matching macroParams schema
+- for any other member functions: it's received endpoint successful response object of previous endpoint invocation
+@param context: the same context object passes through out all member invocations, keeping shared state
+@returns
+- {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
+- {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
+
+## generated code output json format:
+\`\`\`json
+{ "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
+  "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
+  "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
+  "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
+  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
+}
+\`\`\`
+**note:**
+1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
+2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
+   - try best to retrieve the info by invoking service endpoints if possible
+   - or ask user to provide from $.question
+   - before asking user, double check if it's really not possible to retrieve from request_object or endpoints invocations!
+3. if $.question is not empty, set all other prop values empty!
+4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
+5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
+6. each member function should have only 0 or 1 \`serviceInvoke\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
+7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
+8. member functions signature is fixed, please don't change it, use context to pass states!
+9. robust code to handle errors/abnormal vars/timeout/retries`,
+    },
+
+    {
+      name: 'generateMacroCode',
+      prompt: `# Task goal:
+generating js macro class to orchestrate the given service API endpoints to fulfill the user request
+
+## user request:
+\`\`\`javascript
+const request = {
+{{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
+{{ } }}"requested from": "{{=it.cenAdaptor}}",
+"request_object": {{=JSON.stringify(it.req)}},
+}
+\`\`\`
+{{ if (it.req.files?.length) { }}> Note: the files are in current dir, you may access them if needed.
+{{ } }}
+## service endpoints:
+\`\`\`pseudo-openAPI-3-doc
+{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+}
+\`\`\`
+
+## generated js class template:
+\`\`\`javascript
+/** stateless class */
+class RequestMacro {
+  /** @param serviceInvoke - function to invoke a service endpoint */
+  constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
+  /** must have this starting member function */
+  main = (requestArgs, context) => {
+    // ...
+
+    // every endpoint invocation goes like this:
+    const r = await this.serviceInvoke(epName, epArgs);
+    const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
+    if (r.statusCode == 2) return {...r, cbMemberFun}
+    // else sync call the same logic
+    return this[cbMemberFun](r.data, context)
+  };
+
+  // ... more member functions for service endpoints to callback
+}
+\`\`\`
+
+## serviceInvoke signature:
+function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
+@returns:
+- {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
+- {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
+
+**note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+
+## all member functions(including \`main\`) have same signature:
+function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
+@param asyncResponse
+- for RequestMacro.main: it's requestArgs, matching macroParams schema
+- for any other member functions: it's received endpoint successful response object of previous endpoint invocation
+@param context: the same context object passes through out all member invocations, keeping shared state
+@returns
+- {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
+- {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
+
+## generated code output json format:
+\`\`\`json
+{ "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
+  "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
+  "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
+  "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
+  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
+}
+\`\`\`
+**note:**
+1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
+2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
+   - try best to retrieve the info by invoking service endpoints if possible
+   - or ask user to provide from $.question
+   - before asking user, double check if it's really not possible to retrieve from request_object or endpoints invocations!
+3. if $.question is not empty, set all other prop values empty!
+4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
+5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
+6. each member function should have only 0 or 1 \`serviceInvoke\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
+7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
+8. member functions signature is fixed, please don't change it, use context to pass states!
+9. robust code to handle errors/abnormal vars/timeout/retries`,
     },
     {
       name: 'convert2Response',

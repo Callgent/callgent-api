@@ -28,9 +28,12 @@ import {
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
 import { FastifyReply } from 'fastify';
+import { diskStorage } from 'fastify-multer';
+import { File } from 'fastify-multer/lib/interfaces';
 import { FastifyFilesInterceptor } from 'nest-fastify-multer';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
+import { EventObject } from '../../../../event-listeners/event-object';
 import { FilesService } from '../../../../files/files.service';
 import { JwtGuard } from '../../../../infras/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infras/libs/utils';
@@ -38,8 +41,6 @@ import { PrismaTenancyService } from '../../../../infras/repo/tenancy/prisma-ten
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RequestRequirement } from '../../dto/request-requirement.dto';
-import { diskStorage } from 'fastify-multer';
-import { File } from 'fastify-multer/lib/interfaces';
 
 /** global rest-api entry entry */
 @ApiTags('Client Entry: Rest-API')
@@ -119,7 +120,10 @@ export class RestApiController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
-    requirement.files = await this.filesService.save(tmpFiles, e.pwd);
+    requirement.files = await this.filesService.save(
+      tmpFiles,
+      EventObject.getPwd(e),
+    );
 
     const {
       statusCode: code,
@@ -127,7 +131,7 @@ export class RestApiController {
       message,
     } = await this.eventListenersService.emit(e);
     // preprocess, c-auth, load target events, load eps,
-    // map2Endpoints(s-auth for all eps/entries, invoke-SEPs)
+    // chooseEndpoints, map2Endpoints(s-auth for all eps/entries, invoke-SEPs)
 
     const headers = {
       'x-callgent-reqId': data.id,

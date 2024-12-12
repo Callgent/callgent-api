@@ -1,6 +1,6 @@
 import { EventCallbackType } from '@prisma/client';
-import { Utils } from '../infras/libs/utils';
 import path from 'path';
+import { Utils } from '../infras/libs/utils';
 
 export class EventObject {
   constructor(
@@ -15,9 +15,7 @@ export class EventObject {
   ) {
     this.id = Utils.uuid();
 
-    const { taskId: tid, pwd } = this._getTaskConfig(taskId);
-    this.taskId = tid;
-    this.pwd = pwd;
+    this.taskId = this._getTaskId(taskId);
 
     Object.defineProperty(this, 'context', {
       value: {},
@@ -32,8 +30,6 @@ export class EventObject {
   public readonly id: string;
   /** task id to relate several events, format: `{yymmdd}-{nanoid}` */
   public readonly taskId: string;
-  /** task process dir */
-  public readonly pwd: string;
   public declare readonly context: { [key: string]: any };
   /** if true, the event will not be propagated to other listeners */
   public declare stopPropagation: boolean;
@@ -41,7 +37,7 @@ export class EventObject {
   /**
    * @returns {{ taskId: string, pwd: string }}, taskId{task id}: `{yyMMdd}-{nanoid}`, pwd{task working dir}: `{yyMM}/{dd}/{nanoid[:1]}/nanoid`
    */
-  protected _getTaskConfig(taskId: string) {
+  protected _getTaskId(taskId: string) {
     let sp = taskId?.split('-', 2);
     if (
       !(taskId?.length == this.id.length + 7) ||
@@ -51,16 +47,18 @@ export class EventObject {
       sp = [this._getUTCDateString(), this.id];
       taskId = sp.join('-');
     }
+    return taskId;
+  }
 
-    return {
-      taskId,
-      pwd: path.join(
-        sp[0].substring(0, 4), // yyMM
-        sp[0].substring(4), // dd
-        sp[1].substring(0, 1), // id[:1]
-        sp[1], // id
-      ),
-    };
+  /** get event working dir */
+  public static getPwd(event: EventObject) {
+    const sp = event.taskId.split('-', 2);
+    return path.join(
+      sp[0].substring(0, 4), // yyMM
+      sp[0].substring(4), // dd
+      sp[1].substring(0, 1), // id[:1]
+      sp[1], // id
+    );
   }
 
   protected _getUTCDateString() {

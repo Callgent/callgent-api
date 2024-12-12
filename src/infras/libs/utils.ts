@@ -34,33 +34,38 @@ export class Utils {
     if (txt.trim().toLowerCase() == 'null') return null;
 
     let str = txt;
-    const delim = isArray ? '[]' : '{}';
+    // split code blocks, pick the last one
+    const pcs = str.split(/^```\w*$/m);
+    if (pcs.length > 2) str = pcs[pcs.length - 2];
+    else {
+      const delim = isArray ? '[]' : '{}';
 
-    // TODO find from end to start
-    let idx = str.indexOf(delim[0]);
-    if (idx < 0) return undefined;
+      // TODO find from end to start
+      let idx = str.indexOf(delim[0]);
+      if (idx < 0) return undefined;
 
-    if (idx > 0) str = str.substring(idx);
-    let encloseCount = 1;
-    _l: for (idx = 1; idx < str.length; idx++) {
-      const i = delim.indexOf(str[idx]);
-      switch (i) {
-        case 0:
-          encloseCount++;
-          break;
-        case 1:
-          encloseCount--;
-          if (encloseCount == 0) {
-            idx++;
-            break _l;
-          }
+      if (idx > 0) str = str.substring(idx);
+      let encloseCount = 1;
+      _l: for (idx = 1; idx < str.length; idx++) {
+        const i = delim.indexOf(str[idx]);
+        switch (i) {
+          case 0:
+            encloseCount++;
+            break;
+          case 1:
+            encloseCount--;
+            if (encloseCount == 0) {
+              idx++;
+              break _l;
+            }
+        }
       }
+      if (encloseCount != 0)
+        throw new Error(
+          `Cannot parse to JSON, brackets${delim} not enclosed: toJSON(${txt}, ${isArray})`,
+        );
+      str = str.substring(0, idx);
     }
-    if (encloseCount != 0)
-      throw new Error(
-        `Cannot parse to JSON, brackets${delim} not enclosed: toJSON(${txt}, ${isArray})`,
-      );
-    str = str.substring(0, idx);
 
     try {
       str = jsonrepair(str);

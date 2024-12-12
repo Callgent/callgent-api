@@ -22,9 +22,7 @@ export class EventStoresService {
       where: { AND: [{ NOT: { id } }, { taskId }] },
       orderBy: { id: 'asc' },
     });
-    if (!es?.length)
-      throw new NotFoundException('Invalid event.taskId: ' + taskId);
-    event.context.tgtEvents = es;
+    if (es?.length) event.context.tgtEvents = es; // current event is not included
   }
 
   findOne(eventId: string) {
