@@ -10,7 +10,14 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiSecurity, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiSecurity,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { CallgentsService } from '../../callgents/callgents.service';
 import { CallgentDto } from '../../callgents/dto/callgent.dto';
@@ -18,6 +25,7 @@ import { CreateCallgentDto } from '../../callgents/dto/create-callgent.dto';
 import { EndpointsService } from '../../endpoints/endpoints.service';
 import { EntriesService } from '../../entries/entries.service';
 import { JwtGuard } from '../../infras/auth/jwt/jwt.guard';
+import { RestApiResponse } from '../../restapi/response.interface';
 
 @ApiTags('BFF')
 @ApiSecurity('defaultBearerAuth')
@@ -38,6 +46,28 @@ export class CallgentTreeController {
   /**
    * @returns callgent with entries tree
    */
+  @ApiOkResponse({
+    description: 'callgent with entries',
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
+        {
+          properties: {
+            data: {
+              properties: {
+                children: {
+                  type: 'array',
+                  description:
+                    'array of callgent entries: [{id:"CLIENT"|"SERVER"|"EVENT", children:[], ...},..]',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
   @Get('callgent-entries/:id')
   async findOne(@Param('id') id: string) {
     const callgent = await this.callgentsService.findOne(id);
@@ -51,6 +81,31 @@ export class CallgentTreeController {
   /**
    * @returns new or existing callgent with entries tree
    */
+  @ApiOperation({
+    summary: 'create new callgent, or return existing with same name',
+  })
+  @ApiCreatedResponse({
+    description: 'newly created or existing callgent with existing entries',
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentDto) } } },
+        {
+          properties: {
+            data: {
+              properties: {
+                children: {
+                  type: 'array',
+                  description:
+                    'array of callgent entries: [{id:"CLIENT"|"SERVER"|"EVENT", children:[], ...},..]',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
   @Post('callgent-entries')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
     let callgent = (await this.callgentsService.getByName(

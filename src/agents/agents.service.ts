@@ -12,9 +12,9 @@ import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { Entry } from '../entries/entities/entry.entity';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
-import { ProgressiveRequestEvent } from './events/progressive-request.event';
-import { LLMService } from './llm.service';
 import { Utils } from '../infras/libs/utils';
+import { ProgressiveRequestEvent } from './events/progressive-request.event';
+import { LLMMessage, LLMService } from './llm.service';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
@@ -43,6 +43,211 @@ export class AgentsService {
   // }
 
   /**
+   * choose eps, if epName, directly return
+   */
+  async chooseEndpoints(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+    if (reqEvent.context.epName) return; // needn't choose
+
+    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
+    if (!endpoints?.length)
+      throw new NotFoundException(
+        'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
+      );
+
+    // map from all taskId events
+    const messages: LLMMessage[] = [
+      ...(reqEvent.histories || []),
+      reqEvent,
+    ].reduce((pre: LLMMessage[], h) => {
+      if (h.statusCode < 0) return pre; // ignore error qas
+      pre.push({
+        role: 'user',
+        content: JSON.stringify(h.context.req),
+      });
+
+      // ignore processing/pending
+      if (![1, 2].includes(h.statusCode)) {
+        const resp = h.context.resp
+          ? h.context.resp
+          : { statusCode: h.statusCode, message: h.message };
+        pre.push({
+          role: 'assistant',
+          content: JSON.stringify(resp),
+        });
+      }
+      return pre;
+    }, []);
+
+    const {
+      id,
+      srcId,
+      dataType: cenAdaptor,
+      context: { callgentName, progressive, req },
+    } = reqEvent;
+
+    const [epName, argName] = ['', ''];
+    const { usedEndpoints, unsureArgs } = await this.llmService.chat(
+      'chooseEndpoints',
+      messages,
+      {
+        callgentName,
+        endpoints,
+        // cenAdaptor,
+        // histories,
+      },
+      {
+        bizKey: id,
+        resultSchema: {
+          usedEndpoints: [{ epName: '', usedFor: '' }],
+          unsureArgs: {
+            [epName]: {
+              [argName]: {
+                'extract-from-user-request-or-files': {
+                  result: true,
+                  explain: '',
+                },
+                'can-be-retrieved-from-service-calls': {
+                  result: true,
+                  explain: '',
+                },
+              },
+            },
+          },
+        },
+        // validate endpoints args exists
+        validate: (gen) =>
+          gen['usedEndpoints'].length &&
+          gen['usedEndpoints'].every((ep0) => {
+            if (endpoints.find((ep) => ep.name == ep0.epName)) return true;
+            throw new Error('Chosen endpoint not exits ' + ep0.epName);
+          }) &&
+          gen['unsureArgs'] &&
+          Object.entries(gen['unsureArgs']).every(([epName, unsureArgs]) => {
+            const ep = endpoints.find((ep) => ep.name == epName);
+            if (!ep) throw new Error('Chosen endpoint not exits ' + epName);
+
+            const args = unsureArgs ? Object.keys(unsureArgs) : [];
+            const { parameters, requestBody } = (ep.params || {}) as any;
+            const mediaTypes = requestBody
+              ? Object.values(requestBody?.content)
+              : [];
+            const reqProps = mediaTypes.length
+              ? (mediaTypes[0] as any).schema.properties
+              : {};
+
+            return args.every((argName) => {
+              if (
+                parameters?.find((p) => p.name == argName) ||
+                this._hasOpenAPIProperty(reqProps, argName)
+              )
+                return true;
+              throw new Error(
+                `Arg '${argName}' not found in endpoint '${epName}'`,
+              );
+            });
+          }),
+      },
+    );
+
+    Object.entries(unsureArgs).forEach(([ep, args]) => {
+      Object.entries(args).forEach(([n, arg]) => {
+        if (Object.values(arg).some((v) => v?.result)) delete args[n];
+      });
+      if (!Object.keys(args).length) delete unsureArgs[ep];
+    });
+
+    messages.pop(); // remove last assistant message
+    const chosen = await this.llmService.chat(
+      'askEndpointsArgs',
+      messages,
+      {
+        callgentName,
+        endpoints,
+        // cenAdaptor,
+        unsureArgs,
+        usedEndpoints,
+      },
+      {
+        resultSchema: {
+          usedEndpoints: [{ epName: '', usedFor: '' }],
+          question: '',
+        },
+        bizKey: id,
+        // validate endpoints exists
+        validate: (gen) =>
+          gen['usedEndpoints'].length &&
+          gen['usedEndpoints'].every(({ epName }) => {
+            if (!endpoints.find((ep) => ep.name == epName))
+              throw new Error('Chosen endpoint not exits ' + epName);
+            return true;
+          }),
+      },
+    );
+
+    if (chosen.question) {
+      if (!progressive)
+        throw new BadRequestException(
+          'Question from service: ' + chosen.question,
+        );
+
+      // emit progressive requesting event
+      const data = await this.eventListenersService.emit(
+        new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
+          progressive,
+          // mapped,
+        }),
+      );
+      if (!data.statusCode)
+        // direct return, no persistent async
+        return this.map2EndpointsProgressive(data, reqEvent);
+
+      if (data.statusCode == 2)
+        // pending
+        return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
+      throw new HttpException(data.message, data.statusCode);
+    }
+
+    const chosenEps = chosen.usedEndpoints.map((ep) => ep.epName);
+    const eps = reqEvent.context.endpoints.filter((ep) =>
+      chosenEps.includes(ep.name),
+    );
+    if (!eps.length)
+      throw new BadRequestException(
+        'Error: mapped to empty endpoints: ' + chosen,
+      );
+
+    reqEvent.context.endpoints = eps;
+    reqEvent.context.map2Endpoints = chosen;
+  }
+
+  private _hasOpenAPIProperty(json, propertyName) {
+    // Base case: if the object is null or not an object, return false
+    if (typeof json !== 'object' || json === null) return false;
+
+    // Check if the current level has the property
+    if (propertyName in json) return true;
+
+    // Check special case for arrays: look into 'items'
+    if (json.type === 'array' && json.items) {
+      return this._hasOpenAPIProperty(json.items, propertyName);
+    }
+
+    // Recursively check in the properties of the current object
+    if (json.properties) {
+      for (const key of Object.keys(json.properties)) {
+        if (this._hasOpenAPIProperty(json.properties[key], propertyName)) {
+          return true;
+        }
+      }
+    }
+
+    // If no matches found, return false
+    return false;
+  }
+
+  /**
    * map req to an API endpoint
    * - if epName means invoke: map to exact endpoint, load/gen mapArgs(req), no question
    * - if no epName request: generate exec macro function, may question
@@ -65,7 +270,7 @@ export class AgentsService {
     if (!mapped) return;
     if ('data' in mapped) return mapped;
 
-    reqEvent.context.map2Endpoints = mapped;
+    // reqEvent.context.map2Endpoints = mapped;
   }
 
   /** progressive not supported for invoking */
@@ -95,11 +300,11 @@ export class AgentsService {
     if (!endpoint.params || Object.keys(endpoint.params).length == 0)
       return { req2Args: '() => ({})', requestArgs: {} }; // no params
 
-    const mapped = await this.llmService.template(
+    const mapped = await this.llmService.query(
       'map2Endpoint',
       { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
       {
-        returnType: { req2Args: '' },
+        resultSchema: { req2Args: '' },
         bizKey: id,
         validate: (data) => {
           try {
@@ -141,7 +346,7 @@ export class AgentsService {
       return r;
     });
 
-    const mapped = await this.llmService.template(
+    const mapped = await this.llmService.query(
       'map2Endpoints',
       {
         req,
@@ -151,7 +356,7 @@ export class AgentsService {
         endpoints,
       },
       {
-        returnType: {
+        resultSchema: {
           question: '',
           endpoints: [''],
           summary: '',
@@ -172,24 +377,20 @@ export class AgentsService {
         );
 
       // emit progressive requesting event
-      const {
-        data: prEvent,
-        statusCode,
-        message,
-      } = await this.eventListenersService.emit(
+      const data = await this.eventListenersService.emit(
         new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
           progressive,
           // mapped,
         }),
       );
-      if (!statusCode)
+      if (!data.statusCode)
         // direct return, no persistent async
-        return this.map2EndpointsProgressive(prEvent, reqEvent);
+        return this.map2EndpointsProgressive(data, reqEvent);
 
-      if (statusCode == 2)
+      if (data.statusCode == 2)
         // pending
         return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
-      throw new HttpException(message, statusCode);
+      throw new HttpException(data.message, data.statusCode);
     } else {
       const endpoints = reqEvent.context.endpoints.filter((ep) =>
         mapped.endpoints.includes(ep.name),
@@ -243,11 +444,11 @@ export class AgentsService {
     requestArgs = requestArgs
       ? Object.entries(requestArgs).map(([name, value]) => ({ name, value }))
       : [];
-    const mapped = await this.llmService.template(
+    const mapped = await this.llmService.query(
       'convert2Response',
       { requestArgs, resp, ep },
       {
-        returnType: { statusCode: 200, data: null },
+        resultSchema: { statusCode: 200, data: null },
         bizKey: eventId,
       },
     ); // TODO validating `mapping`
@@ -270,8 +471,8 @@ export class AgentsService {
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     totally?: boolean;
   }) {
-    const result = await this.llmService.template('summarizeEntry', data, {
-      returnType: { summary: '', instruction: '', totally: true },
+    const result = await this.llmService.query('summarizeEntry', data, {
+      resultSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.entry.id,
     });
     return result;
@@ -291,8 +492,8 @@ export class AgentsService {
     olds?: Omit<Entry, 'securities' | 'createdAt'>[];
     totally?: boolean;
   }) {
-    const result = await this.llmService.template('summarizeCallgent', data, {
-      returnType: { summary: '', instruction: '', totally: true },
+    const result = await this.llmService.query('summarizeCallgent', data, {
+      resultSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.callgent.id,
     });
 
@@ -304,8 +505,8 @@ export class AgentsService {
     callgent: { name: string; summary: string; instruction: string };
     bizKey: string;
   }) {
-    const result = await this.llmService.template('genVue1Route', data, {
-      returnType: [
+    const result = await this.llmService.query('genVue1Route', data, {
+      resultSchema: [
         {
           name: '',
           path: '',
@@ -357,8 +558,8 @@ export class AgentsService {
     bizKey: string;
   }) {
     let compName = '';
-    const result = await this.llmService.template('genVue2Components', data, {
-      returnType: {
+    const result = await this.llmService.query('genVue2Components', data, {
+      resultSchema: {
         [compName]: {
           file: '',
           endpoints: [''],
@@ -413,8 +614,8 @@ export class AgentsService {
     packages: string[];
     bizKey: string;
   }) {
-    const result = await this.llmService.template('genVue3Component', data, {
-      returnType: {
+    const result = await this.llmService.query('genVue3Component', data, {
+      resultSchema: {
         code: '',
         packages: [''],
         importedStores: [
@@ -464,8 +665,8 @@ export class AgentsService {
     apiBaseUrl: string;
     bizKey: string;
   }) {
-    const result = await this.llmService.template('genVue4Store', data, {
-      returnType: { code: '', packages: [''] },
+    const result = await this.llmService.query('genVue4Store', data, {
+      resultSchema: { code: '', packages: [''] },
       bizKey: data.bizKey,
       validate: (gen) =>
         gen.packages.every((p) => {
@@ -502,8 +703,8 @@ export class AgentsService {
     packages: string[];
     bizKey: string;
   }) {
-    const result = await this.llmService.template('genVue5View', data, {
-      returnType: { code: '', packages: [''] },
+    const result = await this.llmService.query('genVue5View', data, {
+      resultSchema: { code: '', packages: [''] },
       bizKey: data.bizKey,
       validate: (gen) =>
         gen.packages?.every((p) => {

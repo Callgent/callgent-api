@@ -35,7 +35,7 @@ export class Utils {
 
     let str = txt;
     // split code blocks, pick the last one
-    const pcs = str.split(/^```\w*$/m);
+    const pcs = str.split(/^```[\w\s]*$/m);
     if (pcs.length > 2) str = pcs[pcs.length - 2];
     else {
       const delim = isArray ? '[]' : '{}';
@@ -81,7 +81,7 @@ export class Utils {
   }
 
   static formalApiName = (method: string, path: string) =>
-    `${method.toUpperCase()} ${path.toLowerCase()}`;
+    `${method.toUpperCase()} ${path}`;
 
   static toFunction<T extends Function>(funCode: string): T {
     try {

@@ -38,10 +38,7 @@ export class EventListenersService {
    * @returns: { data: event, message?, statusCode?: 1-processing, 0-done, 2-pending, (<0 || >399)-error}
    */
   @Transactional()
-  async emit<T extends EventObject>(
-    data: T,
-    timeout = 0,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
+  async emit<T extends EventObject>(data: T, timeout = 0): Promise<T> {
     // load persist listeners
     const listeners = await this.loadListeners(data);
 
@@ -54,7 +51,7 @@ export class EventListenersService {
       ? Promise.race([
           result,
           Utils.sleep(timeout).then(() => ({
-            data,
+            ...data,
             statusCode: 1,
             message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
           })),
@@ -69,7 +66,7 @@ export class EventListenersService {
   async resume<T extends EventObject>(
     event: string | EventStore,
     update?: (event: EventStore) => Promise<EventStore>,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
+  ): Promise<T> {
     if (typeof event === 'string')
       event = (await this.loadEvent(event)) || event;
     if (!event || typeof event === 'string')
@@ -101,18 +98,15 @@ export class EventListenersService {
    * @param urlOnly `EVENT` type callback only applicable on resuming
    */
   protected async _invokeCallback<T extends EventObject>(
-    result: { data: T; statusCode?: number; message?: string },
+    data: T,
     urlOnly = true,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
-    if (result.statusCode) return result; // not done, no cb
+  ): Promise<T> {
+    if (data.statusCode) return data; // not done, no cb
 
     // FIXME
-    const {
-      data: { callbackType, callback },
-    } = result;
-    if (!callback) return result;
-    if (callbackType === 'EVENT')
-      return urlOnly ? result : this.resume(callback);
+    const { callbackType, callback } = data;
+    if (!callback) return data;
+    if (callbackType === 'EVENT') return urlOnly ? data : this.resume(callback);
 
     // URL callback
   }
@@ -123,9 +117,10 @@ export class EventListenersService {
     listeners: EventListener[],
     event: T,
     funName?: string,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
+  ): Promise<T> {
     // invoke listeners, supports persisted-async
-    let [statusCode, idx] = [1, 0];
+    let idx = 0;
+    event.statusCode = 1; // processing
     try {
       for (; idx < listeners.length; ) {
         if (event.stopPropagation) break;
@@ -138,40 +133,33 @@ export class EventListenersService {
           // if no result, empty funName
           funName = result?.resumeFunName;
 
-          statusCode = funName
+          event.statusCode = funName
             ? 2 // pending
             : event.stopPropagation || idx >= listeners.length
               ? 0 // done
               : 1; // processing
           if (funName || event.stopPropagation) break;
         } catch (e) {
-          statusCode = e.status || -1; // error
-          const message =
+          event.statusCode = e.status || -1; // error
+          event.message =
             e.response?.data?.message || `[${e.name}] ${e.message}`;
           e.status < 500 || this.logger.error(e);
-          return {
-            data: event,
-            statusCode,
-            message,
-          };
+          return event;
         }
       }
-      return {
-        data: event,
-        statusCode,
-      };
+      return event;
     } finally {
       const nextListener =
-        statusCode == 1
+        event.statusCode == 1
           ? listeners[idx] // processing: next
-          : statusCode == 0 || (statusCode > 2 && statusCode < 399)
+          : event.statusCode == 0 ||
+              (event.statusCode > 2 && event.statusCode < 399)
             ? null // success: null
             : listeners[idx - 1]; // error/pending: current
       await this.eventStoresService.upsertEvent(
         event,
         funName || null,
         nextListener?.id || null,
-        statusCode,
       );
     }
   }

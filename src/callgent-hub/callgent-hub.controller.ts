@@ -31,6 +31,7 @@ export class CreateCallgentDtoEx extends CreateCallgentDto {
     type: 'integer',
     format: 'int32',
     required: true,
+    nullable: false,
   })
   @IsNotEmpty()
   @IsInt()

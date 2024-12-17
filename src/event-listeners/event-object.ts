@@ -34,6 +34,10 @@ export class EventObject {
   /** if true, the event will not be propagated to other listeners */
   public declare stopPropagation: boolean;
 
+  /** event status/msg:  <0: error, 0: done, 1: processing, 2: pending, others: http status */
+  public statusCode?: number;
+  public message?: string;
+
   /**
    * @returns {{ taskId: string, pwd: string }}, taskId{task id}: `{yyMMdd}-{nanoid}`, pwd{task working dir}: `{yyMM}/{dd}/{nanoid[:1]}/nanoid`
    */

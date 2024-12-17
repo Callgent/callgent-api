@@ -85,11 +85,7 @@ export class WebpageController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
-    const {
-      statusCode: code,
-      data,
-      message,
-    } = await this.eventListenersService.emit(e);
+    const data = await this.eventListenersService.emit(e);
     // event listeners:
     // preprocess, c-auth, load target events, load eps, (choose eps?),
     // [gen view/model/view-model from summary, response]
@@ -98,12 +94,15 @@ export class WebpageController {
     // return generated webpage
 
     const ctx = data?.context;
-    // FIXME data
-    const statusCode = code || 200;
+    const status = data.statusCode;
+    const message = data.message;
+    // delete data.statusCode, delete data.message;
     // code cannot < 0
-    res
-      .status(statusCode < 0 ? 418 : statusCode < 200 ? 200 : statusCode)
-      .send({ data: { ...data, response: ctx.resp }, statusCode, message });
+    res.status(status < 0 ? 418 : status < 200 ? 200 : status).send({
+      data: { ...data, response: ctx.resp },
+      statusCode: status,
+      message,
+    });
   }
 
   @ApiOperation({ summary: 'To invoke pregenerated pages.' })
@@ -145,7 +144,7 @@ export class WebpageController {
 
     const { entry, callgent } = await this._load(callgentId, entryId);
 
-    const result = await this.eventListenersService.emit(
+    const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
         entry.id,
         entry.adaptorKey,
@@ -162,9 +161,9 @@ export class WebpageController {
       parseInt(timeout) || 0, //  sync timeout
     );
     // FIXME data
-    const code = result.statusCode || 200;
+    const status = data.statusCode;
     // code cannot < 0
-    res.status(code < 0 ? 418 : code < 200 ? 200 : code).send(result);
+    res.status(status < 0 ? 418 : status < 200 ? 200 : status).send({ data });
   }
 
   private async _load(callgentId: string, entryId: string) {

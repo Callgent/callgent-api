@@ -4,6 +4,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { EventObject } from '../event-listeners/event-object';
 import { Utils } from '../infras/libs/utils';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 
 @Injectable()
 export class EventStoresService {
@@ -12,17 +13,25 @@ export class EventStoresService {
   ) {}
 
   /** load all events of taskId if not empty */
-  async loadTargetEvents(event: EventObject) {
+  async loadClientEventHistories(event: ClientRequestEvent) {
     const { id, taskId } = event;
     if (!taskId) return;
 
     const prisma = this.txHost.tx as PrismaClient;
     const es = await prisma.eventStore.findMany({
-      select: { id: true, eventType: true, dataType: true }, // TODO, what to select
-      where: { AND: [{ NOT: { id } }, { taskId }] },
-      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        dataType: true,
+        context: true,
+        statusCode: true,
+        message: true,
+      },
+      where: {
+        AND: [{ NOT: { id } }, { taskId }, { eventType: 'CLIENT_REQUEST' }],
+      },
+      orderBy: { pk: 'asc' },
     });
-    if (es?.length) event.context.tgtEvents = es; // current event is not included
+    if (es?.length) event.histories = es as any[]; // current event is not included
   }
 
   findOne(eventId: string) {
@@ -33,13 +42,8 @@ export class EventStoresService {
   }
 
   @Transactional()
-  upsertEvent(
-    event: EventObject,
-    funName: string,
-    listenerId: string,
-    statusCode: number,
-  ) {
-    if (statusCode === 0) {
+  upsertEvent(event: EventObject, funName: string, listenerId: string) {
+    if (event.statusCode === 0) {
       // if event success, keep the latest listenerId and funName
       funName || (funName = undefined);
       listenerId || (listenerId = undefined);
@@ -52,8 +56,6 @@ export class EventStoresService {
       stopPropagation: event.stopPropagation,
       funName,
       listenerId,
-      statusCode,
-      // FIXME message,
     };
     return prisma.eventStore.upsert({
       where: { id: event.id },

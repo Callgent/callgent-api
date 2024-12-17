@@ -30,6 +30,12 @@ export class ClientRequestEvent extends EventObject {
     super(entryId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
     Object.assign(this.context, context);
     this.context.req = req;
+
+    Object.defineProperty(this, 'histories', {
+      value: false,
+      writable: true,
+      enumerable: false,
+    });
   }
   public declare readonly context: {
     req: any;
@@ -45,6 +51,14 @@ export class ClientRequestEvent extends EventObject {
     callerId?: string;
     epName?: string;
     progressive?: string;
+    map2Endpoints: {
+      usedEndpoints: {
+        epName: string;
+        usedFor: string;
+      }[];
+      question: string;
+    };
     [key: string]: any;
   };
+  public declare histories?: ClientRequestEvent[];
 }

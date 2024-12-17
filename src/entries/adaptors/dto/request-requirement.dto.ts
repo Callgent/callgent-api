@@ -15,31 +15,31 @@ export class RequestRequirement {
   @IsString()
   requirement: string;
 
-  @ApiProperty({
-    description:
-      'When extract service invoking args from requirement, whether ignore optional or nullable service params if absent',
-    type: 'boolean',
-    default: true,
-    nullable: true,
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
-  ignoreOptionalOrNullableParamsIfAbsentInRequirement = true;
+  // @ApiProperty({
+  //   description:
+  //     'When extract service invoking args from requirement, whether ignore optional or nullable service params if absent',
+  //   type: 'boolean',
+  //   default: true,
+  //   nullable: true,
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsBoolean()
+  // @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
+  // ignoreOptionalOrNullableParamsIfAbsentInRequirement = true;
 
-  @ApiProperty({
-    description:
-      'When extract service invoking args from requirement, whether to use default value of service params if absent',
-    type: 'boolean',
-    default: true,
-    nullable: true,
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
-  useDefaultParamValuesIfAbsentInRequirement = true;
+  // @ApiProperty({
+  //   description:
+  //     'When extract service invoking args from requirement, whether to use default value of service params if absent',
+  //   type: 'boolean',
+  //   default: true,
+  //   nullable: true,
+  //   required: false,
+  // })
+  // @IsOptional()
+  // @IsBoolean()
+  // @Transform(({ value }) => value === 'true') // manual transform to boolean, for multipart form
+  // useDefaultParamValuesIfAbsentInRequirement = true;
 
   @ApiProperty({
     type: 'array',

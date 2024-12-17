@@ -23,22 +23,23 @@ export class LLMService {
   private readonly logger = new Logger(LLMService.name);
 
   /**
+   * single round request-response query
+   *
    * @param template prompt template name
    * @param args  prompt args
-   * @param returnType if not empty, try to parse the response as the specified json. for index signature, do this: const key=''; returnType = { [key]: any }
-   * @param validate if error: retry default times(adding error msgs into prompt), default retry is 3, else stop retry
+   * @param args { resultSchema: "returning json schema", validate: "validate function to check generated json" }
    */
   @Transactional()
-  async template<T>(
+  async query<T>(
     template: string,
     args: { [key: string]: any },
     {
-      returnType,
       bizKey,
+      resultSchema,
       validate,
     }: {
-      returnType?: T;
       bizKey?: string;
+      resultSchema?: T;
       validate?: (generated: T, retry: number) => boolean | void;
     },
   ): Promise<T> {
@@ -68,7 +69,7 @@ export class LLMService {
             stream: false,
             models: this.llmModels,
             route: 'fallback',
-            temperature: 0.5,
+            temperature: 0.5, // TODO
           });
           llmModel = resp.model;
 
@@ -82,11 +83,11 @@ export class LLMService {
           llmResult = ret = choice.text as any;
         }
 
-        if (returnType) {
-          const isArray = Array.isArray(returnType);
+        if (resultSchema) {
+          const isArray = Array.isArray(resultSchema);
           ret = Utils.toJSON(ret as any, isArray);
           // check type
-          this._checkJsonType(returnType, ret, isArray);
+          this._checkJsonType(resultSchema, ret, isArray);
         }
         valid = !validate || validate(ret, i);
       } catch (e) {
@@ -114,8 +115,104 @@ export class LLMService {
     return ret;
   }
 
-  protected _checkJsonType(returnType: any, val: any, isArray: boolean) {
-    const entries = Object.entries(isArray ? returnType[0] : returnType);
+  /**
+   * multi-turn chat. not cached
+   *
+   * @param template system prompt template
+   * @param messages conversation messages, including current user message
+   * @param args { resultSchema: "returning json schema", resultPrompt: "prompt for returning schema", validate: "validate function to check generated json" }
+   * @returns assistant response will be appended to messages
+   */
+  @Transactional()
+  async chat<T>(
+    template: string,
+    originalMessages: LLMMessage[],
+    args: { [key: string]: any },
+    {
+      bizKey,
+      resultSchema,
+      validate,
+    }: {
+      bizKey?: string;
+      resultSchema?: T;
+      resultPrompt?: string;
+      validate?: (generated: T, retry: number) => boolean | void;
+    },
+  ): Promise<T> {
+    const prompt = await this._prompt(template, args);
+    // template prompt as system message
+    const messages: LLMMessage[] = [
+      { role: 'system', content: prompt },
+      ...originalMessages,
+    ];
+
+    const usrMsg = messages.at(-1);
+    if (usrMsg.role !== 'user')
+      throw new Error('Current message must be role=user');
+
+    let llmModel: string,
+      ret: T,
+      llmResult = '',
+      errorMessage = '';
+    let [maxRetry, valid] = [3, undefined];
+    for (let i = 0; i < maxRetry; i++) {
+      try {
+        if (!ret) {
+          if (errorMessage)
+            usrMsg.content += `\n\nThere was a mistake, please retry generating:\n ${errorMessage}`;
+          const resp = await this._completion({
+            messages,
+            stream: false,
+            models: this.llmModels,
+            route: 'fallback',
+            temperature: 0.5, // TODO
+          });
+          llmModel = resp.model;
+
+          if (!resp?.choices?.length) {
+            valid = false;
+            errorMessage = `LLM service not available, error=${(resp as any)?.error?.message}`;
+            break;
+          }
+
+          const choice = resp.choices[0] as NonStreamingChoice;
+          llmResult = ret = choice.message.content as any;
+        }
+
+        if (resultSchema) {
+          const isArray = Array.isArray(resultSchema);
+          ret = Utils.toJSON(ret as any, isArray);
+          // check type
+          this._checkJsonType(resultSchema, ret, isArray);
+        }
+        valid = !validate || validate(ret, i);
+      } catch (e) {
+        // add error to conversation to optimize result
+        errorMessage = e.message;
+        this.logger.warn(
+          '[retry %s %d/%d] Fail validating generated content: %s',
+          template,
+          i + 1,
+          maxRetry,
+          errorMessage,
+        );
+        ret = undefined;
+        continue; // default retry
+      }
+      break; // force stop;
+    }
+    if (!valid)
+      throw new Error(
+        'Fail validating generated content, ' +
+          [llmModel, template, errorMessage],
+      );
+
+    originalMessages.push({ role: 'assistant', content: llmResult });
+    return ret;
+  }
+
+  protected _checkJsonType(resultSchema: any, val: any, isArray: boolean) {
+    const entries = Object.entries(isArray ? resultSchema[0] : resultSchema);
     const a = isArray ? val : [val];
     for (const v of a) {
       entries.forEach(([key, type]) => {
@@ -237,7 +334,7 @@ export class LLMService {
 // Definitions of subtypes are below
 type LLMRequest = {
   // Either "messages" or "prompt" is required
-  messages?: Message[];
+  messages?: LLMMessage[];
   prompt?: string;
 
   // If "model" is unspecified, uses the user's default
@@ -365,7 +462,7 @@ type ImageContentPart = {
 
 type ContentPart = TextContent | ImageContentPart;
 
-type Message = {
+export type LLMMessage = {
   role: 'user' | 'assistant' | 'system' | 'tool';
   // ContentParts are only for the 'user' role:
   content: string | ContentPart[];

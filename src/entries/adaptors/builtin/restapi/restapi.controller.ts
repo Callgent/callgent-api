@@ -125,11 +125,7 @@ export class RestApiController {
       EventObject.getPwd(e),
     );
 
-    const {
-      statusCode: code,
-      data,
-      message,
-    } = await this.eventListenersService.emit(e);
+    const data = await this.eventListenersService.emit(e);
     // preprocess, c-auth, load target events, load eps,
     // chooseEndpoints, map2Endpoints(s-auth for all eps/entries, invoke-SEPs)
 
@@ -137,27 +133,33 @@ export class RestApiController {
       'x-callgent-reqId': data.id,
       'x-callgent-taskId': data.taskId,
     };
-    code && (headers['x-callgent-status'] = code);
+    const statusCode = data.statusCode;
+    const message = data.message;
+    statusCode && (headers['x-callgent-status'] = statusCode);
+    message && (headers['x-callgent-message'] = message);
+    delete data.statusCode, delete data.message;
 
     const resp = data?.context.resp;
     if (resp) {
-      resp.statusText && (headers['x-callgent-message'] = resp.statusText);
       resp.headers && Object.assign(headers, resp.headers);
       const body = resp.data || {
         statusCode: resp.status,
         message: resp.statusText,
       };
-      res
-        .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
-        .headers(headers)
-        .send(body);
+      res.status(resp.status).headers(headers).send(body);
       return body;
     }
 
     // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
-    const statusCode = code ? (code < 0 ? 418 : code < 200 ? 202 : code) : 200;
-    const body = { data, statusCode: code, message };
-    res.status(statusCode).headers(headers).send(body);
+    const status = statusCode
+      ? statusCode < 0
+        ? 418
+        : statusCode < 200
+          ? 202
+          : statusCode
+      : 200;
+    const body = { data, statusCode, message };
+    res.status(status).headers(headers).send(body);
     return body;
   }
 
@@ -222,11 +224,7 @@ export class RestApiController {
     // TODO owner defaults to caller callgent
     const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
 
-    const {
-      statusCode: code,
-      data,
-      message,
-    } = await this.eventListenersService.emit(
+    const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
         entry.id,
         entry.adaptorKey,
@@ -248,27 +246,33 @@ export class RestApiController {
       'x-callgent-reqId': data.id,
       'x-callgent-taskId': data.taskId,
     };
-    code && (headers['x-callgent-status'] = code);
+    const statusCode = data.statusCode;
+    const message = data.message;
+    statusCode && (headers['x-callgent-status'] = statusCode);
+    message && (headers['x-callgent-message'] = message);
+    delete data.statusCode, delete data.message;
 
     const resp = data?.context.resp;
     if (resp) {
-      resp.statusText && (headers['x-callgent-message'] = resp.statusText);
       resp.headers && Object.assign(headers, resp.headers);
       const body = resp.data || {
         statusCode: resp.status,
         message: resp.statusText,
       };
-      res
-        .status(resp.status < 0 ? 418 : resp.status < 200 ? 202 : resp.status)
-        .headers(headers)
-        .send(body);
+      res.status(resp.status).headers(headers).send(body);
       return body;
     }
 
     // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
-    const statusCode = code ? (code < 0 ? 418 : code < 200 ? 202 : code) : 200;
-    const body = { data, statusCode: code, message };
-    res.status(statusCode).headers(headers).send(body);
+    const status = statusCode
+      ? statusCode < 0
+        ? 418
+        : statusCode < 200
+          ? 202
+          : statusCode
+      : 200;
+    const body = { data, statusCode, message };
+    res.status(status).headers(headers).send(body);
     return body;
   }
 

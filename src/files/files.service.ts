@@ -13,7 +13,7 @@ export class FilesService {
 
   /** save into task context dir */
   async save(files: File[], pwd: string) {
-    if (!files?.length) return [];
+    if (!files?.length) return undefined;
 
     pwd = path.join(this.UPLOAD_ROOT_DIR, pwd);
     if (!fs.existsSync(pwd)) fs.mkdirSync(pwd, { recursive: true });
