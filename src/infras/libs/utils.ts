@@ -3,19 +3,29 @@ import { jsonrepair } from 'jsonrepair';
 import { nanoid, urlAlphabet } from 'nanoid';
 
 export class Utils {
-  /** @returns a random uuid, specifically not starts with '-' */
-  static uuid(size?: number) {
-    for (;;) {
-      const id = nanoid(size);
-      if (id[0] != '-') return id;
-    }
+  /**
+   * @param opt - size: length of the uuid, raw: if false, prefix uuid with intToBase64(mins) since `2024-12-25 08:35`
+   * @returns a random uuid, specifically not starts with '-'
+   */
+  static uuid(opt?: { size?: number; raw?: boolean }) {
+    if (opt?.raw)
+      for (;;) {
+        const id = nanoid(opt?.size);
+        if (id[0] != '-') return id;
+      }
+
+    // mins = now - `2024-12-25 08:35` + 262144, intToBase64(262144) = '1000'
+    // need 31.4 years to reach 'zzzz'
+    const prefix = ((Date.now() / 60000) | 0) - 28656451;
+    return Utils.intToBase64(prefix) + nanoid(opt?.size);
   }
 
   static intToBase64(num: number) {
+    if (num === 0) return '0';
     let result = '';
     while (num > 0) {
-      result += urlAlphabet[num % 64];
-      num = Math.floor(num / 64);
+      result = urlAlphabet[num & 63] + result;
+      num >>>= 6;
     }
     return result;
   }
@@ -92,6 +102,15 @@ export class Utils {
     } catch (e) {
       throw new Error('Invalid function code, msg: ' + e.message);
     }
+  }
+
+  static uniqueBy<T>(arr: T[], key: keyof T) {
+    const exists = new Set();
+    return arr?.filter((x) => {
+      if (exists.has(x[key])) return false;
+      exists.add(x[key]);
+      return true;
+    });
   }
 }
 

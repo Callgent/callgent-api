@@ -142,7 +142,7 @@ export class EventListenersService {
         } catch (e) {
           event.statusCode = e.status || -1; // error
           event.message =
-            e.response?.data?.message || `[${e.name}] ${e.message}`;
+            e.response?.data?.message || `${e.message}`;
           e.status < 500 || this.logger.error(e);
           return event;
         }

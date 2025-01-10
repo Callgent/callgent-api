@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { File } from 'fastify-multer/lib/interfaces';
 import fs from 'fs';
 import path from 'path';
+import { RequestFile } from '../entries/adaptors/dto/request-requirement.dto';
 
 @Injectable()
 export class FilesService {
@@ -12,7 +13,7 @@ export class FilesService {
   }
 
   /** save into task context dir */
-  async save(files: File[], pwd: string) {
+  async save(files: File[], pwd: string): Promise<RequestFile[]> {
     if (!files?.length) return undefined;
 
     pwd = path.join(this.UPLOAD_ROOT_DIR, pwd);

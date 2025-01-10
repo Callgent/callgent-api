@@ -51,13 +51,6 @@ export class ClientRequestEvent extends EventObject {
     callerId?: string;
     epName?: string;
     progressive?: string;
-    map2Endpoints: {
-      usedEndpoints: {
-        epName: string;
-        usedFor: string;
-      }[];
-      question: string;
-    };
     [key: string]: any;
   };
   public declare histories?: ClientRequestEvent[];

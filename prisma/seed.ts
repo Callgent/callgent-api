@@ -113,41 +113,13 @@ function initEventListeners(
       priority: (priority += 100),
     },
     {
-      id: 'CR-CHOOSE-ENDPOINTS',
-      srcId: '*',
-      tenantPk: 0,
-      eventType: 'CLIENT_REQUEST',
-      dataType: '*',
-      serviceType: 'SERVICE',
-      serviceName: 'AgentsService',
-      funName: 'chooseEndpoints',
-      description:
-        'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
-      createdBy: 'GLOBAL',
-      priority: (priority += 100),
-    },
-    {
       id: 'CR-MAP-2-ENDPOINTS',
       srcId: '*',
       tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
-      serviceName: 'AgentsService',
-      funName: 'map2Endpoints',
-      description:
-        'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
-      createdBy: 'GLOBAL',
-      priority: (priority += 100),
-    },
-    {
-      id: 'CR-MAP-2-ENDPOINTS',
-      srcId: '*',
-      tenantPk: 0,
-      eventType: 'CLIENT_REQUEST',
-      dataType: '*',
-      serviceType: 'SERVICE',
-      serviceName: 'AgentsService',
+      serviceName: 'ScriptAgentService',
       funName: 'map2Endpoints',
       description:
         'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
@@ -203,7 +175,7 @@ async function initLlmTemplates(
       name: 'map2Endpoint',
       prompt: `given below service endpoint:
 service \`{{=it.callgentName}}\` { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },
 {{~}}}
 
 Please generate js function req2Args(request) to map below request into endpoint args following the openAPI params schema:
@@ -213,168 +185,507 @@ output single-line json object below:
 { "req2Args": "Full code of js function req2Args(request_object):ArgsMap, to map request into endpoint args. ArgsMap is a k-v map of vars in endpoint.params(no conflict keys, no more props than it), all values just extracted from request_object, but no direct constant in code from request_object, all calculated from request_object props as variables!" },
 output just json no explanation`,
     },
-    //     {
-    //       name: 'chooseEndpoints',
-    //       prompt: `You are a highly skilled API usage assistant specializing in analyzing OpenAPI documentation and assisting users in designing solutions based on their described requirements in conversations. Your tasks include:
-
-    // 1. **API Endpoint Selection**:
-    //    - Analyze the user's requirements and determine which endpoints from the OpenAPI documentation are relevant
-    //    - Describe each endpoint's purpose in achieving the user's goals
-    //    - Include all endpoints that might be invoked, even if not finally used
-
-    // 2. **Parameter Analysis**:
-    //    - For each selected endpoint, analyze its parameters to identify:
-    //      - Parameters that can be directly extracted from the user's requirements, \`can-extract-from-user-descriptions-or-files\`
-    //      - Parameters that depend on the results of previous API queries, \`can-be-retrieved-from-service-calls\`
-    //      - Parameters that are \`optional\`, \`nullable\`, or have default values \`with-default-value\`, and can thus be ignored
-    //    - Strictly ensure that parameters do not contain mock, fake, or imaginary data. Parameters must be sourced from real data provided by the user, extracted from prior API calls, or obtained from other reliable sources
-
-    // 3. **Output Requirements**:
-    //    - Present the analysis in the following JSON format:
-    //    {
-    //      "usedEndpoints": [{"epName":"the original name of chosen endpoints to be invoked, it's ok to list if not finally used", "usedFor":"description of functions related to user goal"},...],
-    //      "unsureArgs":{["epName"]:{["argName"]:{"optional":false,"nullable":false,"with-default-value":false,"can-extract-from-user-descriptions-or-files":false,"can-be-retrieved-from-service-calls":false}}, ...]
-    //    }
-
-    // 4. **Handling Uncertainty**:
-    //    - If the user's description lacks information necessary for complete parameter analysis, highlight these gaps clearly in the \`unsureArgs\` section of the JSON
-
-    // **Guidelines**:
-    // - Be precise and detailed in your analysis
-    // - Avoid guessing or assuming missing details; always justify choices based on the documentation and the user's input
-    // - Use clear and concise language to ensure the user can understand the results
-
-    // ## The given service endpoint APIs:
-    // \`\`\`json
-    // { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-    //   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-    // }
-    // \`\`\``,
-    //     },
     {
       name: 'chooseEndpoints',
-      prompt: `You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to fulfill their specific needs. Additionally, you need to analyze the parameters of the selected APIs to determine their sources and ensure that all necessary data is available.
-1. Understand the Requirements: Carefully read the conversations and comprehend the user's requirements description
+      prompt: `You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
+1. Understand the Requirements: Carefully read the conversations and comprehend the user's requirements
 2. Analyze the OpenAPI Document: Review the provided OpenAPI document to understand the available endpoints, their functionalities, request parameters, and response structures
-3. Match Requirements to APIs: Identify which APIs from the OpenAPI document are relevant to the user's requirements
+3. Match Requirements to APIs: Identify which APIs from the OpenAPI document are relevant to the user's requirements, don't imagine non-existing endpoint!
 4. Explain the Purpose: For each identified API, explain its purpose and how it meets the user's needs
-5. Analyze API Parameters:
-   * Source Identification: Determine the source of each parameter value:
-    * If the parameter is nullable, optional, or has a default value, don't include it in the analysis, just ignore it
-    * From Requirements conversations: If the parameter value can be extracted from the user's requirements conversations, set \`can-extract-from-user-descriptions-or-files\` to true
-    * From Preceding API responses: If the parameter value can be obtained directly from the response of previously identified API calls, set \`can-be-retrieved-from-service-calls\` to true
-    * Object parameter: If the parameter is an object, drill down its properties and repeat the analysis for each property
-   * Strict Data Constraints: Ensure that all parameter values are sourced from real data as described above. Do not use mock, fake, or imaginary data
-6. output result in json format
+5. It's very likely there is not enough APIs to fulfill user requirements, place the purposes into \`unaddressedAPI\` list
+6. output complete purposes in json format:
    \`\`\`json
    {
-     "usedEndpoints": [{"epName":"the original name of chosen endpoints to be invoked, it's ok to list if not finally used", "usedFor":"description of functions related to user goal"},...],
-     "unsureArgs":{["epName"]:{["argName"]:{"can-extract-from-user-descriptions-or-files":{explain:"Source Identification explanation", result:'boolean: whether value comes from user'},"can-be-retrieved-from-service-calls":{explain:"Source Identification explanation", result:'boolean: whether value comes from preceding api responses'}}}, ...]
+     "unaddressedAPI":[{
+       "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
+       "purposeKey":"unique purpose key",
+       "needExternalAPI": "boolean. true: if external service openAPI is needed; Note: if can be handled by local script code, please set to false"
+     },..],
+     "usedEndpoints":[{
+       "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
+       "purposeKey":"unique purpose key",
+       "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
+       "description":"endpoint functionality descriptions sourced only from the openAPI doc"
+     },..]
    }
    \`\`\`
 
 **Guidelines**:
-- Be precise and detailed in your analysis
-- Source Identification is critical for user goal success, be sure to analyze it thoroughly!
-- $.usedEndpoints.epName must exactly match the original name of chosen endpoints to be invoked
+- Be precise and detailed in your analysis, to ensure the output list can fulfill all user's requirements
+- it's ok if some chosen endpoints are not finally used
+- **Don't** choose wrong endpoints which may cause unexpected loss, better miss than wrong!
+- \`epName\` must exist in \`The given service endpoint APIs\`, better empty than fake!
 
 ## The given service endpoint APIs:
-\`\`\`
-{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+\`\`\`json
+{
+  "serviceName": "{{=it.callgent.name}}",
+  "summary":"{{=it.callgent.summary}}",
+  "instruction":"{{=it.callgent.instruction}}",
+  "endpoints": [{{~ it.endpoints :ep }}
+    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  ]
 }
-\`\`\``,
+\`\`\`{{ if (it.files) { }}
+
+## User uploaded files
+files are in current dir \`.\` of local disk, you may directly access them if needed:
+\`\`\`json
+{{=JSON.stringify(it.files)}}
+\`\`\`{{ } }}`,
     },
-    //     {
-    //       name: 'chooseEndpoints1',
-    //       prompt: `# Choose service API endpoints to be invoked to fulfill user request goal
-
-    // ## Your task
-    // Given {{ if (it.histories?.length) { }}\`conversation history\`, {{ } }}\`user request\` and the API \`endpoints\` doc of running services, your task is to:
-    // 1. understand what goal user really wants to achieve, based on whole conversation history and user request
-    // 2. analyze what service endpoints are possibly needed to achieve the user goal
-    //    - it's ok if some endpoints are not finally used
-    //    - but don't miss any needed endpoints!
-    // 3. figure out does the user request offer enough args to invoke necessary endpoints to achieve user goal
-    //    - some args are directly from user request
-    //    - some args are from endpoints API default values, or optional/nullable for endpoints
-    //    - some args can be retrieved from service endpoints invocations
-    //      - this is the most complex part, and key point of this task!
-    //    - don't use fake/mock/guessed/ambiguous args, because all service are real production services, wrong args will absolutely cause errors and MONEY LOSS!
-    // 4. if user request offers no-enough/ambiguous info to invoke necessary endpoints to achieve user goal, ask user to provide more more
-    // 5. if info is enough/clear/may-be-queried-from-service-endpoints to achieve user goal, list all necessary service endpoints to invoke to fulfill user goal
-
-    // ## {{ if (it.histories?.length) { }}user offering more info{{ }else{ }}current user request{{ } }}:
-    // \`\`\`json
-    // {
-    // "requested from": "{{=it.cenAdaptor}}",
-    // "request_object": {{=JSON.stringify(it.req)}},
-    // }
-    // \`\`\`{{ if (it.req.files?.length) { }}
-    // > Note: the files are in current dir, you may access them if needed.{{ } }}
-
-    // ## service endpoints:
-    // \`\`\`pseudo-openAPI-3-doc
-    // { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-    //   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-    // }
-    // \`\`\`
-
-    // ## output task result in json format:
-    // \`\`\`json
-    // {
-    //   "usedEndpoints": [{"epName":"the chosen endpoints to be invoked, it's ok to list if not finally used", "usedFor":"description of functions related to user goal"},...],
-    //   "unsureArgs":{["epName"]:{["argName"]:{"optional":false,"nullable":false,"with-default-value":false,"can-extract-from-user-descriptions-or-files":false,"can-be-retrieved-from-service-calls":false}}, ...]
-    // }
-    // \`\`\``,
-    //     },
     {
-      name: 'askEndpointsArgs',
-      prompt: `You are an API planning assistant. Based on the OpenAPI documentation and the user's described requirements in conversation, your task is to determine whether the selected APIs and their configurations can fulfill the user’s goal. Follow these steps carefully:
-
-1. **Validate API Endpoints**:
-   - Analyze the selected \`usedEndpoints\`, and confirm if they align with the user's goal
-     - carefully review each selected endpoint, make sure it is applicable to \`usedFor\` purpose
-       - if it is misused, remove or correct it in output data
-     - If additional APIs are required, suggest them in output data
-2. **Verify Argument Sources**:
-   - Review \`unsureArgs\` for each listed endpoint
-   - Ensure the correctness of attributes:
-     - optional/nullable/with-default-value parameters are not listed in unsureArgs, if they are, remove them from unsureArgs
-     - \`can-extract-from-user-descriptions-or-files\` is true only if arg value can be extracted from user descriptions or files
-     - \`can-be-retrieved-from-service-calls\` is correct is true only if arg value can be retrieved from preceding api call responses
-   - Use the OpenAPI documentation and the user's conversation context to verify whether each attribute is appropriately set to \`true\` or \`false\`
-   - If additional APIs are added, update the \`unsureArgs\` accordingly
-3. **Resolve Unknown Argument Sources**:
-   - If all attributes for an arg are \`false\`, identify it as having an unknown source, list it unsureArgs of in output data; else remove it from unsureArgs
-   - Formulate a specific question for the user to provide the required value or confirm their goal.
-   - Leave the \`question\` field empty if no clarification is needed.
-4. **Output**:
-   Generate a structured response in JSON format:
+      name: 'reChooseEndpoints',
+      prompt: `You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
+1. Understand the Requirements: Carefully read the conversations and comprehend the user's requirements
+2. Analyze the OpenAPI Document: Review the provided OpenAPI document to understand the available endpoints, their functionalities, request parameters, and response structures
+3. Examine the split \`usedFor\` purposes: Are the purposes complete enough to meet all user requirements
+4. Address which endpoint is best suited for each \`usedFor\` purpose, don't imagine **non-existing** endpoint!
+5. It's very likely there is no appropriate endpoint for \`usedFor\` purpose, move it from \`usedEndpoints\` into \`unaddressedAPI\` list
+6. output complete purposes in json format:
    \`\`\`json
    {
-     "usedEndpoints": [{"epName":"confirmed chosen endpoints to be invoked, it's ok to list if not finally used", "usedFor":"description of functions related to user goal"},...],
-     "unsureArgs":{["epName"]:{["argName"]:{"can-extract-from-user-descriptions-or-files":{explain:"Source Identification explanation", result:'boolean: whether value comes from user'},"can-be-retrieved-from-service-calls":{explain:"Source Identification explanation", result:'boolean: whether value comes from preceding api responses'}}}, ...]
-     "question": "the question to ask user to confirm user goal or provide more info of listed args(please list api name with args). you must leave this field empty if no question needed, so we go on proceed!",
+     "unaddressedAPI":[{
+       "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
+       "purposeKey":"unique purpose key",
+       "needExternalAPI": "boolean. true: if external service API is needed; false: if can be handled by local script code"
+     },..],
+     "usedEndpoints":[{
+       "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
+       "purposeKey":"unique purpose key",
+       "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
+       "description":"endpoint functionality descriptions sourced only from the openAPI doc"
+     },..]
    }
    \`\`\`
 
-Be precise, thorough, and ensure the response aligns with the OpenAPI documentation and the user's requirements.
+**Guidelines**:
+- Be precise and detailed in your analysis, to ensure the output list can fulfill all user's requirements
+- it's ok if some chosen endpoints are not finally used
+- **Don't** choose wrong endpoints which may cause unexpected loss, better miss than wrong!
+- Double check \`epName\` exists in \`The given service endpoint APIs\`, better empty than fake!
 
-## selected service API endpoints:
+## The split \`usedFor\` purposes to fulfill user goal:
 \`\`\`json
-{
-  "usedEndpoints": {{=JSON.stringify(it.usedEndpoints)}},
-  "unsureArgs": {{=JSON.stringify(it.unsureArgs)}}
-}
+{{=JSON.stringify(it.purposes)}}
 \`\`\`
 
 ## The given service endpoint APIs:
-\`\`\`
-{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+\`\`\`json
+{
+  "serviceName": "{{=it.callgent.name}}",
+  "summary":"{{=it.callgent.summary}}",
+  "instruction":"{{=it.callgent.instruction}}",
+  "endpoints": [{{~ it.endpoints :ep }}
+    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  ]
 }
-\`\`\``,
+\`\`\`{{ if (it.files) { }}
+
+## User uploaded files
+files are in current dir \`.\` of local disk, you may directly access them if needed:
+\`\`\`json
+{{=JSON.stringify(it.files)}}
+\`\`\`{{ } }}`,
+    },
+    {
+      name: 'confirmEndpoints',
+      prompt: `Analyze the provided user requirements in conversation, and the split purposes per API perspective to achieve the user requirements goals,
+
+## Objectives:
+Opt the best endpoint for each item in \`optEndpoints\` to fulfill \`usedFor\` purpose.
+
+## Deliverables:
+Output all purposes from \`optEndpoints\` and \`confirmedEndpoints\` in json array:
+\`\`\`json
+[{
+  "purposeKey": "unique purpose key",
+  "usedFor": "Explain the Purpose of the endpoint, double check it matches with user goal",
+  "epName": "the original name of chosen endpoint to be invoked. don't fake it!",
+  "description": "endpoint functionality descriptions sourced only from the openAPI doc"
+},..]
+\`\`\`
+
+Ensure accuracy and avoid assumptions outside the provided data.
+
+## Input Details:
+
+### Per API Perspective Split Purposes:
+\`\`\`json
+{{=JSON.stringify(it.purposes)}}
+\`\`\`
+
+### The given service endpoint APIs:
+\`\`\`json
+{
+  "serviceName": "{{=it.callgent.name}}",
+  "summary":"{{=it.callgent.summary}}",
+  "instruction":"{{=it.callgent.instruction}}",
+  "endpoints": [{{~ it.endpoints :ep }}
+    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  ]
+}
+\`\`\`{{ if (it.files) { }}
+
+### User uploaded files
+files are in current dir \`.\` of local disk, you may directly access them if needed:
+\`\`\`json
+{{=JSON.stringify(it.files)}}
+\`\`\`{{ } }}`,
+    },
+    {
+      name: 'confirmEndpointsArgs',
+      prompt: `Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
+
+### Input:
+1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
+2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
+3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`{{ if (it.files) { }}
+4. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
+   \`\`\`json
+   {{=JSON.stringify(it.files)}}
+   \`\`\`{{ } }}
+
+### Objectives:
+Your goal is to:
+1. Extract all required arguments from user information to prepare for invoking the endpoints:
+2. Identify gaps where:
+   - **Missing information**: User-provided information is insufficient to invoke chosen endpoints
+   - **Ambiguous**: user provided info is unclear or contradictory
+   - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
+
+### Deliverables:
+Output the argument sourcing in JSON format:
+\`\`\`json
+[{
+  "purposeKey": "",
+  "args": [{
+    "argName": "Endpoint full path arg name, e.g.: \`requestBody.prop1.list2.prop3\` or \`parameters.prop4\`. If the parameter/requestBody is an object, drill down its properties and repeat the analysis for each property",
+    "retrieved-from-API-calls": ["If some values source from preceding endpoints call responses, list of \`purposeKey\`s invoked to retrieve the values", "leave empty if needn't"],
+    "extracted-from-user-info-or-files": {
+      "flag": "boolean: true if some values source from user-provided info/files",
+      "userProvided": "if flag true, give description of which user info or files to source this value; Encourage **best guess** of arg source from user info",
+      "needConfirm": "if flag true, send user this question alone to clarify. Please least bother user for best user experience. Leave empty if needn't confirm"
+    },
+    "mapping": {
+      "from":"extracted info type and edge conditions","to":"endpoint parameter type and constraints","mismatch":"boolean: whether \`from\` mismatches \`to\`",
+      "conversion": {
+        "steps":["if mismatch, steps to convert extracted info into valid endpoint arg"],
+        "missing":"boolean: true if use info is sufficient but, mismatch=true and mapping-dictionaries or API is **not explicitly specified** anywhere, which makes it impossible to convert"
+      }
+    },
+  },..]
+},..]
+\`\`\`  
+
+#### Notes:
+- Ensure endpoint purposes match user goals precisely
+- Ensure all arg values are sourced from real data as user provided. Do not use imaginary/fake/example/mock/test data as arg values
+  - There must be at least one source for each argument
+- One arg may have multiple sources. remove json node flagged as false`,
+    },
+    {
+      name: 'reConfirmEndpointsArgs',
+      prompt: `Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
+
+### Input:
+1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
+2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
+3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+4. **Uncertain Endpoint arguments to Analyze**:
+   \`\`\`json
+   {{=JSON.stringify(it.reConfirmArgs)}}
+   \`\`\`{{ if (it.files) { }}
+5. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
+   \`\`\`json
+   {{=JSON.stringify(it.files)}}
+   \`\`\`{{ } }}
+
+### Objectives:
+Your goal is to:
+1. Analyze the **Uncertain** args to prepare for invoking the endpoints:
+2. Identify gaps where:
+   - **Missing information**: User-provided information is insufficient to invoke chosen endpoints
+   - **Ambiguous**: user provided info is unclear or contradictory
+   - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
+
+### Deliverables:
+Output the Uncertain arguments sourcing in JSON format:
+\`\`\`json
+[{
+  "purposeKey": "",
+  "args": [{
+    "argName": "Endpoint full path arg name, e.g.: \`requestBody.prop1.list2.prop3\` or \`parameters.prop4\`. If the parameter/requestBody is an object, drill down its properties and repeat the analysis for each property",
+    "retrieved-from-API-calls": ["If some values source from preceding endpoints call responses, list of \`purposeKey\`s invoked to retrieve the values", "leave empty if needn't"],
+    "extracted-from-user-info-or-files": {
+      "flag": "boolean: true if some values source from user-provided info/files",
+      "userProvided": "if flag true, give description of which user info or files to source this value; Encourage **best guess** of arg source from user info",
+      "needConfirm": "if flag true, send user this question alone to clarify. Please least bother user for best user experience. Leave empty if needn't confirm"
+    },
+    "mapping": {
+      "from":"extracted info type and edge conditions","to":"endpoint parameter type and constraints","mismatch":"boolean: whether \`from\` mismatches \`to\`",
+      "optional":"boolean: where parameter optional or has default value",
+      "conversion": {
+        "steps":["if mismatch, steps to convert extracted info into valid endpoint arg"],
+        "missing":"boolean: true if use info is sufficient but, mismatch=true and mapping-dictionaries or API is **not explicitly specified** anywhere, which makes it impossible to convert"
+      }
+    },
+  },..]
+},..]
+\`\`\`  
+
+#### Notes:
+- Only analyze the **Uncertain** args, which are not clear or contradictory, or missing conversion
+- Ensure all arg values are sourced from real data as user provided. Do not use imaginary/fake/example/mock/test data as arg values
+  - There must be at least one source for each argument
+- One arg may have multiple sources. remove json node flagged as false`,
+    },
+    {
+      name: 'analyzeEdgeCases',
+      prompt: `You are a software assistant focused on API integration and edge case analysis. Given user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints.
+
+### Input:
+1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
+2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
+3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+4. **Endpoint Argument Hints**:
+   \`\`\`json
+   {{=JSON.stringify(it.argsHints)}}
+   \`\`\`{{ if (it.files) { }}
+5. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
+   \`\`\`json
+   {{=JSON.stringify(it.files)}}
+   \`\`\`{{ } }}
+
+### Objectives:
+Analyze each endpoint edge cases which need additional code logic required to handle:
+- **Input edge value validation**: Determine and describe edge cases for each parameter used by the endpoint.
+- **Output edge values and exceptions**: Identify edge cases in the responses and exceptions returned by the endpoint.
+- **Service side-effects and stateful edge conditions**: Examine side effects and stateful conditions (e.g., database changes, resource locks).
+
+### Deliverables:
+Output the argument sourcing in JSON format:
+\`\`\`json
+[{
+  "purposeKey": "", "edgeCaseKey": "", "priority":"int: 0~4, 0-highest",
+  "description": "",
+  "handleLogic": "",
+  "additionalEndpoint":"description of additional endpoint needed for this edge case. leave empty if needn't",
+},..]
+\`\`\`  
+
+#### Notes:
+- Provide a detailed description of the identified edge cases and their handling logic, including suggestions for validation or recovery steps.
+- Ignore and exclude edge cases that require no handling or can safely terminate execution without impacting the overall process.
+  - You may also ignore whose simple cases such as null value check
+  - Ignore cases which can not be handled by code, e.g. cases need reading doc
+- Ensure clarity and conciseness in describing the edge cases and handling logic`,
+    },
+    {
+      name: 'dddServiceDesign',
+      prompt: `You are a Domain-Driven Design expert and TypeScript architect. Your role is to:
+
+### Objectives:
+1. Analyze the provided task requirements in conversation, associated files (if any), and related REST APIs to:
+   - Identify key business entities and their relationships.
+   - Consolidate related entities and functionality into **minimal aggregate roots**:
+     - Consider **logical**, **validation**, and **resource-based exceptional scenarios** to guide aggregate boundaries.
+     - Ensure aggregates encapsulate business invariants and maintain transaction consistency.
+     - Minimize the number of aggregate roots to reduce complexity.
+
+2. Design **anemic domain-driven services**:
+   - Define clear service boundaries aligned with aggregate roots.
+   - Group related operations into cohesive services that reflect business capabilities.
+   - Address exceptional scenarios within service interfaces:
+     - Logical exceptions (e.g., conflicting business rules).
+     - Validation issues (e.g., malformed inputs or constraint violations).
+     - Resource-based exceptions (e.g., unavailability of dependent services).
+   - Focus on service interfaces and operations, avoiding implementation details.
+
+3. Create a **TypeScript task orchestration script**:
+   - Use the designed services to fulfill the specified task requirements.
+   - Handle success and failure scenarios with proper error handling and retries.
+   - Maintain transaction consistency and use async/await patterns.
+   - Include necessary type definitions and manage all identified edge cases.
+
+
+### Deliverables:
+1. **Service Design**:
+   - A list of identified aggregate roots with justifications.
+   - Designed service interfaces including:
+     - Service name and purpose.
+     - Key operations/methods with input/output contracts.
+     - Dependencies between services.
+     - Consideration of edge cases, exceptional scenarios, and recovery strategies.
+
+2. **Orchestrated Script**:
+   - A complete TypeScript script demonstrating how to use the services to fulfill the task.
+   - Incorporate proper error handling, transaction management, and async/await usage.
+
+### Key Considerations:
+- Minimize aggregate roots by consolidating related entities, ensuring they reflect business invariants and scenarios.
+- Design services to simplify operations and minimize interdependencies.
+- Incorporate edge cases, resource unavailability, and error handling in the design and script.
+- Ensure scalability, maintainability, and robustness.
+
+By considering exceptional scenarios during aggregate root identification, ensure your design is both resilient and aligned with business requirements. Your output should reflect these principles for a robust, maintainable solution.
+
+### Input Details:
+#### Service Documentation of **Related APIs**:
+\`\`\`json
+{
+  "serviceName": "{{=it.callgent.name}}",
+  "summary":"{{=it.callgent.summary}}",
+  "instruction":"{{=it.callgent.instruction}}",
+  "endpoints": [{{~ it.endpoints :ep }}
+    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  ],
+  "usedEndpoints": {{=JSON.stringify(it.usedEndpoints)}}{{ if (it.unsureArgs){ }},
+  "hintsOnSomeArgs": {{=JSON.stringify(it.unsureArgs)}}{{ } }}
+}
+\`\`\`{{ if (it.files) { }}
+
+#### **User uploaded files**:
+all in current dir \`.\` of local disk:
+\`\`\`json
+{{=JSON.stringify(it.files)}}
+\`\`\`{{ } }}`,
+    },
+    {
+      name: 'optimisticProcessDesign',
+      prompt: `You are an expert in OpenAPI 3.0 standards and implementation design. Your task is to generate a detailed OpenAPI 3.0 endpoint specification and corresponding pseudocode implementation logic based on the user's provided request details, supplemental descriptions, chosen OpenAPI endpoints to fulfill the user's goal, and hints for argument extraction.
+
+## **Input Details**:
+1. **User's Requirement Description**: A clear description of the user's goal and required functionality in conversations
+   - **User Conversations**: Conversations of user and assistant to clarify user's goal and requirements{{ if (it.files) { }}
+   - **User uploaded files**: files needed to process to achieve user goal, all in current dir \`.\` of local disk
+   \`\`\`json
+   {{=JSON.stringify(it.files)}}
+   \`\`\`{{ } }}
+2. **Selected Endpoints{{ if (it.unsureArgs){ }} and some argument hints**{{ } }}:
+   - **Selected OpenAPI Endpoints**: A list of relevant endpoints with their purpose and possible use cases{{ if (it.unsureArgs){ }}
+   - **Hints on Argument Extraction**: Guidance on how some arguments are derived, including their sources{{ } }}
+   \`\`\`json
+   {
+     "usedEndpoints": {{=JSON.stringify(it.usedEndpoints)}}{{ if (it.unsureArgs){ }},
+     "hintsOnSomeArgs": {{=JSON.stringify(it.unsureArgs)}}{{ } }}
+   }
+   \`\`\`
+3. **Documentation of Selected Endpoints**: API spec for service \`{{=it.callgent.name}}\`:
+   \`\`\`json
+   {
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+
+## **Your Output**:
+1. **OpenAPI Endpoint Specification**: A valid OpenAPI 3.0 endpoint definition tailored to fulfill the user's goal. Ensure that:
+   - The \`path\`, \`method\`, \`parameters\`(may empty) and \`RequestBody\`(may undefined) match the provided requirements and hints
+   - Responses reflect realistic success and error scenarios
+2. **Pseudocode Implementation**  
+   Design pseudocode as a stateless script class that only for user goal execution, the script class contains:
+   - **\`execute\` Entry Function**: This is the only controller function for the \`spec\` endpoint, to execute the overall process and combine the logic into a single workflow
+     - parameters/requestBody/responses must be consistent with the OpenAPI endpoint specification
+   - **predefined \`invokeService\` function**: helper function to handle API calls
+     - **fixed signature**: \`invokeService(epName: string, epArgs:object): Promise<any>\`
+     - **Predefined**: you needn't output it, just use it
+   - **Helper Functions**: To handle specific steps, such as argument extraction, API calls, and response validation
+   - **No member variables**: The pseudocode should be stateless
+   - **Output file**: if user requires outputting file, save it directly at current dir \`.\`, and return the file name in response, so user can download it
+     - else undefined
+
+Include comprehensive validation details, such as the \`epName\` for each API call, parameter names, expected results, and failure conditions.
+
+### **Format**:
+**Output Format**:
+\`\`\`json
+{
+  "spec": {
+    "operationId": "Unique identifier for this endpoint, please be more specific to prevent potential conflict",
+    "method": "rest API method",
+    "parameters": ["may empty"{{ if (it.files) { }}, "include user uploaded file names as normal parameters, if needed to be processed by script"{{ } }}],
+    "requestBody": {"openAPI requestBody, if not needed, set as empty object"},
+    "responses": {..}
+  },
+  "args": {
+    "parameters": { "[name]": "Value extracted based on user provided into or hints{{ if (it.files) { }}, include user uploaded file names as normal parameters, if needed to be processed by script{{ } }}" },
+    "requestBody": "Value extracted from the user-provided details(may undefined)"
+  },
+  "pseudoCode": {
+    [helperFunctionName: string]: {
+      "signature": {"doc":"documentation for this helper function", "parameters": [{"name":"param name","doc":"","type":"function params in openAPI format"}], "returns": {"doc":"","type":"function return type in openAPI format"}, "exceptions": ["ExceptionType1",..]},
+      "lines": [{
+        "line":"Step-by-step typescript pseudocode as array of lines; don't use constant value/file name directly extracted from user provided info, instead pass it in as parameters from the \`signature\`",
+        "helperInvoked":{
+          "name":"Helper function invoked in this step line, function must exists in pseudoCode. may empty",
+          "args":{[argName]:{"valueFrom":"var **name** defined in previous \`varsDefined\` or \`signature.parameters\`; or just hardcoded value, instead of var name","isName":"boolean: true if \`valueFrom\` is var name"}}
+        },
+        "varsDefined":["local variables or constants names defined in this step line. including loop vars, if any", "may empty"],
+        "outFile":"Output file name only if user wants to download. If multiple files generated, please zip into one and just return the zip file name). may empty"
+      }]
+    }
+  }
+}
+\`\`\`
+
+### **Important Instructions**:
+- Values extracted from user provided info must not go directly into pseudocode as **constants**; instead it must be declared in \`spec\` parameters/requestBody!
+- Match all values of the \`args\` to the schema defined in the \`spec\`{{ if (it.files) { }}
+  - include user uploaded file names as normal parameters, if needed to be processed by script{{ } }}
+  - Ensure that all \`args\` values are sourced from real data as user provided. Do not use mock/fake/example/imaginary data
+- Write pseudocode that is easy to follow and directly maps to the user's objective
+  - at least one helper function named \`execute\` must be generated, whose signature must match the \`spec\` endpoint
+    - you may define more helpers to be invoked by \`execute\`, to make the pseudocode more modular
+  - Don't use \`args\` directly in pseudocode, instead pass it in as proper parameters from the \`execute.signature.parameters\`
+  - \`invokeService\` is predefined, don't generate it. yet you need it to invoke \`usedEndpoints\`
+    - \`epName\` must match the original name in \`usedEndpoints\`, specify path vars in \`epArgs\`
+    - set \`epArgs.requestBody\` if applicable
+  - please output correct \`valueFrom\` in \`helperInvoked\` args. we cross check it with defined params/vars{{ if (it.files) { }}
+    - if arg value is assembled from several vars/values, defined it as a new local var in pre-step
+  - read files from current dir \`.\` to process in pseudocode, if needed{{ } }}`,
     },
     //     {
     //       name: 'askEndpointsArgs',
@@ -404,7 +715,7 @@ Be precise, thorough, and ensure the response aligns with the OpenAPI documentat
     // ## service endpoints:
     // \`\`\`pseudo-openAPI-3-doc
     // { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-    //   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+    //   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
     // }
     // \`\`\`
 
@@ -444,7 +755,7 @@ const request = {
 ## service endpoints:
 \`\`\`pseudo-openAPI-3-doc
 { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 }
 \`\`\`
 
@@ -476,7 +787,7 @@ function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
 - {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
 - {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
 
-**note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+**note**: every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
 function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
@@ -497,7 +808,7 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
   "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
 }
 \`\`\`
-**note:**
+**note**:
 1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
 2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
    - try best to retrieve the info by invoking service endpoints if possible
@@ -530,7 +841,7 @@ const request = {
 ## service endpoints:
 \`\`\`pseudo-openAPI-3-doc
 { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 }
 \`\`\`
 
@@ -557,12 +868,12 @@ class RequestMacro {
 \`\`\`
 
 ## serviceInvoke signature:
-function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
+function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>
 @returns:
 - {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
 - {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
 
-**note:** every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+**note**: every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
 function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
@@ -583,7 +894,7 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
   "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
 }
 \`\`\`
-**note:**
+**note**:
 1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
 2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
    - try best to retrieve the info by invoking service endpoints if possible
@@ -600,7 +911,7 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
     {
       name: 'convert2Response',
       prompt: `Given the openAPI endpoint:
-{"endpoint": "{{=it.ep.name}}""{{=it.ep.summary?', "summary":'+it.ep.summary:''}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"params":{{=JSON.stringify(it.ep.params)}}, "responses":{{=JSON.stringify(it.ep.responses)}} }
+{"endpoint": "{{=it.ep.name}}""{{=it.ep.summary?', "summary":'+it.ep.summary:''}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(it.ep.responses)}} }
 
 invoked with the following request:
 <--- request begin ---
@@ -619,23 +930,23 @@ Please formalize the response content as a single-lined JSON object:
       name: 'summarizeEntry',
       prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed endpoints{{ } }}:
 Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 {{ } else { }}
   summary: '{{=it.entry.summary}}',
   instruction: '{{=it.entry.instruction}}',
   endpoints: { {{ if (it.news && it.news.length) { }}
     existing: {...},
     added: { {{~ it.news : ep }}
-      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
     },{{ } }}{{ if (it.olds && it.olds.length) { }}
     removed: { {{~ it.olds : ep }}
-      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params":{{=JSON.stringify(ep.params)}}, "responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+      "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
     },{{ } }}
   }{{ } }}
 };
 Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more meaningful to users):,
 output a single-lined JSON object:
-{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}",   "summary": "Concise summary to let users quickly understand in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: all core concepts explained, operations described, etc. leave empty if \`totally\` is true." }`,
+{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand the core business concepts and in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true." }`,
     },
     {
       name: 'summarizeCallgent',
@@ -657,7 +968,7 @@ Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
 };
 Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
 output a single-lined JSON object:
-{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
+{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand business background, the core concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
     },
     {
       name: 'genVue1Route',
@@ -691,7 +1002,7 @@ and existing UI components:
 
 Depending on the installed packages: [{{=it.packages}}], use these components libraries for best practice,
 As world-class frontend architect, please design simple components for entire view \`{{=it.view.name}}\`, which are back-ended by service endpoints: [{{~ it.endpoints :ep }}
-  { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"params": {{=JSON.stringify(ep.params)}} },{{~}}
+  { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }} },{{~}}
 ],
 Note: all API params are already documented here! Components access them only via store states/actions.
 
@@ -804,7 +1115,12 @@ function initTags(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  const tags: Prisma.TagCreateInput[] = [
+  const tags: Prisma.TagUncheckedCreateInput[] = [
+    {
+      id: -1,
+      name: 'Unlabelled',
+      description: 'APIs that do not fall into any specific category',
+    },
     {
       name: 'App Security',
       description:

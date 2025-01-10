@@ -39,7 +39,7 @@ export class EventObject {
   public message?: string;
 
   /**
-   * @returns {{ taskId: string, pwd: string }}, taskId{task id}: `{yyMMdd}-{nanoid}`, pwd{task working dir}: `{yyMM}/{dd}/{nanoid[:1]}/nanoid`
+   * @returns taskId{task id}: `{yyMMdd}-{nanoid}`
    */
   protected _getTaskId(taskId: string) {
     let sp = taskId?.split('-', 2);

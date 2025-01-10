@@ -11,6 +11,7 @@ import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { BothEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
+import { Utils } from '../../../../infras/libs/utils';
 
 @EntryAdaptorDecorator('restAPI', { both: '/icons/RestAPI.svg' })
 export class RestAPIAdaptor extends BothEntryAdaptor {
@@ -62,7 +63,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     if (!progressive) {
     }
 
-    // reqEvent.context.req = this.req2Json(req);
+    reqEvent.context.req = this.req2Json(req);
   }
 
   async invoke(
@@ -98,6 +99,9 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
   }
 
   req2Json(request) {
+    if (!request?.method) return request;
+
+    // handle http request
     const { method, headers: rawHeaders, query, body, url: url0 } = request;
     if (url0.indexOf('/rest/invoke/') < 0)
       throw new Error(

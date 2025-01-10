@@ -35,7 +35,7 @@ export class JwtAuthService {
     // TODO emit event to revoke old tokens
     const n = Date.now();
     payload.iat = Math.floor(n / 1000);
-    payload.jti = Utils.intToBase64(n) + Utils.uuid(2);
+    payload.jti = Utils.intToBase64(n) + Utils.uuid({ size: 2, raw: true });
     return this.jwtService.sign(payload, { expiresIn: this.expiresIn });
   }
 

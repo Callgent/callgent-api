@@ -133,11 +133,6 @@ export class RestApiController {
       'x-callgent-reqId': data.id,
       'x-callgent-taskId': data.taskId,
     };
-    const statusCode = data.statusCode;
-    const message = data.message;
-    statusCode && (headers['x-callgent-status'] = statusCode);
-    message && (headers['x-callgent-message'] = message);
-    delete data.statusCode, delete data.message;
 
     const resp = data?.context.resp;
     if (resp) {
@@ -151,6 +146,9 @@ export class RestApiController {
     }
 
     // 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume, <0: error
+    const statusCode = data.statusCode;
+    const message = data.message;
+    delete data.statusCode, delete data.message;
     const status = statusCode
       ? statusCode < 0
         ? 418
@@ -275,6 +273,8 @@ export class RestApiController {
     res.status(status).headers(headers).send(body);
     return body;
   }
+
+  // TODO invoke with multipart body
 
   @ApiOperation({
     description:

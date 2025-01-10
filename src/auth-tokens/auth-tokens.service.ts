@@ -18,7 +18,7 @@ export class AuthTokensService {
    */
   @Transactional()
   async issue(payload: JwtPayload, type: 'JWT' | 'API_KEY') {
-    const token = payload.jti || (payload.jti = Utils.uuid());
+    const token = payload.jti || (payload.jti = Utils.uuid({ raw: true }));
     const expiresAt = payload.exp
       ? new Date(Date.now() + payload.exp * 1000)
       : undefined;

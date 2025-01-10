@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /** request with requirement description */
 export class RequestRequirement {
@@ -53,10 +52,12 @@ export class RequestRequirement {
   })
   @IsOptional()
   // @IsArray()
-  files?: {
-    filename: string;
-    encoding: string;
-    mimetype: string;
-    size?: number;
-  }[];
+  files?: RequestFile[];
+}
+
+export class RequestFile {
+  filename: string;
+  encoding: string;
+  mimetype: string;
+  size?: number;
 }

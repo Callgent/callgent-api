@@ -17,9 +17,11 @@ export class LLMService {
     private readonly eventEmitter: EventEmitter2,
   ) {
     dot.templateSettings.strip = false;
-    this.llmModels = JSON.parse(this.configService.get('LLM_MODELS'));
+    this.llmModels = this.configService.get('LLM_MODELS');
+    if (this.llmModels[0] == '[')
+      this.llmModels = JSON.parse(this.llmModels as string);
   }
-  protected llmModels: string[];
+  protected llmModels: string[] | string;
   private readonly logger = new Logger(LLMService.name);
 
   /**
@@ -63,14 +65,16 @@ export class LLMService {
           const promptExt = errorMessage
             ? `${prompt}\n\nPlease retry as you just made a mistake: ${errorMessage}`
             : prompt;
-          const resp = await this._completion({
+          const req: LLMRequest = {
             // messages: [{ role: 'user', content: prompt }],
             prompt: promptExt,
             stream: false,
-            models: this.llmModels,
             route: 'fallback',
-            temperature: 0.5, // TODO
-          });
+            temperature: 0, // TODO
+          };
+          if (Array.isArray(this.llmModels)) req.models = this.llmModels;
+          else req.model = this.llmModels;
+          const resp = await this._completion(req);
           llmModel = resp.model;
 
           if (!resp?.choices?.length) {
@@ -120,7 +124,7 @@ export class LLMService {
    *
    * @param template system prompt template
    * @param messages conversation messages, including current user message
-   * @param args { resultSchema: "returning json schema", resultPrompt: "prompt for returning schema", validate: "validate function to check generated json" }
+   * @param args { resultSchema: "returning json schema", validate: "validate function to check generated json" }
    * @returns assistant response will be appended to messages
    */
   @Transactional()
@@ -134,9 +138,8 @@ export class LLMService {
       validate,
     }: {
       bizKey?: string;
-      resultSchema?: T;
-      resultPrompt?: string;
       validate?: (generated: T, retry: number) => boolean | void;
+      resultSchema?: T;
     },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
@@ -150,28 +153,25 @@ export class LLMService {
     if (usrMsg.role !== 'user')
       throw new Error('Current message must be role=user');
 
-    let llmModel: string,
-      ret: T,
-      llmResult = '',
-      errorMessage = '';
-    let [maxRetry, valid] = [3, undefined];
+    let ret: T;
+    let [llmResult, llmModel] = ['', ''];
+    let [maxRetry, invalidMsg] = [3, ''];
     for (let i = 0; i < maxRetry; i++) {
       try {
         if (!ret) {
-          if (errorMessage)
-            usrMsg.content += `\n\nThere was a mistake, please retry generating:\n ${errorMessage}`;
-          const resp = await this._completion({
+          const req: LLMRequest = {
             messages,
             stream: false,
-            models: this.llmModels,
             route: 'fallback',
-            temperature: 0.5, // TODO
-          });
+            temperature: 0, // TODO
+          };
+          if (Array.isArray(this.llmModels)) req.models = this.llmModels;
+          else req.model = this.llmModels;
+          const resp = await this._completion(req);
           llmModel = resp.model;
 
           if (!resp?.choices?.length) {
-            valid = false;
-            errorMessage = `LLM service not available, error=${(resp as any)?.error?.message}`;
+            invalidMsg = `LLM service not available, error=${(resp as any)?.error?.message}`;
             break;
           }
 
@@ -185,26 +185,31 @@ export class LLMService {
           // check type
           this._checkJsonType(resultSchema, ret, isArray);
         }
-        valid = !validate || validate(ret, i);
+        if (validate && !validate(ret, i))
+          invalidMsg = 'Failed validating generated content';
       } catch (e) {
         // add error to conversation to optimize result
-        errorMessage = e.message;
+        messages.push({ role: 'assistant', content: llmResult });
+        messages.push({
+          role: 'user',
+          content: `There was a mistake:\n${e.message}\n\nplease re-generate`,
+        });
         this.logger.warn(
           '[retry %s %d/%d] Fail validating generated content: %s',
           template,
           i + 1,
           maxRetry,
-          errorMessage,
+          e.message,
         );
         ret = undefined;
         continue; // default retry
       }
       break; // force stop;
     }
-    if (!valid)
+    if (invalidMsg)
       throw new Error(
         'Fail validating generated content, ' +
-          [llmModel, template, errorMessage],
+          [llmModel, template, invalidMsg],
       );
 
     originalMessages.push({ role: 'assistant', content: llmResult });
@@ -306,12 +311,11 @@ export class LLMService {
 
   protected async _completion(req: LLMRequest): Promise<LLMResponse> {
     return new Promise((resolve, reject) => {
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const startTime = Date.now();
+      fetch(this.configService.get('LLM_URL'), {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.configService.get(
-            'OPENROUTER_API_KEY',
-          )}`,
+          Authorization: `Bearer ${this.configService.get('LLM_API_KEY')}`,
           'HTTP-Referer': `${this.configService.get('CALLGENT_SITE_URL')}`,
           'X-Title': `${this.configService.get('CALLGENT_SITE_NAME')}`,
           'Content-Type': 'application/json',
@@ -319,7 +323,14 @@ export class LLMService {
         body: JSON.stringify(req),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then((data: LLMResponse) => {
+          data.usage || (data.usage = {} as any);
+          data.usage['duration'] = Date.now() - startTime;
+          this.logger.debug(
+            '>>> LLM %s response usage: %j',
+            data.model,
+            data.usage,
+          );
           this.eventEmitter.emit(
             LlmCompletionEvent.eventName,
             new LlmCompletionEvent(data),
