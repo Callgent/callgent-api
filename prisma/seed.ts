@@ -187,112 +187,130 @@ output just json no explanation`,
     },
     {
       name: 'chooseEndpoints',
-      prompt: `You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+
+## Objectives:
+You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
 1. Understand the Requirements: Carefully read the conversations and comprehend the user's requirements
 2. Analyze the OpenAPI Document: Review the provided OpenAPI document to understand the available endpoints, their functionalities, request parameters, and response structures
 3. Match Requirements to APIs: Identify which APIs from the OpenAPI document are relevant to the user's requirements, don't imagine non-existing endpoint!
 4. Explain the Purpose: For each identified API, explain its purpose and how it meets the user's needs
 5. It's very likely there is not enough APIs to fulfill user requirements, place the purposes into \`unaddressedAPI\` list
-6. output complete purposes in json format:
-   \`\`\`json
-   {
-     "unaddressedAPI":[{
-       "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
-       "purposeKey":"unique purpose key",
-       "needExternalAPI": "boolean. true: if external service openAPI is needed; Note: if can be handled by local script code, please set to false"
-     },..],
-     "usedEndpoints":[{
-       "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
-       "purposeKey":"unique purpose key",
-       "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
-       "description":"endpoint functionality descriptions sourced only from the openAPI doc"
-     },..]
-   }
-   \`\`\`
 
-**Guidelines**:
+## Deliverables:
+output complete purposes in json format:
+\`\`\`json
+{
+  "unaddressedAPI":[{
+    "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
+    "purposeKey":"unique purpose key",
+    "needExternalAPI": "boolean. true: if external service openAPI is needed; Note: if can be handled by local script code, please set to false"
+  },..],
+  "usedEndpoints":[{
+    "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
+    "purposeKey":"unique purpose key",
+    "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
+    "description":"endpoint functionality descriptions sourced only from the openAPI doc"
+  },..]
+}
+\`\`\`
+
+### Notes:
 - Be precise and detailed in your analysis, to ensure the output list can fulfill all user's requirements
 - it's ok if some chosen endpoints are not finally used
 - **Don't** choose wrong endpoints which may cause unexpected loss, better miss than wrong!
-- \`epName\` must exist in \`The given service endpoint APIs\`, better empty than fake!
-
-## The given service endpoint APIs:
-\`\`\`json
-{
-  "serviceName": "{{=it.callgent.name}}",
-  "summary":"{{=it.callgent.summary}}",
-  "instruction":"{{=it.callgent.instruction}}",
-  "endpoints": [{{~ it.endpoints :ep }}
-    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-  ]
-}
-\`\`\`{{ if (it.files) { }}
-
-## User uploaded files
-files are in current dir \`.\` of local disk, you may directly access them if needed:
-\`\`\`json
-{{=JSON.stringify(it.files)}}
-\`\`\`{{ } }}`,
+- \`epName\` must exist in \`The given service endpoint APIs\`, better empty than fake!`,
     },
     {
       name: 'reChooseEndpoints',
-      prompt: `You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+3. **The split \`usedFor\` purposes to fulfill user goal**:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
+   
+## Objectives:
+You are an expert in analyzing OpenAPI documents and understanding user requirements. Your task is to help the user identify which APIs from the provided OpenAPI document are necessary to orchestrate a script to fulfill user task goal.
 1. Understand the Requirements: Carefully read the conversations and comprehend the user's requirements
 2. Analyze the OpenAPI Document: Review the provided OpenAPI document to understand the available endpoints, their functionalities, request parameters, and response structures
 3. Examine the split \`usedFor\` purposes: Are the purposes complete enough to meet all user requirements
 4. Address which endpoint is best suited for each \`usedFor\` purpose, don't imagine **non-existing** endpoint!
 5. It's very likely there is no appropriate endpoint for \`usedFor\` purpose, move it from \`usedEndpoints\` into \`unaddressedAPI\` list
-6. output complete purposes in json format:
-   \`\`\`json
-   {
-     "unaddressedAPI":[{
-       "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
-       "purposeKey":"unique purpose key",
-       "needExternalAPI": "boolean. true: if external service API is needed; false: if can be handled by local script code"
-     },..],
-     "usedEndpoints":[{
-       "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
-       "purposeKey":"unique purpose key",
-       "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
-       "description":"endpoint functionality descriptions sourced only from the openAPI doc"
-     },..]
-   }
-   \`\`\`
 
-**Guidelines**:
+## Deliverables:
+output complete purposes in json format:
+\`\`\`json
+{
+  "unaddressedAPI":[{
+    "usedFor":"Explain the unaddressedAPI Purpose, which need an external API endpoint, but no appropriate one found"
+    "purposeKey":"unique purpose key",
+    "needExternalAPI": "boolean. true: if external service API is needed; false: if can be handled by local script code"
+  },..],
+  "usedEndpoints":[{
+    "usedFor":"Explain the Purpose of the endpoint, double check it matches with user goal",
+    "purposeKey":"unique purpose key",
+    "epName":"the original name of chosen endpoint to be invoked. don't fake it!",
+    "description":"endpoint functionality descriptions sourced only from the openAPI doc"
+  },..]
+}
+\`\`\`
+
+### Notes:
 - Be precise and detailed in your analysis, to ensure the output list can fulfill all user's requirements
 - it's ok if some chosen endpoints are not finally used
 - **Don't** choose wrong endpoints which may cause unexpected loss, better miss than wrong!
-- Double check \`epName\` exists in \`The given service endpoint APIs\`, better empty than fake!
-
-## The split \`usedFor\` purposes to fulfill user goal:
-\`\`\`json
-{{=JSON.stringify(it.purposes)}}
-\`\`\`
-
-## The given service endpoint APIs:
-\`\`\`json
-{
-  "serviceName": "{{=it.callgent.name}}",
-  "summary":"{{=it.callgent.summary}}",
-  "instruction":"{{=it.callgent.instruction}}",
-  "endpoints": [{{~ it.endpoints :ep }}
-    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-  ]
-}
-\`\`\`{{ if (it.files) { }}
-
-## User uploaded files
-files are in current dir \`.\` of local disk, you may directly access them if needed:
-\`\`\`json
-{{=JSON.stringify(it.files)}}
-\`\`\`{{ } }}`,
+- Double check \`epName\` exists in \`The given service endpoint APIs\`, better empty than fake!`,
     },
     {
       name: 'confirmEndpoints',
-      prompt: `Analyze the provided user requirements in conversation, and the split purposes per API perspective to achieve the user requirements goals,
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+   \`\`\`json
+   {
+     "serviceName": "{{=it.callgent.name}}",
+     "summary":"{{=it.callgent.summary}}",
+     "instruction":"{{=it.callgent.instruction}}",
+     "endpoints": [{{~ it.endpoints :ep }}
+       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
+     ]
+   }
+   \`\`\`
+3. **Per API Perspective Split Purposes**:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
 
 ## Objectives:
+Analyze the provided user requirements in conversation, and the split purposes per API perspective to achieve the user requirements goals,
+
 Opt the best endpoint for each item in \`optEndpoints\` to fulfill \`usedFor\` purpose.
 
 ## Deliverables:
@@ -306,44 +324,14 @@ Output all purposes from \`optEndpoints\` and \`confirmedEndpoints\` in json arr
 },..]
 \`\`\`
 
-Ensure accuracy and avoid assumptions outside the provided data.
-
-## Input Details:
-
-### Per API Perspective Split Purposes:
-\`\`\`json
-{{=JSON.stringify(it.purposes)}}
-\`\`\`
-
-### The given service endpoint APIs:
-\`\`\`json
-{
-  "serviceName": "{{=it.callgent.name}}",
-  "summary":"{{=it.callgent.summary}}",
-  "instruction":"{{=it.callgent.instruction}}",
-  "endpoints": [{{~ it.endpoints :ep }}
-    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-  ]
-}
-\`\`\`{{ if (it.files) { }}
-
-### User uploaded files
-files are in current dir \`.\` of local disk, you may directly access them if needed:
-\`\`\`json
-{{=JSON.stringify(it.files)}}
-\`\`\`{{ } }}`,
+Note: Ensure accuracy and avoid assumptions beyond the provided info`,
     },
     {
       name: 'confirmEndpointsArgs',
-      prompt: `Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
-
-### Input:
-1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
-2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
-   \`\`\`json
-   {{=JSON.stringify(it.purposes)}}
-   \`\`\`
-3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
@@ -353,13 +341,15 @@ files are in current dir \`.\` of local disk, you may directly access them if ne
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
    }
-   \`\`\`{{ if (it.files) { }}
-4. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
+   \`\`\`
+3. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
    \`\`\`json
-   {{=JSON.stringify(it.files)}}
-   \`\`\`{{ } }}
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
 
-### Objectives:
+## Objectives:
+Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
+
 Your goal is to:
 1. Extract all required arguments from user information to prepare for invoking the endpoints:
 2. Identify gaps where:
@@ -367,7 +357,7 @@ Your goal is to:
    - **Ambiguous**: user provided info is unclear or contradictory
    - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
 
-### Deliverables:
+## Deliverables:
 Output the argument sourcing in JSON format:
 \`\`\`json
 [{
@@ -391,23 +381,19 @@ Output the argument sourcing in JSON format:
 },..]
 \`\`\`  
 
-#### Notes:
+### Notes:
 - Ensure endpoint purposes match user goals precisely
 - Ensure all arg values are sourced from real data as user provided. Do not use imaginary/fake/example/mock/test data as arg values
+  - Please Don't make assumption on any missing info, ask the user directly
   - There must be at least one source for each argument
 - One arg may have multiple sources. remove json node flagged as false`,
     },
     {
       name: 'reConfirmEndpointsArgs',
-      prompt: `Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
-
-### Input:
-1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
-2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
-   \`\`\`json
-   {{=JSON.stringify(it.purposes)}}
-   \`\`\`
-3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
@@ -418,16 +404,18 @@ Output the argument sourcing in JSON format:
      ]
    }
    \`\`\`
+3. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
 4. **Uncertain Endpoint arguments to Analyze**:
    \`\`\`json
    {{=JSON.stringify(it.reConfirmArgs)}}
-   \`\`\`{{ if (it.files) { }}
-5. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
-   \`\`\`json
-   {{=JSON.stringify(it.files)}}
-   \`\`\`{{ } }}
+   \`\`\`
 
-### Objectives:
+## Objectives:
+Analyze user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints. Evaluate the inputs for sufficiency and identify any missing parameters necessary to fulfill the task.
+
 Your goal is to:
 1. Analyze the **Uncertain** args to prepare for invoking the endpoints:
 2. Identify gaps where:
@@ -435,7 +423,7 @@ Your goal is to:
    - **Ambiguous**: user provided info is unclear or contradictory
    - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
 
-### Deliverables:
+## Deliverables:
 Output the Uncertain arguments sourcing in JSON format:
 \`\`\`json
 [{
@@ -460,23 +448,18 @@ Output the Uncertain arguments sourcing in JSON format:
 },..]
 \`\`\`  
 
-#### Notes:
+### Notes:
 - Only analyze the **Uncertain** args, which are not clear or contradictory, or missing conversion
 - Ensure all arg values are sourced from real data as user provided. Do not use imaginary/fake/example/mock/test data as arg values
   - There must be at least one source for each argument
 - One arg may have multiple sources. remove json node flagged as false`,
     },
     {
-      name: 'analyzeEdgeCases',
-      prompt: `You are a software assistant focused on API integration and edge case analysis. Given user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints.
-
-### Input:
-1. **User Requirements**: All Information is already provided in conversations for user task goal. Please Don't make assumption on any missing info, ask the user directly
-2. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
-   \`\`\`json
-   {{=JSON.stringify(it.purposes)}}
-   \`\`\`
-3. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
+      name: 'generateTaskScript',
+      prompt: `## Input:
+1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
@@ -487,38 +470,55 @@ Output the Uncertain arguments sourcing in JSON format:
      ]
    }
    \`\`\`
+3. **Chosen OpenAPI Endpoints**: A list of endpoints needed to fulfill the user requirements:
+   \`\`\`json
+   {{=JSON.stringify(it.purposes)}}
+   \`\`\`
 4. **Endpoint Argument Hints**:
    \`\`\`json
    {{=JSON.stringify(it.argsHints)}}
-   \`\`\`{{ if (it.files) { }}
-5. **User uploaded files**: files are placed in current dir \`.\` of local disk, directly accessed by script code if needed:
-   \`\`\`json
-   {{=JSON.stringify(it.files)}}
-   \`\`\`{{ } }}
+   \`\`\`
 
-### Objectives:
-Analyze each endpoint edge cases which need additional code logic required to handle:
-- **Input edge value validation**: Determine and describe edge cases for each parameter used by the endpoint.
-- **Output edge values and exceptions**: Identify edge cases in the responses and exceptions returned by the endpoint.
-- **Service side-effects and stateful edge conditions**: Examine side effects and stateful conditions (e.g., database changes, resource locks).
+## Objectives:
+You are a software developer focusing on code implementation with high performance and fault tolerance. Given user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints.
 
-### Deliverables:
-Output the argument sourcing in JSON format:
+Generate a TypeScript class on node18+ that adheres to the following criteria:
+1. **Clear Class Design**: Choose a self-explanatory class name that reflects its purpose based on the user requirements
+2. **Predefined Members**:
+   - the default no-argument constructor should be defined
+   - Primary Entry Point: the \`async execute()\` method as the main entry point for executing the required task
+   - Persistent Class Field: define \`this.resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
+     - this is the only field restored to resume the task, task runner will save/load it for you automatically
+     - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
+   - Endpoint Invoke Helper: an predefined member function \`invokeService(purposeKey: string, args:{parameters?:any[],requestBody?:any}): Promise<any>\`
+     - You needn't output this method, directly use it to invoke any endpoint
+     - this method just relays req/resp, please handle validations/exceptions/retry by yourself
+3. **Modular and Reusable Code**: Implement well-structured member functions to encapsulate specific logic, ensuring the class is modular, reusable, and easy to maintain
+4. **Best Performance**: Estimate heavy resources/io/mem/cpu loads, and optimization strategies, especially preload/cache frequently accessed resources/handles out of loops as local vars or files:
+   - disk space is big enough, temp files may be created under \`.\`, you needn't clean them, task runner does this after all iterations
+     - check temp files existence on reentrant calls
+   - parallel processing iteration items in batch is critical for speed, estimate a batch size
+   - prevent performance/lock issues on  accessing the same resource the same time in batch
+5. **Robust and Fault-Tolerant**:
+   - Thoroughly analyze the input, output, exceptions, and side effects of all dependent API endpoints and resources
+   - Handle edge cases and values and errors gracefully to ensure reliability, including args validation, response type checking, error handling
+     - strictly use \`Optional Chaining Operators\` to prevent foolish npe errors
+6. Log essential info with progress \`ndices/totals\` and critical failures using \`console\`. Keep logs concisely and readable, no massive logs output
+
+## Deliverables:
+1. Describe optimization strategies based on estimated heavy resources loads. All in pullet items.
+2. Estimated total execution time range in code block:
+\`\`\`text
+short desc in one line
+\`\`\`
+3. Describe the resumingStates object structure for reentrant task resuming in bullet items, only define essential props
+4. Generate the class code(no usage code) in index.ts, which can be directly executed without any modification(so output full code):
+\`\`\`typescript
+// full code
+\`\`\`
+5. package.json
 \`\`\`json
-[{
-  "purposeKey": "", "edgeCaseKey": "", "priority":"int: 0~4, 0-highest",
-  "description": "",
-  "handleLogic": "",
-  "additionalEndpoint":"description of additional endpoint needed for this edge case. leave empty if needn't",
-},..]
-\`\`\`  
-
-#### Notes:
-- Provide a detailed description of the identified edge cases and their handling logic, including suggestions for validation or recovery steps.
-- Ignore and exclude edge cases that require no handling or can safely terminate execution without impacting the overall process.
-  - You may also ignore whose simple cases such as null value check
-  - Ignore cases which can not be handled by code, e.g. cases need reading doc
-- Ensure clarity and conciseness in describing the edge cases and handling logic`,
+\`\`\``,
     },
     {
       name: 'dddServiceDesign',

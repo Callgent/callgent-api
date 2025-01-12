@@ -29,7 +29,7 @@ export class LLMService {
    *
    * @param template prompt template name
    * @param args  prompt args
-   * @param args { resultSchema: "returning json schema", validate: "validate function to check generated json" }
+   * @param args { parseSchema: "returning json schema", validate: "validate function to check generated json" }
    */
   @Transactional()
   async query<T>(
@@ -37,11 +37,13 @@ export class LLMService {
     args: { [key: string]: any },
     {
       bizKey,
-      resultSchema,
+      parseType = 'json',
+      parseSchema,
       validate,
     }: {
       bizKey?: string;
-      resultSchema?: T;
+      parseType?: 'json' | 'codeBlock';
+      parseSchema?: T;
       validate?: (generated: T, retry: number) => boolean | void;
     },
   ): Promise<T> {
@@ -84,15 +86,10 @@ export class LLMService {
           }
 
           const choice = resp.choices[0] as NonChatChoice;
-          llmResult = ret = choice.text as any;
+          llmResult = choice.text as any;
         }
 
-        if (resultSchema) {
-          const isArray = Array.isArray(resultSchema);
-          ret = Utils.toJSON(ret as any, isArray);
-          // check type
-          this._checkJsonType(resultSchema, ret, isArray);
-        }
+        ret = this._parseResultSchema(parseSchema, parseType, llmResult);
         valid = !validate || validate(ret, i);
       } catch (e) {
         // add error to conversation to optimize result
@@ -124,7 +121,7 @@ export class LLMService {
    *
    * @param template system prompt template
    * @param messages conversation messages, including current user message
-   * @param args { resultSchema: "returning json schema", validate: "validate function to check generated json" }
+   * @param args { parseSchema: "parsing schema", validate: "validate function to check generated json", parseType }, if parseType is markdown codeBlock, parseSchema must only `new Array(n)`
    * @returns assistant response will be appended to messages
    */
   @Transactional()
@@ -134,12 +131,14 @@ export class LLMService {
     args: { [key: string]: any },
     {
       bizKey,
-      resultSchema,
+      parseType = 'json',
+      parseSchema,
       validate,
     }: {
       bizKey?: string;
+      parseType?: 'json' | 'codeBlock';
+      parseSchema?: T;
       validate?: (generated: T, retry: number) => boolean | void;
-      resultSchema?: T;
     },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
@@ -176,15 +175,10 @@ export class LLMService {
           }
 
           const choice = resp.choices[0] as NonStreamingChoice;
-          llmResult = ret = choice.message.content as any;
+          llmResult = choice.message.content as any;
         }
 
-        if (resultSchema) {
-          const isArray = Array.isArray(resultSchema);
-          ret = Utils.toJSON(ret as any, isArray);
-          // check type
-          this._checkJsonType(resultSchema, ret, isArray);
-        }
+        ret = this._parseResultSchema(parseSchema, parseType, llmResult);
         if (validate && !validate(ret, i))
           invalidMsg = 'Failed validating generated content';
       } catch (e) {
@@ -215,9 +209,46 @@ export class LLMService {
     originalMessages.push({ role: 'assistant', content: llmResult });
     return ret;
   }
+  private _parseResultSchema<T extends {}>(
+    parseSchema: T,
+    parseType: string,
+    llmResult: string,
+  ): T {
+    if (!parseSchema) return llmResult as any;
 
-  protected _checkJsonType(resultSchema: any, val: any, isArray: boolean) {
-    const entries = Object.entries(isArray ? resultSchema[0] : resultSchema);
+    let ret: T;
+    const isArray = Array.isArray(parseSchema);
+    switch (parseType) {
+      case 'json':
+        ret = Utils.toJSON(llmResult, isArray);
+        // check type
+        this._checkJsonType(parseSchema, ret, isArray);
+        break;
+      case 'codeBlock':
+        const size = (parseSchema as any).length;
+        if (!size)
+          throw new Error(
+            'for parseType="codeBlock", parseSchema must be array',
+          );
+        const split = llmResult.split(/^\s*```[\w\s]*$/m);
+        if (split.length < 2 * size + 1)
+          throw new Error(
+            size + ' code blocks expected, got: ' + ~~split.length / 2,
+          );
+        // pick from the end
+        const a = Array(size);
+        for (let i = -1; i >= -size; i--)
+          a[size + i] = split[split.length + i * 2].trim();
+        ret = a as any;
+        break;
+      default:
+        throw new Error('Unknown llm result parseType:' + parseType);
+    }
+    return ret;
+  }
+
+  protected _checkJsonType(parseSchema: any, val: any, isArray: boolean) {
+    const entries = Object.entries(isArray ? parseSchema[0] : parseSchema);
     const a = isArray ? val : [val];
     for (const v of a) {
       entries.forEach(([key, type]) => {

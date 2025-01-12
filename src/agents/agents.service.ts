@@ -40,7 +40,7 @@ export class AgentsService {
       'convert2Response',
       { requestArgs, resp, ep },
       {
-        resultSchema: { statusCode: 200, data: null },
+        parseSchema: { statusCode: 200, data: null },
         bizKey: eventId,
       },
     ); // TODO validating `mapping`
@@ -64,7 +64,7 @@ export class AgentsService {
     totally?: boolean;
   }) {
     const result = await this.llmService.query('summarizeEntry', data, {
-      resultSchema: { summary: '', instruction: '', totally: true },
+      parseSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.entry.id,
     });
     return result;
@@ -85,7 +85,7 @@ export class AgentsService {
     totally?: boolean;
   }) {
     const result = await this.llmService.query('summarizeCallgent', data, {
-      resultSchema: { summary: '', instruction: '', totally: true },
+      parseSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.callgent.id,
     });
 
@@ -98,7 +98,7 @@ export class AgentsService {
     bizKey: string;
   }) {
     const result = await this.llmService.query('genVue1Route', data, {
-      resultSchema: [
+      parseSchema: [
         {
           name: '',
           path: '',
@@ -151,7 +151,7 @@ export class AgentsService {
   }) {
     let compName = '';
     const result = await this.llmService.query('genVue2Components', data, {
-      resultSchema: {
+      parseSchema: {
         [compName]: {
           file: '',
           endpoints: [''],
@@ -207,7 +207,7 @@ export class AgentsService {
     bizKey: string;
   }) {
     const result = await this.llmService.query('genVue3Component', data, {
-      resultSchema: {
+      parseSchema: {
         code: '',
         packages: [''],
         importedStores: [
@@ -258,7 +258,7 @@ export class AgentsService {
     bizKey: string;
   }) {
     const result = await this.llmService.query('genVue4Store', data, {
-      resultSchema: { code: '', packages: [''] },
+      parseSchema: { code: '', packages: [''] },
       bizKey: data.bizKey,
       validate: (gen) =>
         gen.packages.every((p) => {
@@ -296,7 +296,7 @@ export class AgentsService {
     bizKey: string;
   }) {
     const result = await this.llmService.query('genVue5View', data, {
-      resultSchema: { code: '', packages: [''] },
+      parseSchema: { code: '', packages: [''] },
       bizKey: data.bizKey,
       validate: (gen) =>
         gen.packages?.every((p) => {

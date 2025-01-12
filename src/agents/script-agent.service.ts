@@ -25,31 +25,171 @@ export class ScriptAgentService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {}
 
-  // async api2Function(
-  //   format: string,
-  //   handle: string,
-  //   args: { [key: string]: string },
+  /**
+   * map req to an API endpoint
+   * - if epName means invoke: map to exact endpoint, load/gen mapArgs(req), no question
+   * - if no epName request: generate exec macro function, may question
+   */
+  async map2Endpoints(
+    reqEvent: ClientRequestEvent,
+  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
+    if (!endpoints?.length)
+      throw new NotFoundException(
+        'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
+      );
+
+    // if epName, try find mapArgs function by [cepAdaptor, epName]
+    const mapped = await (reqEvent.context.epName
+      ? this._map2Endpoint(reqEvent, endpoints)
+      : this._map2Endpoints(reqEvent, endpoints));
+    if (!mapped) return;
+    if ('data' in mapped) return mapped;
+
+    reqEvent.context.map2Endpoints = mapped;
+  }
+
+  /** progressive not supported for invoking */
+  protected async _map2Endpoint(
+    reqEvent: ClientRequestEvent,
+    endpoints: EndpointDto[],
+  ) {
+    const {
+      id,
+      srcId,
+      dataType: cenAdaptor,
+      context: { callgentName, epName, req, tgtEvents },
+    } = reqEvent;
+    const endpoint: EndpointDto = endpoints.find((e) => e.name == epName);
+    if (!endpoint)
+      throw new NotFoundException('map2Endpoint not found of name:' + epName);
+
+    // load existing (srcId, epName)
+    const prisma = this.txHost.tx as PrismaClient;
+    const rec = await prisma.req2ArgsRepo.findUnique({
+      select: { req2Args: true },
+      where: { cepId_sepId: { cepId: srcId, sepId: endpoint.id } },
+    });
+    if (rec) return rec;
+
+    // generate
+    if (!endpoint.params || Object.keys(endpoint.params).length == 0)
+      return { req2Args: '() => ({})', requestArgs: {} }; // no params
+
+    const mapped = await this.llmService.query(
+      'map2Endpoint',
+      { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
+      {
+        parseSchema: { req2Args: '' },
+        bizKey: id,
+        validate: (data) => {
+          try {
+            const fun = Utils.toFunction(data.req2Args);
+            (data as any).requestArgs = fun(req);
+          } catch (e) {
+            throw new Error(
+              '[map2Endpoint] Wrong generation `req2Args` function: ' +
+                e.message,
+            );
+          }
+          return true;
+        },
+      },
+    );
+    return mapped;
+  }
+
+  // protected async _map2Endpoints(
+  //   reqEvent: ClientRequestEvent,
+  //   endpoints: EndpointDto[],
   // ) {
-  //   return this.llmService.template(
-  //     'api2Function',
+  //   const {
+  //     id,
+  //     srcId,
+  //     dataType: cenAdaptor,
+  //     context: { callgentName, epName, progressive, req },
+  //   } = reqEvent;
+
+  //   // remove unsuccess responses
+  //   endpoints = endpoints.map((item) => {
+  //     const r = { ...item };
+  //     const successResponse = {};
+  //     Object.entries(item.responses).forEach(([k, v]) => {
+  //       if (k.startsWith('2') || k.startsWith('3') || k == 'default')
+  //         successResponse[k] = v;
+  //     });
+  //     r.responses = successResponse;
+  //     return r;
+  //   });
+
+  //   const mapped = await this.llmService.query(
+  //     'map2Endpoints',
   //     {
-  //       format,
-  //       handle,
-  //       ...args,
+  //       req,
+  //       epName,
+  //       callgentName,
+  //       cenAdaptor,
+  //       endpoints,
   //     },
-  //     { epName: '', params: [''], documents: '', fullCode: '' },
+  //     {
+  //       parseSchema: {
+  //         question: '',
+  //         endpoints: [''],
+  //         summary: '',
+  //         instruction: '',
+  //         requestArgs: {},
+  //         macroParams: { parameters: [], requestBody: {} },
+  //         macroResponse: {},
+  //         memberFunctions: { main: '' },
+  //       },
+  //       bizKey: id,
+  //     },
   //   );
+
+  //   if (mapped.question) {
+  //     if (!progressive)
+  //       throw new BadRequestException(
+  //         'Question from service: ' + mapped.question,
+  //       );
+
+  //     // emit progressive requesting event
+  //     const data = await this.eventListenersService.emit(
+  //       new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
+  //         progressive,
+  //         // mapped,
+  //       }),
+  //     );
+  //     if (!data.statusCode)
+  //       // direct return, no persistent async
+  //       return this.map2EndpointsProgressive(data, reqEvent);
+
+  //     if (data.statusCode == 2)
+  //       // pending
+  //       return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
+  //     throw new HttpException(data.message, data.statusCode);
+  //   } else {
+  //     const endpoints = reqEvent.context.endpoints.filter((ep) =>
+  //       mapped.endpoints.includes(ep.name),
+  //     );
+  //     if (!endpoints.length)
+  //       throw new BadRequestException(
+  //         'Error: mapped to none endpoint: ' + mapped,
+  //       );
+  //     reqEvent.context.endpoints = endpoints;
+
+  //     return mapped;
+  //   }
   // }
 
   /**
    * choose eps, if epName, directly return
    */
-  async map2Endpoints(
+  async _map2Endpoints(
     reqEvent: ClientRequestEvent,
+    endpoints: EndpointDto[],
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     if (reqEvent.context.epName) return; // needn't choose
 
-    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
     if (!endpoints?.length)
       throw new NotFoundException(
         'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
@@ -66,8 +206,8 @@ export class ScriptAgentService {
         role: 'user',
         content: JSON.stringify(h.context.req),
       });
-      // @see RequestRequirement.files
-      if (h.context.req.files?.length) files.push(...h.context.req.files);
+      // @see RequestRequirement.files, todo remove duplications
+      h.context.req.files?.length && files.push(...h.context.req.files);
 
       // ignore processing/pending
       if (![1, 2].includes(h.statusCode)) {
@@ -109,77 +249,30 @@ export class ScriptAgentService {
     );
 
     // resources edge cases analysis //////////////////////
-    // messages.pop(); // remove last assistant message
-    // const r = await this._analyzeEdgeCases(
-    //   messages,
-    //   chosenEndpoints,
-    //   usedEndpoints,
-    //   argsHints,
-    //   callgent,
-    //   files,
-    //   id,
-    // );
 
     // generate script //////////////////////
-    // messages.pop(); // remove last assistant message
-    // const r = await this._analyzeEdgeCases(
-    //   messages,
-    //   chosenEndpoints,
-    //   usedEndpoints,
-    //   argsHints,
-    //   callgent,
-    //   files,
-    //   id,
-    // );
+    messages.pop(); // remove last assistant message
+    const { estimatedTime, indexTs, packageJson } =
+      await this._generateTaskScript(
+        messages,
+        chosenEndpoints,
+        purposes,
+        argsHints,
+        callgent,
+        files,
+        id,
+      );
 
-    //     if (chosen.question) {
-    //       const q = `${chosen.question}
-
-    // \`\`\`markdown name="Chosen Endpoints"
-    //  ${Object.entries(chosen.usedEndpoints)
-    //    .map(([epName, usedFor]) => `- "${epName}": ${usedFor}`)
-    //    .join('\n')}
-    // \`\`\``;
-    //       if (!progressive)
-    //         throw new BadRequestException(
-    //           'Question from service: ' + chosen.question,
-    //         );
-
-    //       // emit progressive requesting event
-    //       const data = await this.eventListenersService.emit(
-    //         new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
-    //           progressive,
-    //           // mapped,
-    //         }),
-    //       );
-    //       if (!data.statusCode)
-    //         // direct return, no persistent async
-    //         return this.map2EndpointsProgressive(data, reqEvent);
-
-    //       if (data.statusCode == 2)
-    //         // pending
-    //         return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
-    //       throw new HttpException(data.message, data.statusCode);
-    //     }
-
-    // DDD anemic service design //////////////////////
-    // messages.pop(); // remove last assistant message
-    // const dddServices = await this._dddServiceDesign(
-    //   chosen,
-    //   messages,
-    //   reqEvent,
-    //   files,
-    // );
-    // // design optimistic process pseudo-code //////////////////////
-    // messages.pop(); // remove last assistant message
-    // const optProcess = await this._optimisticDesign(
-    //   chosen,
-    //   messages,
-    //   reqEvent,
-    //   files,
-    // );
-
-    // design pessimistic robust process pseudo-code //////////////////////
+    // {
+    //   question: '',
+    //   endpoints: [''],
+    //   summary: '',
+    //   instruction: '',
+    //   requestArgs: {},
+    //   macroParams: { parameters: [], requestBody: {} },
+    //   macroResponse: {},
+    //   memberFunctions: { main: '' },
+    // }
   }
 
   protected async chooseEndpoints(
@@ -273,7 +366,7 @@ export class ScriptAgentService {
       },
       {
         bizKey: id,
-        resultSchema: {
+        parseSchema: {
           unaddressedAPI: [
             { purposeKey: '', usedFor: '', needExternalAPI: false },
           ],
@@ -341,7 +434,7 @@ export class ScriptAgentService {
       },
       {
         bizKey: id,
-        resultSchema: {
+        parseSchema: {
           unaddressedAPI: [
             { purposeKey: '', usedFor: '', needExternalAPI: false },
           ],
@@ -435,7 +528,7 @@ export class ScriptAgentService {
         },
         {
           bizKey: id,
-          resultSchema: [
+          parseSchema: [
             { purposeKey: '', epName: '', description: '', usedFor: '' },
           ],
           // validate endpoints exist
@@ -473,7 +566,7 @@ export class ScriptAgentService {
     id: string,
   ) {
     // validate endpoints/args exist, arg has at least one source
-    const resultSchema = [
+    const parseSchema = [
       {
         purposeKey: '',
         args: [
@@ -500,7 +593,7 @@ export class ScriptAgentService {
       },
     ];
     const self = this;
-    function validate(gen: typeof resultSchema) {
+    function validate(gen: typeof parseSchema) {
       return gen.every(({ purposeKey, args }) => {
         const purpose = purposes.find((p) => p.purposeKey == purposeKey);
         if (!purpose)
@@ -558,7 +651,7 @@ export class ScriptAgentService {
       },
       {
         bizKey: id,
-        resultSchema,
+        parseSchema,
         validate,
       },
     );
@@ -608,7 +701,7 @@ export class ScriptAgentService {
         },
         {
           bizKey: id,
-          resultSchema,
+          parseSchema,
           validate: (gen) =>
             // all reConfirmArgs exist
             reConfirmArgs.every(({ purposeKey, args }) => {
@@ -698,289 +791,69 @@ export class ScriptAgentService {
     return argsHints;
   }
 
-  // /**
-  //  * - endpoint i/o/e
-  //  * - persistent resource
-  //  * - tx/side effects
-  //  * - performance
-  //  */
-  // protected async _analyzeEdgeCases(
-  //   messages: LLMMessage[],
-  //   endpoints: { [name: string]: EndpointDto },
-  //   purposes: {
-  //     purposeKey: string;
-  //     usedFor: string;
-  //     epName: string;
-  //     description: string;
-  //   }[],
-  //   argsHints: { purposeKey: string; args: { argName: string }[] }[],
-  //   callgent: any,
-  //   files: RequestFile[],
-  //   id: string,
-  // ) {
-  //   const { usedEndpoints, unaddressedAPI } = await this.llmService.chat(
-  //     'analyzeEdgeCases',
-  //     messages,
-  //     {
-  //       callgent,
-  //       endpoints,
-  //       argsHints,
-  //       purposes: purposes.map((ep) => ({
-  //         usedFor: ep.usedFor,
-  //         purposeKey: ep.purposeKey,
-  //         needExternalAPI:
-  //           'boolean: please specify if really an external openAPI is needed, **false** if local code can handle it',
-  //       })),
-  //       files,
-  //     },
-  //     {
-  //       bizKey: id,
-  //       resultSchema: {
-  //         unaddressedAPI: [
-  //           { purposeKey: '', usedFor: '', needExternalAPI: false },
-  //         ],
-  //         usedEndpoints: [
-  //           {
-  //             purposeKey: '',
-  //             epName: '',
-  //             description: '',
-  //             usedFor: '',
-  //             needExternalAPI: false,
-  //           },
-  //         ],
-  //       },
-  //       // validate endpoints exist
-  //       validate: (gen) =>
-  //         (gen.usedEndpoints.length || gen.unaddressedAPI.length) &&
-  //         gen.usedEndpoints.every((ep0) => {
-  //           if (!ep0.epName || endpoints.find((ep) => ep.name == ep0.epName))
-  //             return true;
-  //           throw new Error('There is no such endpoint named: ' + ep0.epName);
-  //         }),
-  //     },
-  //   );
-  // }
-
-  /** design aggregated domain services, and output task script using services */
-  protected async _dddServiceDesign(
-    {
-      usedEndpoints,
-      unsureArgs,
-    }: {
-      usedEndpoints: { epName: string; usedFor: string }[];
-      unsureArgs: { [epName: string]: { [argName: string]: any } };
-    },
+  protected async _generateTaskScript(
     messages: LLMMessage[],
-    reqEvent: ClientRequestEvent,
-    files?: RequestFile[],
+    endpoints: EndpointDto[],
+    purposes: {
+      purposeKey: string;
+      usedFor: string;
+      epName: string;
+      description: string;
+    }[],
+    argsHints: { purposeKey: string; args: { argName: string }[] }[],
+    callgent: any,
+    files: RequestFile[],
+    id: string,
   ) {
-    const endpoints = (reqEvent.context.endpoints =
-      reqEvent.context.endpoints.filter((ep) =>
-        usedEndpoints.find((u) => u.epName == ep.name),
-      ));
-    const {
-      id,
-      context: { callgent },
-    } = reqEvent;
-    const [helperFunctionName, argName] = ['', ''];
-    const optProcess = await this.llmService.chat(
-      'dddServiceDesign',
+    // todo: generateTaskScript-{taskType}
+
+    const [estimatedTime] = await this.llmService.chat(
+      'generateTaskScript',
       messages,
       {
         callgent,
         endpoints,
-        hintsOnSomeArgs: unsureArgs,
-        usedEndpoints,
+        argsHints,
+        purposes,
         files,
       },
       {
-        resultSchema: {
-          spec: {
-            operationId: '',
-            method: '',
-            parameters: [],
-            requestBody: {},
-            responses: {},
-          },
-          args: {
-            parameters: { [argName]: {} },
-            requestBody: {},
-          },
-          pseudoCode: {
-            execute: {
-              signature: '',
-              javaDoc: '',
-              lines: [
-                {
-                  line: '',
-                  helper: {
-                    name: '',
-                    args: { [argName]: { from: '', isName: false } },
-                  },
-                  varsDefined: [''],
-                  outFile: '',
-                },
-              ],
-            },
-            [helperFunctionName]: {
-              signature: '',
-              javaDoc: '',
-              lines: [
-                {
-                  line: '',
-                  helper: {
-                    name: '',
-                    args: { [argName]: { from: '', isName: false } },
-                  },
-                  varsDefined: [''],
-                  outFile: '',
-                },
-              ],
-            },
-          },
-        },
         bizKey: id,
-        // TODO: helper params validation
-        validate: ({ spec, args, pseudoCode }) => {
-          const helpers = Object.entries(pseudoCode);
-          // signature check
-          helpers.forEach(([name, design]) => {
-            if (!design?.signature?.includes(name))
-              throw new Error(`pseudoCode.${name}.signature is not valid`);
-            if (!design?.lines?.length)
-              throw new Error(`pseudoCode.${name}.lines should not empty`);
-
-            // helper function matches with lines
-            design.lines.forEach((line) => {
-              if (line.helper && !(line.helper.name in pseudoCode))
-                throw new Error(
-                  `pseudoCode.${name} invoked a non-exiting helper: '${line.helper.name}', at line: ${line.line}`,
-                );
-              // if (line.epName && !(line.epName in usedEndpoints))
-              //   throw new Error(
-              //     `pseudoCode.${name} invoked a non-exiting endpoint: '${line.epName}', at line: ${line.line}`,
-              //   );
-            });
-          });
-          // args matches with spec
-
-          return true;
-        },
+        parseType: 'codeBlock',
+        parseSchema: new Array(3),
+        // validate index.ts and package.json
+        validate: ([_, indexTs, packageJson]) =>
+          packageJson && JSON.parse(packageJson)?.name,
       },
     );
 
-    return optProcess;
-  }
-
-  /** optimistic process design, less concern on exceptions */
-  protected async _optimisticDesign(
-    {
-      usedEndpoints,
-      unsureArgs,
-    }: {
-      usedEndpoints: { epName: string; usedFor: string }[];
-      unsureArgs: { [epName: string]: { [argName: string]: any } };
-    },
-    messages: LLMMessage[],
-    reqEvent: ClientRequestEvent,
-    files?: RequestFile[],
-  ) {
-    const endpoints = (reqEvent.context.endpoints =
-      reqEvent.context.endpoints.filter((ep) =>
-        usedEndpoints.find((u) => u.epName == ep.name),
-      ));
-    const {
-      id,
-      context: { callgentName },
-    } = reqEvent;
-    const [helperFunctionName, argName] = ['', ''];
-    const optProcess = await this.llmService.chat(
-      'optimisticProcessDesign',
+    // refactor code
+    messages.push({
+      role: 'user',
+      content:
+        '- Review and fix bugs\n- simplify `resumingStates`\n- Double check batch processing\n- null check on params/responses\n- avoid over design.\n\nOutput clean, bug-free and robust code, and package.json',
+    });
+    const [indexTs, packageJson] = await this.llmService.chat(
+      'generateTaskScript',
       messages,
       {
-        callgentName,
+        callgent,
         endpoints,
-        hintsOnSomeArgs: unsureArgs,
-        usedEndpoints,
+        argsHints,
+        purposes,
         files,
       },
       {
-        resultSchema: {
-          spec: {
-            operationId: '',
-            method: '',
-            parameters: [],
-            requestBody: {},
-            responses: {},
-          },
-          args: {
-            parameters: { [argName]: {} },
-            requestBody: {},
-          },
-          pseudoCode: {
-            execute: {
-              signature: '',
-              javaDoc: '',
-              lines: [
-                {
-                  line: '',
-                  helper: {
-                    name: '',
-                    args: { [argName]: { from: '', isName: false } },
-                  },
-                  varsDefined: [''],
-                  outFile: '',
-                },
-              ],
-            },
-            [helperFunctionName]: {
-              signature: '',
-              javaDoc: '',
-              lines: [
-                {
-                  line: '',
-                  helper: {
-                    name: '',
-                    args: { [argName]: { from: '', isName: false } },
-                  },
-                  varsDefined: [''],
-                  outFile: '',
-                },
-              ],
-            },
-          },
-        },
         bizKey: id,
-        // TODO: helper params validation
-        validate: ({ spec, args, pseudoCode }) => {
-          const helpers = Object.entries(pseudoCode);
-          // signature check
-          helpers.forEach(([name, design]) => {
-            if (!design?.signature?.includes(name))
-              throw new Error(`pseudoCode.${name}.signature is not valid`);
-            if (!design?.lines?.length)
-              throw new Error(`pseudoCode.${name}.lines should not empty`);
-
-            // helper function matches with lines
-            design.lines.forEach((line) => {
-              if (line.helper && !(line.helper.name in pseudoCode))
-                throw new Error(
-                  `pseudoCode.${name} invoked a non-exiting helper: '${line.helper.name}', at line: ${line.line}`,
-                );
-              // if (line.epName && !(line.epName in usedEndpoints))
-              //   throw new Error(
-              //     `pseudoCode.${name} invoked a non-exiting endpoint: '${line.epName}', at line: ${line.line}`,
-              //   );
-            });
-          });
-          // args matches with spec
-
-          return true;
-        },
+        parseType: 'codeBlock',
+        parseSchema: Array(2),
+        // validate index.ts and package.json
+        validate: ([indexTs, packageJson]) =>
+          packageJson && JSON.parse(packageJson)?.name,
       },
     );
 
-    return optProcess;
+    return { estimatedTime, indexTs, packageJson };
   }
 
   /**
@@ -1017,191 +890,4 @@ export class ScriptAgentService {
     }
     return this._hasOpenAPIProperty(schema[props.shift()], props);
   }
-
-  /**
-   * map req to an API endpoint
-   * - if epName means invoke: map to exact endpoint, load/gen mapArgs(req), no question
-   * - if no epName request: generate exec macro function, may question
-   */
-  async map2Endpoints0(
-    reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const endpoints: EndpointDto[] = reqEvent.context.endpoints;
-    if (!endpoints?.length)
-      throw new NotFoundException(
-        'No endpoints for mapping, ClientRequestEvent#' + reqEvent.id,
-      );
-
-    // FIXME map from all taskId events
-
-    // if epName, try find mapArgs function by [cepAdaptor, epName]
-    const mapped = await (reqEvent.context.epName
-      ? this._map2Endpoint(reqEvent, endpoints)
-      : this._map2Endpoints(reqEvent, endpoints));
-    if (!mapped) return;
-    if ('data' in mapped) return mapped;
-
-    // reqEvent.context.map2Endpoints = mapped;
-  }
-
-  /** progressive not supported for invoking */
-  protected async _map2Endpoint(
-    reqEvent: ClientRequestEvent,
-    endpoints: EndpointDto[],
-  ) {
-    const {
-      id,
-      srcId,
-      dataType: cenAdaptor,
-      context: { callgentName, epName, req, tgtEvents },
-    } = reqEvent;
-    const endpoint: EndpointDto = endpoints.find((e) => e.name == epName);
-    if (!endpoint)
-      throw new NotFoundException('map2Endpoint not found of name:' + epName);
-
-    // load existing (srcId, epName)
-    const prisma = this.txHost.tx as PrismaClient;
-    const rec = await prisma.req2ArgsRepo.findUnique({
-      select: { req2Args: true },
-      where: { cepId_sepId: { cepId: srcId, sepId: endpoint.id } },
-    });
-    if (rec) return rec;
-
-    // generate
-    if (!endpoint.params || Object.keys(endpoint.params).length == 0)
-      return { req2Args: '() => ({})', requestArgs: {} }; // no params
-
-    const mapped = await this.llmService.query(
-      'map2Endpoint',
-      { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
-      {
-        resultSchema: { req2Args: '' },
-        bizKey: id,
-        validate: (data) => {
-          try {
-            const fun = Utils.toFunction(data.req2Args);
-            (data as any).requestArgs = fun(req);
-          } catch (e) {
-            throw new Error(
-              '[map2Endpoint] Wrong generation `req2Args` function: ' +
-                e.message,
-            );
-          }
-          return true;
-        },
-      },
-    );
-    return mapped;
-  }
-
-  protected async _map2Endpoints(
-    reqEvent: ClientRequestEvent,
-    endpoints: EndpointDto[],
-  ) {
-    const {
-      id,
-      srcId,
-      dataType: cenAdaptor,
-      context: { callgentName, epName, progressive, req },
-    } = reqEvent;
-
-    // remove unsuccess responses
-    endpoints = endpoints.map((item) => {
-      const r = { ...item };
-      const successResponse = {};
-      Object.entries(item.responses).forEach(([k, v]) => {
-        if (k.startsWith('2') || k.startsWith('3') || k == 'default')
-          successResponse[k] = v;
-      });
-      r.responses = successResponse;
-      return r;
-    });
-
-    const mapped = await this.llmService.query(
-      'map2Endpoints',
-      {
-        req,
-        epName,
-        callgentName,
-        cenAdaptor,
-        endpoints,
-      },
-      {
-        resultSchema: {
-          question: '',
-          endpoints: [''],
-          summary: '',
-          instruction: '',
-          requestArgs: {},
-          macroParams: { parameters: [], requestBody: {} },
-          macroResponse: {},
-          memberFunctions: { main: '' },
-        },
-        bizKey: id,
-      },
-    );
-
-    if (mapped.question) {
-      if (!progressive)
-        throw new BadRequestException(
-          'Question from service: ' + mapped.question,
-        );
-
-      // emit progressive requesting event
-      const data = await this.eventListenersService.emit(
-        new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
-          progressive,
-          // mapped,
-        }),
-      );
-      if (!data.statusCode)
-        // direct return, no persistent async
-        return this.map2EndpointsProgressive(data, reqEvent);
-
-      if (data.statusCode == 2)
-        // pending
-        return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
-      throw new HttpException(data.message, data.statusCode);
-    } else {
-      const endpoints = reqEvent.context.endpoints.filter((ep) =>
-        mapped.endpoints.includes(ep.name),
-      );
-      if (!endpoints.length)
-        throw new BadRequestException(
-          'Error: mapped to none endpoint: ' + mapped,
-        );
-      reqEvent.context.endpoints = endpoints;
-
-      return mapped;
-    }
-  }
-
-  /** progressive response, to continue mapping */
-  async map2EndpointsProgressive(
-    data: ProgressiveRequestEvent,
-    reqEvent?: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // handle resp
-  }
-
-  // private _args2List30x(args: object) {
-  //   const list = [];
-  //   if (!args) return list;
-  //   const { parameters, requestBody } = args as any;
-  //   parameters?.forEach((p) => {
-  //     // if (!p.value)
-  //     //   throw new BadRequestException('Missing value for parameter:' + p.name);
-  //     list.push(p);
-  //   });
-  //   if (requestBody) {
-  //     // if (!requestBody.value)
-  //     //   throw new BadRequestException('Missing value for requestBody');
-  //     list.push({
-  //       ...requestBody,
-  //       name: 'Request Body',
-  //       // content: this._formatMediaType(requestBody.content),
-  //     }); // TODO format
-  //   }
-  //   return list;
-  // }
 }
