@@ -55,12 +55,13 @@ export class EventObject {
   }
 
   /** get event working dir */
-  public static getPwd(event: EventObject) {
-    const sp = event.taskId.split('-', 2);
+  public getCwd(base: string) {
+    const sp = this.taskId.split('-', 2);
     return path.join(
+      base,
       sp[0].substring(0, 4), // yyMM
       sp[0].substring(4), // dd
-      sp[1].substring(0, 1), // id[:1]
+      sp[1].at(-1), // id[-1:]
       sp[1], // id
     );
   }

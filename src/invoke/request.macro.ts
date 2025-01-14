@@ -22,7 +22,7 @@ export class RequestMacro<T extends { [name: string]: string }> {
       | { cbMemberFun: string; message: string }
       | { data?: any; statusCode?: number; message?: string }
     > => {
-      const r = await this.serviceInvoke(epName, args);
+      const r = await this.invokeService(epName, args);
       if ((r as any).statusCode == 2)
         return { ...r, cbMemberFun: '$defaultEpCb' };
       if ('data' in r) return this.$defaultEpCb(r.data, {}); // succeed
@@ -46,7 +46,7 @@ export class RequestMacro<T extends { [name: string]: string }> {
    * init invoke chain ctx, and run chain.
    * only successful responses returned in $.data; else throws error
    */
-  private async serviceInvoke(
+  private async invokeService(
     epName: string,
     args: any,
     // config: EntryDto,

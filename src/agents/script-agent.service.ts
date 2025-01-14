@@ -2,18 +2,16 @@ import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
-  HttpException,
   Injectable,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { RequestFile } from '../entries/adaptors/dto/request-requirement.dto';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
+import { FilesService } from '../files/files.service';
 import { Utils } from '../infras/libs/utils';
-import { ProgressiveRequestEvent } from './events/progressive-request.event';
 import { LLMMessage, LLMService } from './llm.service';
 
 /** agent to generate macro script for task */
@@ -23,6 +21,7 @@ export class ScriptAgentService {
     private readonly llmService: LLMService,
     private readonly eventListenersService: EventListenersService,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    private readonly filesService: FilesService,
   ) {}
 
   /**
@@ -44,7 +43,7 @@ export class ScriptAgentService {
       ? this._map2Endpoint(reqEvent, endpoints)
       : this._map2Endpoints(reqEvent, endpoints));
     if (!mapped) return;
-    if ('data' in mapped) return mapped;
+    // if ('data' in mapped) return mapped;
 
     reqEvent.context.map2Endpoints = mapped;
   }
@@ -184,10 +183,7 @@ export class ScriptAgentService {
   /**
    * choose eps, if epName, directly return
    */
-  async _map2Endpoints(
-    reqEvent: ClientRequestEvent,
-    endpoints: EndpointDto[],
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+  async _map2Endpoints(reqEvent: ClientRequestEvent, endpoints: EndpointDto[]) {
     if (reqEvent.context.epName) return; // needn't choose
 
     if (!endpoints?.length)
@@ -252,27 +248,36 @@ export class ScriptAgentService {
 
     // generate script //////////////////////
     messages.pop(); // remove last assistant message
-    const { estimatedTime, indexTs, packageJson } =
-      await this._generateTaskScript(
-        messages,
-        chosenEndpoints,
-        purposes,
-        argsHints,
-        callgent,
-        files,
-        id,
-      );
+    const scripts = await this._generateTaskScript(
+      messages,
+      chosenEndpoints,
+      purposes,
+      argsHints,
+      callgent,
+      files,
+      id,
+    );
 
-    // {
-    //   question: '',
-    //   endpoints: [''],
-    //   summary: '',
-    //   instruction: '',
-    //   requestArgs: {},
-    //   macroParams: { parameters: [], requestBody: {} },
-    //   macroResponse: {},
-    //   memberFunctions: { main: '' },
-    // }
+    // write to files, install deps
+    const cwd = reqEvent.getCwd(this.filesService.UPLOAD_BASE_DIR);
+    await this.installScriptFiles(cwd, scripts);
+
+    // function to run script
+    // (
+    //   args: any,
+    //   context: { [varName: string]: any },
+    // ) => Promise<
+    //   | { cbMemberFun: string; message: string }
+    //   | { data?: any; statusCode?: number; message?: string }
+    // >
+    const fun = ({ Utils, cwd }) => {
+      return Utils.spawn('ts-node', ['index.ts'], { cwd });
+    };
+
+    return {
+      requestArgs: { Utils, cwd },
+      memberFunctions: { main: fun.toString() },
+    };
   }
 
   protected async chooseEndpoints(
@@ -833,7 +838,7 @@ export class ScriptAgentService {
       content:
         '- Review and fix bugs\n- simplify `resumingStates`\n- Double check batch processing\n- null check on params/responses\n- avoid over design.\n\nOutput clean, bug-free and robust code, and package.json',
     });
-    const [indexTs, packageJson] = await this.llmService.chat(
+    const [mainTs, packageJson] = await this.llmService.chat(
       'generateTaskScript',
       messages,
       {
@@ -848,12 +853,66 @@ export class ScriptAgentService {
         parseType: 'codeBlock',
         parseSchema: Array(2),
         // validate index.ts and package.json
-        validate: ([indexTs, packageJson]) =>
+        validate: ([mainTs, packageJson]) =>
           packageJson && JSON.parse(packageJson)?.name,
       },
     );
 
-    return { estimatedTime, indexTs, packageJson };
+    return { estimatedTime, mainTs, packageJson };
+  }
+
+  /** write script files, and install packages */
+  public async installScriptFiles(
+    cwd: string,
+    {
+      mainTs,
+      packageJson,
+    }: {
+      mainTs: string;
+      packageJson: string;
+    },
+  ) {
+    // generated files
+    const p = JSON.parse(packageJson);
+    p.dependencies || (p.dependencies = {});
+    p.dependencies['ts-node'] = '^10.9.2';
+    p.dependencies.typescript = '^5.7.3';
+    p.dependencies.chroot = '^1.0.11';
+    this.filesService.save(
+      { 'main.ts': mainTs, 'package.json': JSON.stringify(p) },
+      cwd,
+    );
+
+    // template files
+    this.filesService.copy(
+      [
+        {
+          originalname: 'index.ts',
+          mimetype: 'application/typescript',
+          path: './templates/task-runner/index.ts',
+          fieldname: '',
+          encoding: 'utf8',
+        },
+        {
+          originalname: 'pnpm-lock.yaml',
+          mimetype: 'text/yaml',
+          path: './templates/task-runner/pnpm-lock.yaml',
+          fieldname: '',
+          encoding: 'utf8',
+        },
+      ],
+      cwd,
+    );
+
+    // install packages
+    const { stderr, stdout } = await Utils.exec('pnpm install', { cwd });
+    if (stderr) {
+      const e = stderr
+        .split('\n')
+        .filter((l) => l.indexOf('ebugger') < 0)
+        .join('\n');
+      if (e) throw new Error(stderr);
+    }
   }
 
   /**

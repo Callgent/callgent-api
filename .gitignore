@@ -1,7 +1,7 @@
 # compiled output
 /dist
 /upload
-/node_modules
+**/node_modules
 
 # generated files
 /src/*/dto/*.dto.ts

@@ -343,7 +343,10 @@ export class LLMService {
   protected async _completion(req: LLMRequest): Promise<LLMResponse> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      fetch(this.configService.get('LLM_URL'), {
+      const url = req.messages
+        ? this.configService.get('LLM_CHAT_URL')
+        : this.configService.get('LLM_COMPLETION_URL');
+      fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.configService.get('LLM_API_KEY')}`,

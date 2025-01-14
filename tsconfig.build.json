@@ -5,6 +5,8 @@
     "test",
     "dist",
     "**/*spec.ts",
-    "prisma"
+    "prisma",
+    "templates",
+    "upload"
   ]
 }

@@ -31,9 +31,9 @@ import { FastifyReply } from 'fastify';
 import { diskStorage } from 'fastify-multer';
 import { File } from 'fastify-multer/lib/interfaces';
 import { FastifyFilesInterceptor } from 'nest-fastify-multer';
+import path from 'path';
 import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
-import { EventObject } from '../../../../event-listeners/event-object';
 import { FilesService } from '../../../../files/files.service';
 import { JwtGuard } from '../../../../infras/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infras/libs/utils';
@@ -120,9 +120,9 @@ export class RestApiController {
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
-    requirement.files = await this.filesService.save(
+    requirement.files = await this.filesService.move(
       tmpFiles,
-      EventObject.getPwd(e),
+      path.join(e.getCwd(this.filesService.UPLOAD_BASE_DIR), 'uploads'),
     );
 
     const data = await this.eventListenersService.emit(e);

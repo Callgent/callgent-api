@@ -189,7 +189,7 @@ output just json no explanation`,
       name: 'chooseEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -238,7 +238,7 @@ output complete purposes in json format:
       name: 'reChooseEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -291,7 +291,7 @@ output complete purposes in json format:
       name: 'confirmEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -330,7 +330,7 @@ Note: Ensure accuracy and avoid assumptions beyond the provided info`,
       name: 'confirmEndpointsArgs',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -392,7 +392,7 @@ Output the argument sourcing in JSON format:
       name: 'reConfirmEndpointsArgs',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -458,7 +458,7 @@ Output the Uncertain arguments sourcing in JSON format:
       name: 'generateTaskScript',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`.\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -483,19 +483,19 @@ Output the Uncertain arguments sourcing in JSON format:
 You are a software developer focusing on code implementation with high performance and fault tolerance. Given user requirements from conversations and uploaded files alongside the chosen OpenAPI endpoints.
 
 Generate a TypeScript class on node18+ that adheres to the following criteria:
-1. **Clear Class Design**: Choose a self-explanatory class name that reflects its purpose based on the user requirements
+1. **Clear Class Design**: Choose a self-explanatory class name that reflects its purpose based on the user requirements. then default export this class
 2. **Predefined Members**:
    - the default no-argument constructor should be defined
    - Primary Entry Point: the \`async execute()\` method as the main entry point for executing the required task
-   - Persistent Class Field: define \`this.resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
+   - Persistent Class Field: define public \`resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
      - this is the only field restored to resume the task, task runner will save/load it for you automatically
      - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
-   - Endpoint Invoke Helper: an predefined member function \`invokeService(purposeKey: string, args:{parameters?:any[],requestBody?:any}): Promise<any>\`
+   - Endpoint Invoke Helper: an predefined public member function \`invokeService(purposeKey: string, args:{parameters?:any[],requestBody?:any}): Promise<any>\`
      - You needn't output this method, directly use it to invoke any endpoint
      - this method just relays req/resp, please handle validations/exceptions/retry by yourself
 3. **Modular and Reusable Code**: Implement well-structured member functions to encapsulate specific logic, ensuring the class is modular, reusable, and easy to maintain
 4. **Best Performance**: Estimate heavy resources/io/mem/cpu loads, and optimization strategies, especially preload/cache frequently accessed resources/handles out of loops as local vars or files:
-   - disk space is big enough, temp files may be created under \`.\`, you needn't clean them, task runner does this after all iterations
+   - disk space is big enough, temp files may be created under \`./tmp\`, you needn't clean them, task runner does this after all iterations
      - check temp files existence on reentrant calls
    - parallel processing iteration items in batch is critical for speed, estimate a batch size
    - prevent performance/lock issues on  accessing the same resource the same time in batch
@@ -512,231 +512,14 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
 short desc in one line
 \`\`\`
 3. Describe the resumingStates object structure for reentrant task resuming in bullet items, only define essential props
-4. Generate the class code(no usage code) in index.ts, which can be directly executed without any modification(so output full code):
+4. Generate the class code(no usage code) in main.ts, which can be directly executed without any modification(so output full code):
 \`\`\`typescript
-// full code
+// os independent full code
 \`\`\`
 5. package.json
 \`\`\`json
 \`\`\``,
     },
-    {
-      name: 'dddServiceDesign',
-      prompt: `You are a Domain-Driven Design expert and TypeScript architect. Your role is to:
-
-### Objectives:
-1. Analyze the provided task requirements in conversation, associated files (if any), and related REST APIs to:
-   - Identify key business entities and their relationships.
-   - Consolidate related entities and functionality into **minimal aggregate roots**:
-     - Consider **logical**, **validation**, and **resource-based exceptional scenarios** to guide aggregate boundaries.
-     - Ensure aggregates encapsulate business invariants and maintain transaction consistency.
-     - Minimize the number of aggregate roots to reduce complexity.
-
-2. Design **anemic domain-driven services**:
-   - Define clear service boundaries aligned with aggregate roots.
-   - Group related operations into cohesive services that reflect business capabilities.
-   - Address exceptional scenarios within service interfaces:
-     - Logical exceptions (e.g., conflicting business rules).
-     - Validation issues (e.g., malformed inputs or constraint violations).
-     - Resource-based exceptions (e.g., unavailability of dependent services).
-   - Focus on service interfaces and operations, avoiding implementation details.
-
-3. Create a **TypeScript task orchestration script**:
-   - Use the designed services to fulfill the specified task requirements.
-   - Handle success and failure scenarios with proper error handling and retries.
-   - Maintain transaction consistency and use async/await patterns.
-   - Include necessary type definitions and manage all identified edge cases.
-
-
-### Deliverables:
-1. **Service Design**:
-   - A list of identified aggregate roots with justifications.
-   - Designed service interfaces including:
-     - Service name and purpose.
-     - Key operations/methods with input/output contracts.
-     - Dependencies between services.
-     - Consideration of edge cases, exceptional scenarios, and recovery strategies.
-
-2. **Orchestrated Script**:
-   - A complete TypeScript script demonstrating how to use the services to fulfill the task.
-   - Incorporate proper error handling, transaction management, and async/await usage.
-
-### Key Considerations:
-- Minimize aggregate roots by consolidating related entities, ensuring they reflect business invariants and scenarios.
-- Design services to simplify operations and minimize interdependencies.
-- Incorporate edge cases, resource unavailability, and error handling in the design and script.
-- Ensure scalability, maintainability, and robustness.
-
-By considering exceptional scenarios during aggregate root identification, ensure your design is both resilient and aligned with business requirements. Your output should reflect these principles for a robust, maintainable solution.
-
-### Input Details:
-#### Service Documentation of **Related APIs**:
-\`\`\`json
-{
-  "serviceName": "{{=it.callgent.name}}",
-  "summary":"{{=it.callgent.summary}}",
-  "instruction":"{{=it.callgent.instruction}}",
-  "endpoints": [{{~ it.endpoints :ep }}
-    {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-  ],
-  "usedEndpoints": {{=JSON.stringify(it.usedEndpoints)}}{{ if (it.unsureArgs){ }},
-  "hintsOnSomeArgs": {{=JSON.stringify(it.unsureArgs)}}{{ } }}
-}
-\`\`\`{{ if (it.files) { }}
-
-#### **User uploaded files**:
-all in current dir \`.\` of local disk:
-\`\`\`json
-{{=JSON.stringify(it.files)}}
-\`\`\`{{ } }}`,
-    },
-    {
-      name: 'optimisticProcessDesign',
-      prompt: `You are an expert in OpenAPI 3.0 standards and implementation design. Your task is to generate a detailed OpenAPI 3.0 endpoint specification and corresponding pseudocode implementation logic based on the user's provided request details, supplemental descriptions, chosen OpenAPI endpoints to fulfill the user's goal, and hints for argument extraction.
-
-## **Input Details**:
-1. **User's Requirement Description**: A clear description of the user's goal and required functionality in conversations
-   - **User Conversations**: Conversations of user and assistant to clarify user's goal and requirements{{ if (it.files) { }}
-   - **User uploaded files**: files needed to process to achieve user goal, all in current dir \`.\` of local disk
-   \`\`\`json
-   {{=JSON.stringify(it.files)}}
-   \`\`\`{{ } }}
-2. **Selected Endpoints{{ if (it.unsureArgs){ }} and some argument hints**{{ } }}:
-   - **Selected OpenAPI Endpoints**: A list of relevant endpoints with their purpose and possible use cases{{ if (it.unsureArgs){ }}
-   - **Hints on Argument Extraction**: Guidance on how some arguments are derived, including their sources{{ } }}
-   \`\`\`json
-   {
-     "usedEndpoints": {{=JSON.stringify(it.usedEndpoints)}}{{ if (it.unsureArgs){ }},
-     "hintsOnSomeArgs": {{=JSON.stringify(it.unsureArgs)}}{{ } }}
-   }
-   \`\`\`
-3. **Documentation of Selected Endpoints**: API spec for service \`{{=it.callgent.name}}\`:
-   \`\`\`json
-   {
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
-     "endpoints": [{{~ it.endpoints :ep }}
-       {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-     ]
-   }
-   \`\`\`
-
-## **Your Output**:
-1. **OpenAPI Endpoint Specification**: A valid OpenAPI 3.0 endpoint definition tailored to fulfill the user's goal. Ensure that:
-   - The \`path\`, \`method\`, \`parameters\`(may empty) and \`RequestBody\`(may undefined) match the provided requirements and hints
-   - Responses reflect realistic success and error scenarios
-2. **Pseudocode Implementation**  
-   Design pseudocode as a stateless script class that only for user goal execution, the script class contains:
-   - **\`execute\` Entry Function**: This is the only controller function for the \`spec\` endpoint, to execute the overall process and combine the logic into a single workflow
-     - parameters/requestBody/responses must be consistent with the OpenAPI endpoint specification
-   - **predefined \`invokeService\` function**: helper function to handle API calls
-     - **fixed signature**: \`invokeService(epName: string, epArgs:object): Promise<any>\`
-     - **Predefined**: you needn't output it, just use it
-   - **Helper Functions**: To handle specific steps, such as argument extraction, API calls, and response validation
-   - **No member variables**: The pseudocode should be stateless
-   - **Output file**: if user requires outputting file, save it directly at current dir \`.\`, and return the file name in response, so user can download it
-     - else undefined
-
-Include comprehensive validation details, such as the \`epName\` for each API call, parameter names, expected results, and failure conditions.
-
-### **Format**:
-**Output Format**:
-\`\`\`json
-{
-  "spec": {
-    "operationId": "Unique identifier for this endpoint, please be more specific to prevent potential conflict",
-    "method": "rest API method",
-    "parameters": ["may empty"{{ if (it.files) { }}, "include user uploaded file names as normal parameters, if needed to be processed by script"{{ } }}],
-    "requestBody": {"openAPI requestBody, if not needed, set as empty object"},
-    "responses": {..}
-  },
-  "args": {
-    "parameters": { "[name]": "Value extracted based on user provided into or hints{{ if (it.files) { }}, include user uploaded file names as normal parameters, if needed to be processed by script{{ } }}" },
-    "requestBody": "Value extracted from the user-provided details(may undefined)"
-  },
-  "pseudoCode": {
-    [helperFunctionName: string]: {
-      "signature": {"doc":"documentation for this helper function", "parameters": [{"name":"param name","doc":"","type":"function params in openAPI format"}], "returns": {"doc":"","type":"function return type in openAPI format"}, "exceptions": ["ExceptionType1",..]},
-      "lines": [{
-        "line":"Step-by-step typescript pseudocode as array of lines; don't use constant value/file name directly extracted from user provided info, instead pass it in as parameters from the \`signature\`",
-        "helperInvoked":{
-          "name":"Helper function invoked in this step line, function must exists in pseudoCode. may empty",
-          "args":{[argName]:{"valueFrom":"var **name** defined in previous \`varsDefined\` or \`signature.parameters\`; or just hardcoded value, instead of var name","isName":"boolean: true if \`valueFrom\` is var name"}}
-        },
-        "varsDefined":["local variables or constants names defined in this step line. including loop vars, if any", "may empty"],
-        "outFile":"Output file name only if user wants to download. If multiple files generated, please zip into one and just return the zip file name). may empty"
-      }]
-    }
-  }
-}
-\`\`\`
-
-### **Important Instructions**:
-- Values extracted from user provided info must not go directly into pseudocode as **constants**; instead it must be declared in \`spec\` parameters/requestBody!
-- Match all values of the \`args\` to the schema defined in the \`spec\`{{ if (it.files) { }}
-  - include user uploaded file names as normal parameters, if needed to be processed by script{{ } }}
-  - Ensure that all \`args\` values are sourced from real data as user provided. Do not use mock/fake/example/imaginary data
-- Write pseudocode that is easy to follow and directly maps to the user's objective
-  - at least one helper function named \`execute\` must be generated, whose signature must match the \`spec\` endpoint
-    - you may define more helpers to be invoked by \`execute\`, to make the pseudocode more modular
-  - Don't use \`args\` directly in pseudocode, instead pass it in as proper parameters from the \`execute.signature.parameters\`
-  - \`invokeService\` is predefined, don't generate it. yet you need it to invoke \`usedEndpoints\`
-    - \`epName\` must match the original name in \`usedEndpoints\`, specify path vars in \`epArgs\`
-    - set \`epArgs.requestBody\` if applicable
-  - please output correct \`valueFrom\` in \`helperInvoked\` args. we cross check it with defined params/vars{{ if (it.files) { }}
-    - if arg value is assembled from several vars/values, defined it as a new local var in pre-step
-  - read files from current dir \`.\` to process in pseudocode, if needed{{ } }}`,
-    },
-    //     {
-    //       name: 'askEndpointsArgs',
-    //       prompt: `# Confirm chosen service API endpoints is enough to fulfill user request goal
-
-    // ## Your task
-    // Given
-    // - \`user requests\`
-    // - the \`chosen endpoints\` trying to fulfill user request goal
-    // - the API \`endpoints\` doc of production running services{{ if (it.askArgs.length) { }}
-    // - some \`unsure args\` that may need to confirm from user{{ } }}
-
-    // your task is to:
-    // 1. understand what goal user really wants to achieve
-    // 2. make sure the chosen endpoints are enough to achieve the user goal, or you may add more endpoints!
-    // 3. ask questions to user if user goal noe clear, or args info is absent to invoke chosen endpoints, or any problems achieving user goal
-
-    // ## {{ if (it.histories?.length) { }}user offering more info{{ }else{ }}current user request{{ } }}:
-    // \`\`\`json
-    // {
-    // "requested from": "{{=it.cenAdaptor}}",
-    // "request_object": {{=JSON.stringify(it.req)}},
-    // }
-    // \`\`\`{{ if (it.req.files?.length) { }}
-    // > Note: the files are in current dir, you may access them if needed.{{ } }}
-
-    // ## service endpoints:
-    // \`\`\`pseudo-openAPI-3-doc
-    // { "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-    //   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-    // }
-    // \`\`\`
-
-    // ## chosen endpoints for user goal:
-    // \`\`\`json
-    // {{=JSON.stringify(it.usedEndpoints)}}
-    // \`\`\`
-    // {{ if (it.askArgs.length) { }}
-    // ## Unsure args:
-    // \`\`\`json
-    // {{=JSON.stringify(it.askArgs)}}
-    // \`\`\`{{ } }}
-
-    // ## output task result in json format:
-    // \`\`\`json
-    // {
-    //   "usedEndpoints": [{"epName":"confirmed chosen endpoints to be invoked, it's ok to list if not finally used", "usedFor":"description of functions related to user goal"},...],
-    //   "question": "the question to ask user to confirm user goal or provide more info of listed args. you must leave this field empty if no question needed, so we go on proceed!",
-    // }
-    // \`\`\``,
-    //     },
     {
       name: 'designProcess',
       prompt: `# Task goal:
@@ -763,14 +546,14 @@ const request = {
 \`\`\`javascript
 /** stateless class */
 class RequestMacro {
-  /** @param serviceInvoke - function to invoke a service endpoint */
-  constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
+  /** @param invokeService - function to invoke a service endpoint */
+  constructor(invokeService){ this.invokeService=invokeService; }
   /** must have this starting member function */
   main = (requestArgs, context) => {
     // ...
 
     // every endpoint invocation goes like this:
-    const r = await this.serviceInvoke(epName, epArgs);
+    const r = await this.invokeService(epName, epArgs);
     const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
     if (r.statusCode == 2) return {...r, cbMemberFun}
     // else sync call the same logic
@@ -781,13 +564,13 @@ class RequestMacro {
 }
 \`\`\`
 
-## serviceInvoke signature:
+## invokeService signature:
 function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
 @returns:
 - {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
-- {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
+- {data}: errors already thrown on any endpoint failure invocation in invokeService, so you just get successful response object here
 
-**note**: every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+**note**: every invokeService may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
 function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
@@ -817,12 +600,11 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
 3. if $.question is not empty, set all other prop values empty!
 4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
 5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
-6. each member function should have only 0 or 1 \`serviceInvoke\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
+6. each member function should have only 0 or 1 \`invokeService\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
 7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
 8. member functions signature is fixed, please don't change it, use context to pass states!
 9. robust code to handle errors/abnormal vars/timeout/retries`,
     },
-
     {
       name: 'generateMacroCode',
       prompt: `# Task goal:
@@ -849,14 +631,14 @@ const request = {
 \`\`\`javascript
 /** stateless class */
 class RequestMacro {
-  /** @param serviceInvoke - function to invoke a service endpoint */
-  constructor(serviceInvoke){ this.serviceInvoke=serviceInvoke; }
+  /** @param invokeService - function to invoke a service endpoint */
+  constructor(invokeService){ this.invokeService=invokeService; }
   /** must have this starting member function */
   main = (requestArgs, context) => {
     // ...
 
     // every endpoint invocation goes like this:
-    const r = await this.serviceInvoke(epName, epArgs);
+    const r = await this.invokeService(epName, epArgs);
     const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
     if (r.statusCode == 2) return {...r, cbMemberFun}
     // else sync call the same logic
@@ -867,13 +649,13 @@ class RequestMacro {
 }
 \`\`\`
 
-## serviceInvoke signature:
+## invokeService signature:
 function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>
 @returns:
 - {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
-- {data}: errors already thrown on any endpoint failure invocation in serviceInvoke, so you just get successful response object here
+- {data}: errors already thrown on any endpoint failure invocation in invokeService, so you just get successful response object here
 
-**note**: every serviceInvoke may return statusCode 2, so we break the whole logic into member functions
+**note**: every invokeService may return statusCode 2, so we break the whole logic into member functions
 
 ## all member functions(including \`main\`) have same signature:
 function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
@@ -903,7 +685,7 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
 3. if $.question is not empty, set all other prop values empty!
 4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
 5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
-6. each member function should have only 0 or 1 \`serviceInvoke\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
+6. each member function should have only 0 or 1 \`invokeService\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
 7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
 8. member functions signature is fixed, please don't change it, use context to pass states!
 9. robust code to handle errors/abnormal vars/timeout/retries`,
