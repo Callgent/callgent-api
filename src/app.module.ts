@@ -16,15 +16,13 @@ import { EndpointsModule } from './endpoints/endpoints.module';
 import { EntriesModule } from './entries/entries.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
 import { EventStoresModule } from './event-stores/event-stores.module';
+import { FilesModule } from './files/files.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './infras/auth/auth.module';
 import { LoggingModule } from './infras/logging/logging.module';
 import { ReposModule } from './infras/repo/repos.module';
 import { InvokeModule } from './invoke/invoke.module';
-import { TaskActionsModule } from './task-actions/task-actions.module';
-import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
-import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -57,12 +55,10 @@ import { FilesModule } from './files/files.module';
     AuthModule,
     UsersModule,
     CallgentsModule,
-    TasksModule,
     AuthTokensModule,
     EntriesModule,
     EndpointsModule,
     AgentsModule,
-    TaskActionsModule,
     EventListenersModule,
     EventStoresModule,
     EmailsModule,
