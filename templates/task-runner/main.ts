@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { extract } from 'zip-lib';
 
+// this class and package.json are a generated files, for test only
 export default class PostmanCollectionImporter {
   public resumingStates: {
     processedItems: string[];
