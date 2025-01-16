@@ -442,6 +442,8 @@ export type LLMResponse = {
     prompt_tokens: number; // Equivalent to "native_tokens_prompt"
     total_tokens: number; // Sum of the above two fields
     total_cost: number; // Number of credits used by this generation
+    prompt_cache_hit_tokens?: number; // Number of tokens served from cache for the prompt
+    prompt_cache_miss_tokens?: number; // Number of tokens that missed the cache and were processed normally
   };
 };
 

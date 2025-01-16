@@ -74,12 +74,13 @@ model User {
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt   DateTime? /// @description logical deletion.
+  UserBalance UserBalance?
 
   @@index([tenantPk])
 }
@@ -660,4 +661,38 @@ model Cached {
   // deletedAt DateTime? /// @description logical deletion.
 
   @@unique([sepId, cacheKey])
+}
+
+model LlmModelPricing {
+  id        Int      @id @default(autoincrement())
+  modelName String   @unique @db.VarChar(150)
+  price     Json     @db.Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model UserBalance {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique @db.VarChar(36)
+  balance   Decimal  @default(0) @db.Decimal(30, 0)
+  currency  String   @default("USD") @db.VarChar(3)
+  updatedAt DateTime @default(now()) @updatedAt
+
+  user               User                 @relation(fields: [userId], references: [id])
+  TransactionHistory TransactionHistory[]
+}
+
+model TransactionHistory {
+  id            Int      @id @default(autoincrement())
+  userBalanceId Int      @db.Integer
+  type          String   @db.VarChar(50)
+  stripeId      String?  @unique @db.VarChar(150)
+  price         Json     @db.Json
+  usage         Json?    @db.Json
+  amount        Decimal  @db.Decimal(30, 0)
+  createdAt     DateTime @default(now())
+
+  userBalance UserBalance @relation(fields: [userBalanceId], references: [id])
+
+  @@index([userBalanceId])
 }
