@@ -899,7 +899,7 @@ function initTags(
 ) {
   const tags: Prisma.TagUncheckedCreateInput[] = [
     {
-      id: -1,
+      pk: -1,
       name: 'Unlabelled',
       description: 'APIs that do not fall into any specific category',
     },

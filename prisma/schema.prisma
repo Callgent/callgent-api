@@ -74,13 +74,12 @@ model User {
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @default(now()) @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt   DateTime? /// @description logical deletion.
-  UserBalance UserBalance?
+  deletedAt DateTime? /// @description logical deletion.
 
   @@index([tenantPk])
 }
@@ -149,7 +148,7 @@ model PublicMailHost {
 
 /// @DtoIgnoreModel
 model Tag {
-  id          Int     @id @default(autoincrement())
+  pk          Int     @id @default(autoincrement())
   name        String  @unique @db.VarChar(30)
   avatar      String? @db.VarChar(1023)
   description String  @db.VarChar(1024)
@@ -404,84 +403,6 @@ model CallgentRealm {
   @@index(tenantPk)
 }
 
-// model RealmToken merged into UserIdentity
-
-model Task {
-  /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
-
-  statusCode Int     @default(1) /// @description Task statusCode, 1: pending, 0: done, <0: failed
-  name       String? @db.VarChar(64) /// @description task name
-  brief      String? @db.VarChar(255) /// @description task brief or description
-  content    Json? /// @description optional task content
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index([tenantPk])
-}
-
-model TaskAction {
-  /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
-
-  // client side information
-  /// @description action owner callgent id, responsible for progressive response
-  ceId        String? @db.VarChar(36) /// @description client entry id
-  epName      String? @db.VarChar(255) /// @description optional endpoint name
-  cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
-  callback    Json?   @db.Json /// @description callback url template or endpoint
-  progressive String? @db.VarChar(36) /// @description progressive requesting url template or endpoint
-
-  // processing
-  returns    Boolean @default(false) /// @description whether action has response object
-  req        Json    @db.Json /// @description request object
-  res        Json?   @db.Json /// @description response object
-  stage      Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
-  statusCode Int     @default(0) /// execution status code
-  message    String? @db.VarChar(255) /// @description error message
-
-  // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
-  taskId String @db.VarChar(36)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36) /// @description user id, anonymous ip, etc.
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index([tenantPk])
-  @@index([taskId])
-}
-
 /// @description Platform auth tokens
 /// @DtoIgnoreModel
 model AuthToken {
@@ -663,36 +584,52 @@ model Cached {
   @@unique([sepId, cacheKey])
 }
 
+/// @DtoIgnoreModel
 model LlmModelPricing {
-  id        Int      @id @default(autoincrement())
+  pk        BigInt   @id @default(autoincrement())
   modelName String   @unique @db.VarChar(150)
   price     Json     @db.Json
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 }
 
+/// @DtoIgnoreModel
 model UserBalance {
-  id        Int      @id @default(autoincrement())
-  userId    String   @unique @db.VarChar(36)
-  balance   Decimal  @default(0) @db.Decimal(30, 0)
-  currency  String   @default("USD") @db.VarChar(3)
-  updatedAt DateTime @default(now()) @updatedAt
+  pk       BigInt  @id @default(autoincrement())
+  balance  Decimal @default(0) @db.Decimal(30, 0)
+  currency String  @default("USD") @db.VarChar(3)
 
-  user               User                 @relation(fields: [userId], references: [id])
+  userId String @unique @db.VarChar(36)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
   TransactionHistory TransactionHistory[]
 }
 
+/// @DtoIgnoreModel
 model TransactionHistory {
-  id            Int      @id @default(autoincrement())
-  userBalanceId Int      @db.Integer
-  type          String   @db.VarChar(50)
-  stripeId      String?  @unique @db.VarChar(150)
-  price         Json     @db.Json
-  usage         Json?    @db.Json
-  amount        Decimal  @db.Decimal(30, 0)
-  createdAt     DateTime @default(now())
+  pk       BigInt  @id @default(autoincrement())
+  type     String  @db.VarChar(50)
+  stripeId String? @unique @db.VarChar(150)
+  price    Json    @db.Json
+  usage    Json?   @db.Json
+  amount   Decimal @db.Decimal(30, 0)
 
-  userBalance UserBalance @relation(fields: [userBalanceId], references: [id])
+  userBalanceId BigInt @db.BigInt
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt DateTime? /// @description logical deletion.
+
+  userBalance UserBalance @relation(fields: [userBalanceId], references: [pk])
 
   @@index([userBalanceId])
 }

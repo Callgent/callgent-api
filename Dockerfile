@@ -2,8 +2,10 @@
 FROM node:18.20.3 AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends criu \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN criu --version
+# https://chatgpt.com/share/6788670a-a904-8005-803a-0e9fcb01279b
+# RUN criu check
 
 RUN npm install -g pnpm
 
