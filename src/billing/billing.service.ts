@@ -4,7 +4,7 @@ import {
   TransactionHost,
 } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
@@ -21,7 +21,7 @@ export class BillingService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
   ) {
     this.stripe = new Stripe(this.configService.get('STRIPE_KEY'), {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: this.configService.get('API_VERSION'),
     });
   }
 
@@ -41,6 +41,7 @@ export class BillingService {
     await this.syncTransactionHistory(amount_receivable, total_price, usage);
   }
 
+  @Transactional()
   async syncTransactionHistory(
     amount_receivable: number,
     total_price: number,
@@ -48,20 +49,21 @@ export class BillingService {
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     const userBalance = await prisma.userBalance.update({
-      where: { userId: 'smAJkwF62dGWkacx0BoypRXDh' },
+      where: { userId: 's2JW5xUlpE__7FjPTUZYDc_gp' },
       data: { balance: { decrement: amount_receivable } },
     });
     await prisma.transactionHistory.create({
       data: {
         userBalanceId: userBalance.pk,
         type: 'token',
-        amount: amount_receivable,
+        amount: -amount_receivable,
         price: { amount_receivable, total_price },
         usage,
       },
     });
   }
 
+  @Transactional()
   async calculateUsageCost(price: any, usage: LLMResponse['usage']) {
     const pricePerInputToken =
       (price.pricePerInputToken * 1e9 * 100) / price.token;
@@ -92,6 +94,7 @@ export class BillingService {
   }
 
   // Create a Stripe payment session
+  @Transactional()
   async createPaymentSession(amount: number, currency: string, userid: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const userBalance = await prisma.userBalance.upsert({
@@ -135,6 +138,7 @@ export class BillingService {
   }
 
   // Payment successful
+  @Transactional()
   async handleStripeWebhook(event: Stripe.Event) {
     const prisma = this.txHost.tx as PrismaClient;
     switch (event.type) {
@@ -145,6 +149,12 @@ export class BillingService {
         const balance = await prisma.userBalance.update({
           where: { userId: userid },
           data: { balance: { increment: amount_subtotal * 1000000000 } },
+          select: {
+            balance: true,
+            userId: true,
+            createdAt: true,
+            updatedAt: true
+          }
         });
         await prisma.transactionHistory.update({
           where: { stripeId: id },
@@ -153,6 +163,24 @@ export class BillingService {
           },
         });
         return { ...balance, balance: balance.balance };
+      case 'checkout.session.async_payment_failed':
+      case 'checkout.session.expired':
+        const session = event.data.object as Stripe.Checkout.Session;
+        const useridFailed = session.metadata.userid;
+        await prisma.transactionHistory.update({
+          where: {
+            stripeId: session.id,
+          },
+          data: {
+            price: {
+              amount_subtotal: session.amount_subtotal,
+              amount_total: session.amount_total,
+              state: 'failed',
+            },
+            deletedAt: new Date(),
+          },
+        });
+        return { message: `Payment failed or expired for user ${useridFailed}`, status: 'failed' };
       default:
         throw new HttpException(
           `Unhandled event type: ${event.type}`,
@@ -161,7 +189,11 @@ export class BillingService {
     }
   }
 
+  @Transactional()
   async getPaymentDetails(userId: string) {
+    if (!userId) {
+      throw new UnauthorizedException('User not authorized');
+    }
     const prisma = this.txHost.tx as PrismaClient;
     const userBalance = await prisma.userBalance.upsert({
       where: { userId },
@@ -175,6 +207,10 @@ export class BillingService {
     const transactionHistory = await prisma.transactionHistory.findMany({
       where: {
         userBalanceId: userBalance.pk,
+        price: {
+          path: ['state'],
+          equals: 'completed',
+        }
       },
       select: {
         type: true,
