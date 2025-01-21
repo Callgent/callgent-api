@@ -1,20 +1,11 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { Entry } from '../entries/entities/entry.entity';
-import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
-import { Utils } from '../infras/libs/utils';
-import { ProgressiveRequestEvent } from './events/progressive-request.event';
-import { LLMMessage, LLMService } from './llm.service';
+import { LLMService } from './llm.service';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
@@ -40,7 +31,7 @@ export class AgentsService {
       'convert2Response',
       { requestArgs, resp, ep },
       {
-        parseSchema: { statusCode: 200, data: null },
+        parseSchema: { status: 200, statusText: '', data: null },
         bizKey: eventId,
       },
     ); // TODO validating `mapping`

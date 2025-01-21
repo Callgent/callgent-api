@@ -54,8 +54,8 @@ export class EventObject {
     return taskId;
   }
 
-  /** get event working dir */
-  public getCwd(base: string) {
+  /** get task working dir */
+  public getTaskCwd(base: string) {
     const sp = this.taskId.split('-', 2);
     return path.join(
       base,
@@ -85,4 +85,12 @@ export class EventObject {
 
     return `${yearStr}${monthStr}${dayStr}`;
   }
+}
+
+/** response from service endpoint */
+export class ServiceResponse {
+  data?: any;
+  headers?: { [key: string]: any };
+  status: number;
+  statusText?: string;
 }

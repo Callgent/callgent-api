@@ -1,4 +1,7 @@
-import { EventObject } from '../../event-listeners/event-object';
+import {
+  EventObject,
+  ServiceResponse,
+} from '../../event-listeners/event-object';
 
 /**
  * event from client entry, processing:
@@ -37,21 +40,35 @@ export class ClientRequestEvent extends EventObject {
       enumerable: false,
     });
   }
+
   public declare readonly context: {
     req: any;
     /** event final response */
-    resp?: {
-      data: any;
-      headers?: { [key: string]: any };
-      status: number;
-      statusText?: string;
-    };
+    resp?: ServiceResponse;
     callgentId: string;
     callgentName: string;
     callerId?: string;
     epName?: string;
     progressive?: string;
+    invocations?: {
+      [id: string]: InvokeStatus;
+    };
     [key: string]: any;
   };
   public declare histories?: ClientRequestEvent[];
+}
+
+export class InvokeStatus {
+  readonly invokeId: string;
+  readonly epName: string;
+  readonly args: { [name: string]: any };
+  /** callback response before postprocess */
+  response?: any;
+  processor?: {
+    /** processor to run, empty means no processor to run */
+    name: string;
+    ctx?: any;
+  };
+  cacheKey?: string;
+  cacheTtl?: number;
 }

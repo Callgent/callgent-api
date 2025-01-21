@@ -1,8 +1,9 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
@@ -23,6 +24,7 @@ export class ScriptAgentService {
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly filesService: FilesService,
   ) {}
+  private readonly logger = new Logger(ScriptAgentService.name);
 
   /**
    * map req to an API endpoint
@@ -42,13 +44,15 @@ export class ScriptAgentService {
     const mapped = await (reqEvent.context.epName
       ? this._map2Endpoint(reqEvent, endpoints)
       : this._map2Endpoints(reqEvent, endpoints));
-    if (!mapped) return;
-    // if ('data' in mapped) return mapped;
-
-    reqEvent.context.map2Endpoints = mapped;
+    reqEvent.context.map2Endpoints = mapped || {};
   }
 
-  /** progressive not supported for invoking */
+  /**
+   * generated:
+   * - req2Args: reusable function generated, which is persisted in db
+   * - requestArgs: actual args to invoke endpoint
+   */
+  @Transactional()
   protected async _map2Endpoint(
     reqEvent: ClientRequestEvent,
     endpoints: EndpointDto[],
@@ -63,19 +67,31 @@ export class ScriptAgentService {
     if (!endpoint)
       throw new NotFoundException('map2Endpoint not found of name:' + epName);
 
+    if (!endpoint.params || Object.keys(endpoint.params).length == 0)
+      return { requestArgs: {} }; // no params
+
     // load existing (srcId, epName)
     const prisma = this.txHost.tx as PrismaClient;
+    const cepId_sepId = { cepId: srcId, sepId: endpoint.id };
     const rec = await prisma.req2ArgsRepo.findUnique({
       select: { req2Args: true },
-      where: { cepId_sepId: { cepId: srcId, sepId: endpoint.id } },
+      where: { cepId_sepId },
     });
-    if (rec) return rec;
+    if (rec) {
+      try {
+        const fun = Utils.toFunction(rec.req2Args);
+        const requestArgs = fun(req);
+        return { requestArgs };
+      } catch (e) {
+        this.logger.warn(
+          'Error mapping request to args, ignore and regenerate',
+          e,
+        );
+      }
+    }
 
     // generate
-    if (!endpoint.params || Object.keys(endpoint.params).length == 0)
-      return { req2Args: '() => ({})', requestArgs: {} }; // no params
-
-    const mapped = await this.llmService.query(
+    const mapped = (await this.llmService.query(
       'map2Endpoint',
       { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
       {
@@ -94,8 +110,16 @@ export class ScriptAgentService {
           return true;
         },
       },
-    );
-    return mapped;
+    )) as { req2Args: string; requestArgs: object };
+
+    if (mapped?.req2Args)
+      await prisma.req2ArgsRepo.upsert({
+        where: { cepId_sepId },
+        update: { req2Args: mapped.req2Args },
+        create: { ...cepId_sepId, req2Args: mapped.req2Args },
+      });
+
+    return { requestArgs: mapped.requestArgs };
   }
 
   // protected async _map2Endpoints(
@@ -182,6 +206,7 @@ export class ScriptAgentService {
 
   /**
    * choose eps, if epName, directly return
+   * @returns { purposes: 'purpose of each endpoint', argsHints: 'hints on args sources' }
    */
   async _map2Endpoints(reqEvent: ClientRequestEvent, endpoints: EndpointDto[]) {
     if (reqEvent.context.epName) return; // needn't choose
@@ -259,25 +284,10 @@ export class ScriptAgentService {
     );
 
     // write to files, install deps
-    const cwd = reqEvent.getCwd(this.filesService.UPLOAD_BASE_DIR);
-    await this.installScriptFiles(cwd, scripts);
+    const cwd = reqEvent.getTaskCwd(this.filesService.UPLOAD_BASE_DIR);
+    await this.installScriptFiles(cwd, scripts, purposes, argsHints);
 
-    // function to run script
-    // (
-    //   args: any,
-    //   context: { [varName: string]: any },
-    // ) => Promise<
-    //   | { cbMemberFun: string; message: string }
-    //   | { data?: any; statusCode?: number; message?: string }
-    // >
-    const fun = ({ Utils, cwd }) => {
-      return Utils.spawn('ts-node', ['index.ts'], { cwd });
-    };
-
-    return {
-      requestArgs: { Utils, cwd },
-      memberFunctions: { main: fun.toString() },
-    };
+    return { script: ['ts-node', 'index.ts'] };
   }
 
   protected async chooseEndpoints(
@@ -871,15 +881,23 @@ export class ScriptAgentService {
       mainTs: string;
       packageJson: string;
     },
+    purposes: any[],
+    argsHints: any[],
   ) {
     // generated files
     const p = JSON.parse(packageJson);
     p.dependencies || (p.dependencies = {});
+    // todo: as config
     p.dependencies['ts-node'] = '^10.9.2';
     p.dependencies.typescript = '^5.7.3';
     p.dependencies.chroot = '^1.0.11';
     this.filesService.save(
-      { 'main.ts': mainTs, 'package.json': JSON.stringify(p) },
+      {
+        'main.ts': mainTs,
+        'package.json': JSON.stringify(p),
+        'purposes.json': JSON.stringify(purposes),
+        'args-hints.json': JSON.stringify(argsHints),
+      },
       cwd,
     );
 
@@ -890,6 +908,13 @@ export class ScriptAgentService {
           originalname: 'index.ts',
           mimetype: 'application/typescript',
           path: './templates/task-runner/index.ts',
+          fieldname: '',
+          encoding: 'utf8',
+        },
+        {
+          originalname: 'pipe-client.ts',
+          mimetype: 'application/typescript',
+          path: './templates/task-runner/pipe-client.ts',
           fieldname: '',
           encoding: 'utf8',
         },

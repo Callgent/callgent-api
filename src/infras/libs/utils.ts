@@ -121,17 +121,20 @@ export class Utils {
     return execPromise(cmd, opts);
   }
 
+  /** @throws Error if exit code not 0 */
   static spawn(
     cmd: string,
     args: readonly string[],
     opts?: SpawnOptions & {
+      onPid?: (pid: number) => void;
       onStdout?: (data: string) => void;
       onStderr?: (data: string) => void;
     },
   ) {
-    return new Promise<{ stdout: string; stderr: string }>(
+    return new Promise<{ stdout: string; stderr: string; pid: number }>(
       (resolve, reject) => {
         const child = spawn(cmd, args, opts);
+        if (opts?.onPid) opts.onPid(child.pid);
 
         let stdout = '';
         let stderr = '';
@@ -153,7 +156,7 @@ export class Utils {
             reject(
               new Error(`Child process '${cmd}' exited with code ${code}`),
             );
-          } else resolve({ stdout, stderr });
+          } else resolve({ stdout, stderr, pid: child.pid });
         });
 
         child.on('error', (err) => reject(err));

@@ -122,7 +122,7 @@ export class RestApiController {
     e.context.callgent = callgent;
     requirement.files = await this.filesService.move(
       tmpFiles,
-      path.join(e.getCwd(this.filesService.UPLOAD_BASE_DIR), 'uploads'),
+      path.join(e.getTaskCwd(this.filesService.UPLOAD_BASE_DIR), 'uploads'),
     );
 
     const data = await this.eventListenersService.emit(e);

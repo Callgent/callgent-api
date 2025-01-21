@@ -3,8 +3,10 @@ import { EntryType } from '@prisma/client';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
 import { EntriesService } from '../../entries/entries.service';
-import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { InvokeSepCtx } from '../invoke-sep.service';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
 @Injectable()
@@ -16,24 +18,22 @@ export class SepPostprocessProcessor extends SepProcessor {
     super();
   }
 
-  async start(
-    ctx: InvokeSepCtx,
+  async _process(
+    ctx: InvokeStatus,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
+    preData: { data?: any; statusCode?: 2 },
   ): Promise<PendingOrResponse> {
-    this.next(ctx);
-
     // sep response: { statusCode: 2; message: string } | { data: any }
-    const { data: resp, statusCode } = ctx.response;
+    const { data: rawResp, statusCode } = preData;
     // if async, needn't postprocess
-    if (statusCode == 2) return;
+    if (statusCode == 2) return preData;
 
     const adaptor = this.entriesService.getAdaptor(
       endpoint.adaptorKey,
       EntryType.SERVER,
     );
-    const data = await adaptor.postprocess(resp, reqEvent, endpoint);
-    ctx.response.data = data;
+    const data = await adaptor.postprocess(rawResp, reqEvent, endpoint, ctx);
     return { data };
   }
 }

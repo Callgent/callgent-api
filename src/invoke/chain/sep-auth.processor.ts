@@ -2,8 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CallgentRealmsService } from '../../callgent-realms/callgent-realms.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
-import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { InvokeSepCtx } from '../invoke-sep.service';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
 @Injectable()
@@ -16,8 +18,8 @@ export class SepAuthProcessor extends SepProcessor {
     super();
   }
 
-  async start(
-    ctx: InvokeSepCtx,
+  protected async _process(
+    ctx: InvokeStatus,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<PendingOrResponse> {
@@ -30,14 +32,11 @@ export class SepAuthProcessor extends SepProcessor {
       reqEvent,
     );
 
+    // pending
     if (r?.resumeFunName) {
       ctx.processor.ctx = r.resumeFunName;
-      return {
-        statusCode: 2,
-        message: 'Server endpoint authentication: ' + r.resumeFunName,
-      };
+      this.break(ctx, true); // break chain, next time re-enter current processor
+      return { statusCode: 2 };
     }
-
-    this.next(ctx);
   }
 }

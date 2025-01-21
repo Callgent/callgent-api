@@ -16,10 +16,11 @@ import { ModuleRef } from '@nestjs/core';
 import { EventStore, Prisma, PrismaClient, ServiceType } from '@prisma/client';
 import { EventStoresService } from '../event-stores/event-stores.service';
 import { Utils } from '../infras/libs/utils';
+import { InvokeService } from '../invoke/invoke.service';
 import { CreateEventListenerDto } from './dto/create-event-listener.dto';
 import { UpdateEventListenerDto } from './dto/update-event-listener.dto';
 import { EventListener } from './entities/event-listener.entity';
-import { EventObject } from './event-object';
+import { EventObject, ServiceResponse } from './event-object';
 
 /**
  * @see https://nodejs.org/api/events.html
@@ -32,6 +33,8 @@ export class EventListenersService {
     private readonly moduleRef: ModuleRef,
     @Inject('EventStoresService')
     private readonly eventStoresService: EventStoresService,
+    @Inject('InvokeService')
+    private readonly invokeService: InvokeService,
   ) {}
 
   /**
@@ -61,29 +64,33 @@ export class EventListenersService {
 
   loadEvent = (eventId: string) => this.eventStoresService.findOne(eventId);
 
-  /** resume pending event, from external callback */
+  /**
+   * resume pending event, from external callback
+   * @param invokeKey: `invokeId-eventId`
+   */
   @Transactional()
   async resume<T extends EventObject>(
-    event: string | EventStore,
-    update?: (event: EventStore) => Promise<EventStore>,
+    invokeKey: string,
+    callbackResponse: any,
   ): Promise<T> {
-    if (typeof event === 'string')
-      event = (await this.loadEvent(event)) || event;
-    if (!event || typeof event === 'string')
-      throw new NotFoundException('Event not found, id=' + event);
-
-    if (update) event = await update(event);
-
-    // 1: processing, 0: done, 2: pending, <0: error
+    const { eventId, invokeId } = this.invokeService.parseInvokeKey(invokeKey);
+    const event = await this.loadEvent(eventId);
+    if (!event) throw new NotFoundException('Event not found, id=' + invokeId);
     if (event.statusCode != 2)
       throw new BadRequestException(
-        `Cannot resume event with status ${event.statusCode}, id=${event.id}`,
+        `Cannot resume event with status ${event.statusCode}, id=${invokeId}`,
       );
 
+    // prepare callback context
+    this.invokeService.setCallbackResponse(
+      invokeId,
+      callbackResponse,
+      event as any,
+    );
     const listeners = await this.resumeListeners(event);
     if (!listeners.length)
       throw new UnprocessableEntityException(
-        `Failed to resume: no listeners found for event, id=${event.id}`,
+        `Failed to resume: no listeners found for event, id=${invokeId}`,
       );
 
     const result = await this._invokeListeners(
@@ -106,7 +113,8 @@ export class EventListenersService {
     // FIXME
     const { callbackType, callback } = data;
     if (!callback) return data;
-    if (callbackType === 'EVENT') return urlOnly ? data : this.resume(callback);
+    if (callbackType === 'EVENT')
+      return urlOnly ? data : this.resume('', callback); // FIXME
 
     // URL callback
   }
@@ -141,8 +149,7 @@ export class EventListenersService {
           if (funName || event.stopPropagation) break;
         } catch (e) {
           event.statusCode = e.status || -1; // error
-          event.message =
-            e.response?.data?.message || `${e.message}`;
+          event.message = e.response?.data?.message || `${e.message}`;
           e.status < 500 || this.logger.error(e);
           return event;
         }

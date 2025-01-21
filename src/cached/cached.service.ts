@@ -7,12 +7,11 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
+import { PendingOrResponse } from '../entries/adaptors/entry-adaptor.base';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { Utils } from '../infras/libs/utils';
-import { InvokeCtx } from '../invoke/invoke.service';
-import { RestApiResponse } from '../restapi/response.interface';
 import { CachedDto } from './dto/cached.dto';
 
 /**
@@ -33,12 +32,13 @@ export class CachedService {
    */
   @Transactional()
   async fromCached(
+    invokeId: string,
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
   ): Promise<{
     cacheKey?: string;
     cacheTtl?: number;
-    response?: RestApiResponse<any>;
+    response?: PendingOrResponse;
   }> {
     // -> load:key(default get key), ttl
     const r = this._loadCacheConfig(endpoint, reqEvent) || {};
@@ -70,7 +70,7 @@ export class CachedService {
 
     //   -> if c-not-done: reg event-id, observe c.event-id
     if (endpoint.isAsync && c.response?.statusCode == 2)
-      await this.addObserver(c.pk, reqEvent.id);
+      await this.addObserver(c.pk, `${invokeId}-${reqEvent.id}`); // fixme
 
     //   -> return c
     return Object.assign(r, { response: c.response });
@@ -83,7 +83,7 @@ export class CachedService {
   @Transactional()
   async toCache(
     { cacheKey, cacheTtl }: { cacheKey?: string; cacheTtl?: number },
-    response: { statusCode?: 2; message?: string; data?: any },
+    response: PendingOrResponse,
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
   ) {
@@ -97,9 +97,9 @@ export class CachedService {
         data: {
           sepId: endpoint.id,
           cacheKey,
-          response,
+          response: response as any,
           sourceId: reqEvent.id,
-          eventIds: [],
+          invokeKeys: [],
         },
       })
       .then((d) => !!d);
@@ -111,7 +111,7 @@ export class CachedService {
    */
   @Transactional()
   async updateCache(
-    response: { data: any },
+    response: PendingOrResponse,
     { cacheKey, cacheTtl }: { cacheKey?: string; cacheTtl?: number },
     endpoint: EndpointDto,
   ) {
@@ -138,38 +138,31 @@ export class CachedService {
     }) as any;
   }
 
-  async addObserver(pk: bigint, eventId: string) {
+  async addObserver(pk: bigint, invokeKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.cached.update({
       where: { pk },
-      data: { eventIds: { push: eventId } },
+      data: { invokeKeys: { push: invokeKey } },
     });
   }
 
   @Transactional(Propagation.RequiresNew)
   /** notify observer event to resume processing */
-  async notifyObservers(c: CachedDto & { pk: bigint }) {
-    const { eventIds, response } = c;
+  async notifyObservers(c: CachedDto) {
+    const { invokeKeys, response } = c;
 
     // trigger resume processing, needn't await
     // grouped notify, preventing resource exhaustion
-    const groups = this._group(eventIds, 6);
-    for (const eIds of groups) {
+    const groups = this._group(invokeKeys, 3);
+    for (const invKeys of groups) {
       await Promise.all(
-        eIds.map((eId) =>
+        invKeys.map((invKey) =>
           this.eventListenersService
-            .resume(eId, async (event) => {
-              // event.statusCode = response.statusCode;
-              // event.message = response.message as string;
-              // update sep response
-              const invocation: InvokeCtx = (event.context as any).invocation;
-              invocation.sepInvoke.response = response as any;
-              return event;
-            })
+            .resume(invKey, response.data)
             .catch((e) =>
               console.error(
-                'Error on notify cached observers, eid=%s, error=%j',
-                eId,
+                'Error on notify cached observers, invokeKey=%s, error=%j',
+                invKey,
                 e,
               ),
             ),
@@ -189,9 +182,12 @@ export class CachedService {
     return result;
   }
 
-  async update(pk: bigint, response: any) {
+  async update(pk: bigint, response: PendingOrResponse) {
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.cached.update({ where: { pk }, data: { response } });
+    return prisma.cached.update({
+      where: { pk },
+      data: { response: response as any },
+    });
   }
 
   async delete(

@@ -561,17 +561,18 @@ model Cached {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  sepId    String   @db.VarChar(36)
+  sepId      String   @db.VarChar(36)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @description source event id
-  sourceId String   @db.VarChar(36)
+  sourceId   String   @db.VarChar(36)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  cacheKey String   @db.VarChar(511)
-  /// @DtoCastType(RestApiResponse<any>, ../../restapi/response.interface)
-  response Json     @db.Json
-  eventIds String[] @db.VarChar(36)
+  cacheKey   String   @db.VarChar(511)
+  /// @DtoCastType(PendingOrResponse, ../../entries/adaptors/entry-adaptor.base)
+  response   Json     @db.Json
+  /// @description invoke keys: invokeId-eventId
+  invokeKeys String[] @db.VarChar(36)
 
   createdAt DateTime @default(now())
   /// @description updated when async callback

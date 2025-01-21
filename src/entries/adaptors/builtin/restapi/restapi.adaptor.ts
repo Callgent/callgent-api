@@ -7,11 +7,11 @@ import { Prisma } from '@prisma/client';
 import axios, { AxiosResponse } from 'axios';
 import { AgentsService } from '../../../../agents/agents.service';
 import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
+import { ServiceResponse } from '../../../../event-listeners/event-object';
 import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { BothEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
-import { Utils } from '../../../../infras/libs/utils';
 
 @EntryAdaptorDecorator('restAPI', { both: '/icons/RestAPI.svg' })
 export class RestAPIAdaptor extends BothEntryAdaptor {
@@ -89,7 +89,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     return { data };
   }
 
-  async postprocess(resp: any) {
+  async postprocess(resp: any): Promise<ServiceResponse> {
     return resp;
   }
 

@@ -1,23 +1,32 @@
 import { default as TaskRunner } from './main.js';
 import * as chroot from 'chroot';
 import * as fs from 'fs';
+import { PipeClient } from './pipe-client.js';
 
 // - add `invokeService` method
 // - manage resumingStates
 // - error fixing and retrying
 class ExtendedTaskRunner extends TaskRunner {
-  constructor() {
-    super();
-    this.loadResumingStates();
-  }
   declare resumingStates: any;
+  public readonly pipeClient: PipeClient;
   private readonly resumingStatesFile = './resumingStates.json';
 
+  constructor(cmdPrefix: string) {
+    super();
+    this.pipeClient = new PipeClient('./pipe.sock', cmdPrefix);
+    this.loadResumingStates();
+  }
   async invokeService(
     purposeKey: string,
     args: { parameters?: any; requestBody?: any },
   ) {
-    console.log('Service invoked...');
+    const r = await this.pipeClient.sendCommand('');
+    try {
+      return JSON.parse(r);
+    } catch (e) {
+      console.error('Failed to parse response from pipe client', e);
+      return r;
+    }
   }
 
   loadResumingStates() {
@@ -52,7 +61,9 @@ chroot(allowedDirectory, (err) => {
     process.exit(1);
   }
 
-  const taskRunner = new ExtendedTaskRunner();
+  const [cmdPrefix] = process.argv.slice(2);
+
+  const taskRunner = new ExtendedTaskRunner(cmdPrefix);
   taskRunner
     .execute()
     .then(() => {
@@ -60,6 +71,9 @@ chroot(allowedDirectory, (err) => {
     })
     .catch((err) => {
       console.error('Failed to execute task runner.', err);
+      throw err;
     })
-    .finally(() => taskRunner.saveResumingStates());
+    .finally(
+      () => (taskRunner.saveResumingStates(), taskRunner.pipeClient?.close()),
+    );
 });

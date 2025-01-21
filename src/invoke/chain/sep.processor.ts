@@ -1,50 +1,49 @@
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
-import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { InvokeSepCtx } from '../invoke-sep.service';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../entries/events/client-request.event';
 
 /** processor chain for sep invoke */
 export abstract class SepProcessor {
   abstract getName(): string;
 
   /** entry function */
-  abstract start(
-    ctx: InvokeSepCtx,
+  async process(
+    ctx: InvokeStatus,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
+    nextProcessor: string,
+    preData: PendingOrResponse,
+  ): Promise<{
+    data: PendingOrResponse;
+    stop: boolean;
+  }> {
+    const data = await this._process(ctx, reqEvent, endpoint, preData);
+
+    const breakCurrent = (ctx.processor as any).breakCurrent;
+    if (!breakCurrent && ctx.processor.name) ctx.processor.name = nextProcessor;
+    delete (ctx.processor as any).breakCurrent;
+
+    const stop = !ctx.processor.name || typeof breakCurrent === 'boolean';
+    return { data, stop };
+  }
+
+  protected abstract _process(
+    ctx: InvokeStatus,
+    reqEvent: ClientRequestEvent,
+    endpoint: EndpointDto,
+    preData: PendingOrResponse,
   ): Promise<PendingOrResponse>;
 
-  /** to next processor */
-  next(ctx: InvokeSepCtx) {
-    delete ctx.processor.fun;
+  /** break chain, next time starts from current or next */
+  protected break(ctx: InvokeStatus, current?: boolean) {
+    (ctx.processor as any).breakCurrent = !!current;
   }
 
-  /** end whole chain: !processor.name && !processor.fun */
-  end(ctx: InvokeSepCtx) {
-    ctx.stopPropagation = true;
-    delete ctx.processor.fun;
+  /** end whole chain */
+  protected end(ctx: InvokeStatus) {
     delete ctx.processor.name;
-  }
-
-  /**
-   * invoking process. dispatch processorFun
-   * @returns async, or final response as $.data
-   */
-  process(
-    ctx: InvokeSepCtx,
-    reqEvent: ClientRequestEvent,
-    endpoint: EndpointDto,
-  ): Promise<PendingOrResponse> {
-    const { processor } = ctx;
-    const fun: Function = this[processor.fun];
-    if (!fun)
-      throw new Error(
-        `Processor[${this.getName()}] function=${processor.fun} Not found, reqId=${reqEvent.id}`,
-      );
-    return fun.call(this, ctx, reqEvent, endpoint);
-  }
-
-  clearSepCtx(reqEvent: ClientRequestEvent) {
-    delete reqEvent.context.invocation.sepInvoke;
   }
 }

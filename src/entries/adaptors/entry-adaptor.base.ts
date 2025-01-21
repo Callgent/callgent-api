@@ -10,9 +10,12 @@ import { EntryType, Prisma } from '@prisma/client';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
-import { RestApiResponse } from '../../restapi/response.interface';
+import { ServiceResponse } from '../../event-listeners/event-object';
 import { EntryDto } from '../dto/entry.dto';
-import { ClientRequestEvent } from '../events/client-request.event';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../events/client-request.event';
 
 export abstract class EntryAdaptor {
   protected readonly agentsService: AgentsService;
@@ -47,9 +50,11 @@ interface _ClientEntryAdaptor {
 }
 
 /** result pending, or response data */
-export type PendingOrResponse =
-  | { data: any }
-  | { statusCode: 2; message: string };
+export class PendingOrResponse {
+  statusCode?: 2;
+  message?: string;
+  data?: ServiceResponse;
+}
 
 export abstract class ServerEntryAdaptor extends EntryAdaptor {
   abstract isAsync(endpoint: EndpointDto): boolean;
@@ -57,20 +62,30 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
   /** init the entry. result in generated content */
   abstract initServer(initParams: object, entry: EntryDto): Promise<string>;
 
-  /** invoke server, returns 2 or real response */
+  /**
+   * invoke server, returns pending or real response
+   * @param sentry config
+   * @param reqEvent context
+   */
   abstract invoke(
     fun: EndpointDto,
-    args: object,
+    args: { [key: string]: any },
     sentry: EntryDto,
     reqEvent: ClientRequestEvent,
-  ): Promise<PendingOrResponse>;
+    ctx: InvokeStatus,
+  ): Promise<{
+    statusCode?: 2;
+    message?: string;
+    data?: any;
+  }>;
 
   /** postprocess response */
   abstract postprocess(
     resp: any,
     reqEvent: ClientRequestEvent,
     fun: EndpointDto,
-  ): Promise<RestApiResponse<any>>;
+    ctx: InvokeStatus,
+  ): Promise<ServiceResponse>;
 
   /**
    * parse APIs to openAPI.json format

@@ -1,9 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EntryType } from '@prisma/client';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
+import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
 import { EntriesService } from '../../entries/entries.service';
-import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { InvokeSepCtx } from '../invoke-sep.service';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
 @Injectable()
@@ -15,26 +18,18 @@ export class SepInvokeProcessor extends SepProcessor {
     super();
   }
 
-  async start(
-    ctx: InvokeSepCtx,
+  async _process(
+    ctx: InvokeStatus,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
-  ): Promise<{ statusCode: 2; message: string } | { data: any }> {
+  ): Promise<PendingOrResponse> {
     const adaptor = this.entriesService.getAdaptor(
       endpoint.adaptorKey,
       EntryType.SERVER,
     );
     const sentry = await this.entriesService.findOne(endpoint.entryId);
-    const r = await adaptor.invoke(
-      endpoint,
-      ctx.args,
-      sentry as any,
-      reqEvent,
-    );
 
     // whether async or not, go on to next processor
-    this.next(ctx);
-    ctx.response = r;
-    return; // do not return r, because even async resp, we go on to cache
+    return adaptor.invoke(endpoint, ctx.args, sentry as any, reqEvent, ctx);
   }
 }

@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { CachedService } from '../../cached/cached.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
-import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { InvokeSepCtx } from '../invoke-sep.service';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
 /** get from cached */
@@ -14,19 +16,18 @@ export class SepCachedProcessor extends SepProcessor {
     super();
   }
 
-  async start(
-    ctx: InvokeSepCtx,
+  protected async _process(
+    ctx: InvokeStatus,
     reqEvent: ClientRequestEvent,
     endpoint: EndpointDto,
   ): Promise<PendingOrResponse> {
     // get from cached
     const { cacheKey, cacheTtl, response } =
-      await this.cachedService.fromCached(endpoint, reqEvent);
+      await this.cachedService.fromCached(ctx.invokeId, endpoint, reqEvent);
     cacheKey && Object.assign(ctx, { cacheKey, cacheTtl });
 
-    if (response) {
-      this.end(ctx); // end whole chain
-    } else this.next(ctx);
+    // end whole chain, even pending response
+    if (response) this.end(ctx);
 
     return response;
   }

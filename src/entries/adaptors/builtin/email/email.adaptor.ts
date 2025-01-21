@@ -13,10 +13,12 @@ import {
   EmailsService,
 } from '../../../../emails/emails.service';
 import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
-import { InvokeCtx } from '../../../../invoke/invoke.service';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
-import { ClientRequestEvent } from '../../../events/client-request.event';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../../events/client-request.event';
 import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
 import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
@@ -66,6 +68,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
     resp: RelayEmail,
     reqEvent: ClientRequestEvent,
     fun: EndpointDto,
+    ctx: InvokeStatus,
   ) {
     if (!resp?.content?.html)
       throw new BadRequestException(
@@ -73,9 +76,8 @@ export class EmailAdaptor extends BothEntryAdaptor {
       );
 
     // convert resp to api format
-    const invocation: InvokeCtx = reqEvent.context.invocation;
     const data = await this.agentsService.convert2Response(
-      invocation.sepInvoke.args,
+      ctx.args,
       resp.content.text || resp.content.html,
       fun,
       reqEvent.id,
@@ -90,16 +92,17 @@ export class EmailAdaptor extends BothEntryAdaptor {
   /**
    * constructs an email sent to sep.host
    *
-   * @param fun - endpoint
+   * @param endpoint - function
    * @param args - function arguments
-   * @param sen - server entry
-   * @param reqEvent - client request event
+   * @param sentry - config
+   * @param reqEvent - context event
    */
   async invoke(
     endpoint: EndpointDto,
     args: object,
     sentry: Entry,
     reqEvent: ClientRequestEvent,
+    ctx: InvokeStatus,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
       reqEvent.id,
@@ -114,7 +117,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
         emailTo,
         'relay-sep-invoke',
         {
-          relayId: reqEvent.id,
+          relayId: `${ctx.invokeId}-${reqEvent.id}`, // todo
           callgentName: reqEvent.context.callgentName,
           endpoint,
           params,
@@ -123,19 +126,17 @@ export class EmailAdaptor extends BothEntryAdaptor {
         { email: emailFrom, name: 'Callgent Invoker' },
       )
       .then((res): PendingOrResponse => {
-        if (!res)
-          // as normal response
-          return {
-            data: {
-              statusCode: 500,
-              message: 'Failed to call service via email ' + emailTo,
-            },
-          };
-
-        return {
-          statusCode: 2, // pending or error
-          message: 'Service called via email, please wait for reply.',
-        };
+        return res
+          ? {
+              statusCode: 2,
+              message: 'Service called via email, please wait for reply.',
+            }
+          : {
+              data: {
+                status: 500,
+                statusText: 'Failed to call service via email ' + emailTo,
+              },
+            };
       });
   }
 
