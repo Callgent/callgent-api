@@ -4,11 +4,11 @@ import {
   TransactionHost,
 } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../entries/adaptors/entry-adaptor.base';
-import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { EventListenersService } from '../event-listeners/event-listeners.service';
 import { Utils } from '../infras/libs/utils';
@@ -19,13 +19,19 @@ import { CachedDto } from './dto/cached.dto';
  * where promise is cached, when resolved, cache will be updated and callers being informed.
  */
 @Injectable()
-export class CachedService {
+export class CachedService implements OnModuleInit {
+  private eventListenersService: EventListenersService;
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    protected readonly eventListenersService: EventListenersService,
-    @Inject('EntriesService')
-    private readonly entriesService: EntriesService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
+  onModuleInit() {
+    // a little hack: circular relation
+    this.eventListenersService = this.moduleRef.get(EventListenersService, {
+      strict: false,
+    });
+  }
 
   /**
    * try to get invoking response from cache

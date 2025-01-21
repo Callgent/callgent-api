@@ -18,6 +18,7 @@ import { InvokeSubprocess } from './invoke.subprocess';
   providers: [
     { provide: 'InvokeService', useClass: InvokeService },
     InvokeSepService,
+    InvokeSubprocess,
     {
       provide: INVOKE_CHAIN_LIST,
       useFactory: (...instances: SepProcessor[]) => instances,
@@ -37,7 +38,6 @@ import { InvokeSubprocess } from './invoke.subprocess';
     SepPostprocessProcessor,
     SepCacheProcessor,
     SepCallbackProcessor,
-    InvokeSubprocess,
   ],
   exports: ['InvokeService'],
 })
