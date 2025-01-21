@@ -94,6 +94,20 @@ function initTestData(
     createdBy: userId,
   };
 
+  const llmModel: Prisma.LlmModelPricingCreateInput = {
+    pk: 1,
+    modelName: 'deepseek-chat',
+    price: {
+      pricePerInputToken: 0.27,
+      pricePerOutputToken: 1.1,
+      pricePerCacheHitToken: 0.07,
+      token: 1000000
+    },
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+
+
   return [
     prisma.tenant
       .upsert({
@@ -148,6 +162,12 @@ function initTestData(
         create: cepDto,
       })
       .then((cep) => console.log({ cep })),
+    prisma.llmModelPricing
+      .upsert({
+        where: { pk: llmModel.pk },
+        update: llmModel,
+        create: llmModel,
+      }),
     // addLlmCache(
     //   prisma,
     //   'map2Endpoints',
@@ -198,10 +218,10 @@ async function addLlmCache(
   return (
     ret?.pk
       ? prisma.llmCache.update({
-          where: { pk: ret.pk },
-          data: llmCacheDto,
-          create: llmCacheDto,
-        })
+        where: { pk: ret.pk },
+        data: llmCacheDto,
+        create: llmCacheDto,
+      })
       : prisma.llmCache.create({ data: { name, model, prompt, result } })
   ).then((lmCache) => console.log({ lmCache }));
 }
