@@ -48,9 +48,15 @@ export class BillingService {
     usage: LLMResponse['usage'],
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const userBalance = await prisma.userBalance.update({
-      where: { userId: 's2JW5xUlpE__7FjPTUZYDc_gp' },
-      data: { balance: { decrement: amount_receivable } },
+    const userid = 'TEST_USER_ID'
+    const userBalance = await prisma.userBalance.upsert({
+      where: { userId: userid },
+      update: { balance: { decrement: amount_receivable }},
+      create: {
+        userId: userid,
+        balance: -amount_receivable,
+        currency: 'USD',
+      },
     });
     await prisma.transactionHistory.create({
       data: {
