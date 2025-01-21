@@ -48,7 +48,7 @@ export class BillingService {
     usage: LLMResponse['usage'],
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const userid = 'TEST_USER_ID'
+    const userid = 'TEST_USER_ID' // FIXME
     const userBalance = await prisma.userBalance.upsert({
       where: { userId: userid },
       update: { balance: { decrement: amount_receivable }},
@@ -210,6 +210,7 @@ export class BillingService {
         currency: 'USD',
       },
     });
+    // FIXME pagination
     const transactionHistory = await prisma.transactionHistory.findMany({
       where: {
         userBalanceId: userBalance.pk,
