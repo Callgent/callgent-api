@@ -215,6 +215,7 @@ export class LLMService {
     llmResult: string,
   ): T {
     if (!parseSchema) return llmResult as any;
+    if (!llmResult) throw new Error('LLM result must not empty');
 
     let ret: T;
     const isArray = Array.isArray(parseSchema);

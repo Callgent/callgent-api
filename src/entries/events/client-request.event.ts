@@ -33,6 +33,7 @@ export class ClientRequestEvent extends EventObject {
     super(entryId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
     Object.assign(this.context, context);
     this.context.req = req;
+    this.context.invocations = {};
 
     Object.defineProperty(this, 'histories', {
       value: false,
@@ -50,7 +51,7 @@ export class ClientRequestEvent extends EventObject {
     callerId?: string;
     epName?: string;
     progressive?: string;
-    invocations?: {
+    invocations: {
       [id: string]: InvokeStatus;
     };
     [key: string]: any;

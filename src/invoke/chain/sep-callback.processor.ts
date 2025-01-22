@@ -11,7 +11,7 @@ import { SepProcessor } from './sep.processor';
 /** resolve async response callback */
 @Injectable()
 export class SepCallbackProcessor extends SepProcessor {
-  getName = (): string => 'InvokeCache';
+  getName = (): string => 'InvokeCallback';
   constructor(private readonly cachedService: CachedService) {
     super();
   }

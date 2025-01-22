@@ -693,24 +693,34 @@ function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMembe
     {
       name: 'convert2Response',
       prompt: `Given the openAPI endpoint:
-{"endpoint": "{{=it.ep.name}}""{{=it.ep.summary?', "summary":'+it.ep.summary:''}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(it.ep.responses)}} }
+\`\`\`json
+{"endpoint": "{{=it.ep.name}}""{{=it.ep.summary?', "summary":'+it.ep.summary:''}}", {{=it.ep.description ? '"description":"'+it.ep.description+'", ':''}}"parameters":{{=JSON.stringify(it.ep.params.parameters)}}, {{ if (it.ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(it.ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(it.ep.responses)}} }
+\`\`\`
 
 invoked with the following request:
-<--- request begin ---
+\`\`\`json
 {{=JSON.stringify(it.requestArgs)}}
---- request end --->
+\`\`\`
 
 we receive below response content:
-<--- response begin ---
+<--- response begin --->
 {{=it.resp}}
---- response end --->
+<--- response end --->
 
 Please formalize the response content as a single-lined JSON object:
-{"status": "the exact response code(integer) defined in API", "data": "extracted response value with respect to the corresponding API response schema, or undefined if abnormal response", "statusText": "status text if abnormal response, otherwise undefined"}`,
+{"status": "the exact response code(integer) defined in API", "data": "extracted response value with respect to the corresponding API response schema, or undefined if abnormal response", "statusText": "status text if abnormal response, otherwise undefined"}
+Output:`,
     },
     {
       name: 'summarizeEntry',
-      prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed endpoints{{ } }}:
+      prompt: `## Objectives:
+Given below API service{{ if (!it.totally) { }} changes, some added/removed endpoints{{ } }}:, please re-summarize just for the API service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more business critical)
+
+## Deliverables:
+output a single-lined JSON object:
+{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}", "summary": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
+
+## Input:
 Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 {{ } else { }}
@@ -725,14 +735,22 @@ Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
       "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
     },{{ } }}
   }{{ } }}
-};
-Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more meaningful to users):,
-output a single-lined JSON object:
-{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand the core business concepts and in what scenarios to use this service. leave empty if \`totally\` is true.", "instruction": "Concise instruction to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true." }`,
+}
+
+## Output
+the json result is:
+`,
     },
     {
       name: 'summarizeCallgent',
-      prompt: `Given below API service{{ if (!it.totally) { }} changes: some added/removed functional entries{{ } }}:
+      prompt: `## Objectives:
+Given below API service{{ if (!it.totally) { }} changes, some added/removed entries{{ } }}:, please re-summarize just for the API service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+
+## Deliverables:
+output a single-lined JSON object:
+{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
+
+## Input:
 Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
 {{ } else { }}
@@ -747,10 +765,11 @@ Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
       "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
     },{{ } }}
   }{{ } }}
-};
-Please re-summarize just for service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
-output a single-lined JSON object:
-{ "totally": "boolean,{{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary to let users quickly understand business background, the core concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction to let users know roughly on how to use this service: concepts/operations etc. leave empty if \`totally\` is true. 3k chars most" }`,
+}
+
+## Output
+the json result is:
+`,
     },
     {
       name: 'genVue1Route',

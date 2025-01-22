@@ -196,7 +196,7 @@ model Callgent {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   forkedPk  Int? /// @description forked from
-  /// @CustomValidator(EntityIdExists, 'tag', 'id', ../../infras/repo/validators/entity-exists.validator)
+  /// @CustomValidator(EntityIdExists, 'tag', 'pk', ../../infras/repo/validators/entity-exists.validator)
   mainTagId Int?
 
   /// @DtoReadOnly

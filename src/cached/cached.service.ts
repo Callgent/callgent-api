@@ -124,12 +124,15 @@ export class CachedService implements OnModuleInit {
     if (!this._reallyCache(cacheKey, cacheTtl, endpoint)) return false;
 
     //   -> get key from event, cached[key] = response
-    const c = await this.findOne(cacheKey, endpoint.id);
+    const c: CachedDto & { pk: bigint } = await this.findOne(
+      cacheKey,
+      endpoint.id,
+    );
     if (!c) return false;
     c.response = response;
-    this.update(c.pk, response);
+    await this.update(c.pk, response);
 
-    //   -> inform all observer events:[resume processing], bound to current event-id
+    //   -> async inform all observer events:[resume processing], bound to current event-id
     this.notifyObservers(c); // no await
     return true;
   }
@@ -188,6 +191,7 @@ export class CachedService implements OnModuleInit {
     return result;
   }
 
+  @Transactional()
   async update(pk: bigint, response: PendingOrResponse) {
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.cached.update({
@@ -196,6 +200,7 @@ export class CachedService implements OnModuleInit {
     });
   }
 
+  @Transactional()
   async delete(
     uniqueWhere: { pk: bigint } | { cacheKey: string; sepId: string },
   ) {

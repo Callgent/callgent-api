@@ -34,7 +34,6 @@ export class InvokeService {
     const {
       epName,
       map2Endpoints: { requestArgs },
-      endpoints,
     } = reqEvent.context;
 
     // direct sep invoke and returns, needn't subprocess
@@ -107,6 +106,7 @@ export class InvokeService {
       this._removeInvokeId();
       // if not pending, invocation done
       if (resp?.statusCode != 2) delete reqEvent.context.invocations[invokeId];
+      reqEvent.message = resp?.message;
     }
   }
 
@@ -180,7 +180,7 @@ export class InvokeService {
         const r = await this._invokeSEP(epName, args, reqEvent, invokeId);
 
         //if pending response, freeze subprocess
-        if (!r) {
+        if (r?.statusCode == 2) {
           this.invokeSubprocess.freezeProcess(child, cwd);
           frozenKilled = true;
         } else {
@@ -200,5 +200,8 @@ export class InvokeService {
         fs.existsSync(pipePath) && fs.unlinkSync(pipePath);
       });
     }
+
+    if (frozenKilled)
+      return { data: reqEvent, resumeFunName: 'invokeSEPsCallback' };
   }
 }

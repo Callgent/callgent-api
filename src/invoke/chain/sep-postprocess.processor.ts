@@ -13,7 +13,7 @@ import { SepProcessor } from './sep.processor';
 export class SepPostprocessProcessor extends SepProcessor {
   getName = (): string => 'InvokePostprocess';
   constructor(
-    @Inject('EntriesService') private readonly entriesService: EntriesService,
+    @Inject('EntriesService') protected readonly entriesService: EntriesService,
   ) {
     super();
   }

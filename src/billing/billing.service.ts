@@ -4,7 +4,12 @@ import {
   TransactionHost,
 } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
@@ -48,10 +53,10 @@ export class BillingService {
     usage: LLMResponse['usage'],
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const userid = 'TEST_USER_ID' // FIXME
+    const userid = 'TEST_USER_ID'; // FIXME
     const userBalance = await prisma.userBalance.upsert({
       where: { userId: userid },
-      update: { balance: { decrement: amount_receivable }},
+      update: { balance: { decrement: amount_receivable } },
       create: {
         userId: userid,
         balance: -amount_receivable,
@@ -159,8 +164,8 @@ export class BillingService {
             balance: true,
             userId: true,
             createdAt: true,
-            updatedAt: true
-          }
+            updatedAt: true,
+          },
         });
         await prisma.transactionHistory.update({
           where: { stripeId: id },
@@ -186,7 +191,10 @@ export class BillingService {
             deletedAt: new Date(),
           },
         });
-        return { message: `Payment failed or expired for user ${useridFailed}`, status: 'failed' };
+        return {
+          message: `Payment failed or expired for user ${useridFailed}`,
+          status: 'failed',
+        };
       default:
         throw new HttpException(
           `Unhandled event type: ${event.type}`,
@@ -217,7 +225,7 @@ export class BillingService {
         price: {
           path: ['state'],
           equals: 'completed',
-        }
+        },
       },
       select: {
         type: true,
