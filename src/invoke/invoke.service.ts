@@ -125,8 +125,11 @@ export class InvokeService {
   }
 
   parseInvokeKey(invokeKey: string) {
-    const [invokeId, eventId] = invokeKey.split('-', 2);
-    return { eventId, invokeId };
+    const idx = invokeKey.indexOf('-');
+    return {
+      invokeId: invokeKey.substring(0, idx),
+      eventId: invokeKey.substring(idx + 1),
+    };
   }
 
   composeInvokeKey(invokeId: string, eventId: string) {
@@ -172,11 +175,11 @@ export class InvokeService {
       },
       onData: async (data, socket) => {
         const msg = data.toString();
-        const [prefix, invokeId, cmd] = msg.split('-', 3);
+        const [prefix, invokeId, ...cmd] = msg.split('-');
         if (cmdPrefix != prefix) return;
 
         // matching command
-        const { epName, args } = JSON.parse(cmd);
+        const { epName, args } = JSON.parse(cmd.join('-'));
         const r = await this._invokeSEP(epName, args, reqEvent, invokeId);
 
         //if pending response, freeze subprocess

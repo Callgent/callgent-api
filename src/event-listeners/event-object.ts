@@ -42,7 +42,7 @@ export class EventObject {
    * @returns taskId{task id}: `{yyMMdd}-{nanoid}`
    */
   protected _getTaskId(taskId: string) {
-    let sp = taskId?.split('-', 2);
+    let sp = taskId?.split('-');
     if (
       !(taskId?.length == this.id.length + 7) ||
       sp[0].length !== 6 ||
@@ -56,7 +56,7 @@ export class EventObject {
 
   /** get task working dir */
   public getTaskCwd(base: string) {
-    const sp = this.taskId.split('-', 2);
+    const sp = this.taskId.split('-');
     return path.join(
       base,
       sp[0].substring(0, 4), // yyMM

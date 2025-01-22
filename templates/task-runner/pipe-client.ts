@@ -29,13 +29,13 @@ export class PipeClient {
 
     this.client.on('data', (data) => {
       const response = data.toString();
-      const [cmdPrefix, requestIdStr, fullResponse] = response.split('-', 3);
+      const [cmdPrefix, requestIdStr, ...fullResponse] = response.split('-');
       if (cmdPrefix != this.cmdPrefix) return;
 
       const requestId = parseInt(requestIdStr, 10);
       const pendingRequest = this.pendingRequests.get(requestId);
       if (pendingRequest) {
-        pendingRequest.resolve(fullResponse);
+        pendingRequest.resolve(fullResponse.join('-'));
         this.pendingRequests.delete(requestId);
       }
     });
