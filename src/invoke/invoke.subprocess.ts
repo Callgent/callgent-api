@@ -4,12 +4,16 @@ import { spawn, spawnSync, SpawnSyncReturns } from 'child_process';
 import fs from 'fs';
 import net from 'net';
 import path from 'path';
+import readline from 'readline';
 
 @Injectable()
 export class InvokeSubprocess {
   private readonly logger = new Logger(InvokeSubprocess.name);
   constructor(private readonly configService: ConfigService) {
-    this.subprocessEnv = { TZ: this.configService.get('TZ') };
+    this.subprocessEnv = {
+      TZ: this.configService.get('TZ'),
+      PATH: this.configService.get('PATH'),
+    };
   }
   private readonly subprocessEnv: NodeJS.ProcessEnv;
 
@@ -25,15 +29,24 @@ export class InvokeSubprocess {
 
     // restore subprocess
     child = this.restoreProcess(this._getCheckpointPath(cwd));
-    if (!child) {
-      // start subprocess
+    if (child) return child;
+
+    // start subprocess
+    return new Promise<{ pid: number }>((resolve, reject) => {
       const p = spawn(cmd, args, {
         cwd,
         env: this.subprocessEnv,
       });
-      child = p as any;
-    }
-    return child;
+
+      const f = (d) => {
+        this.logger.log('Subprocess output: %s', d);
+        resolve(p as { pid: number });
+      };
+      p.stdout.on('data', f);
+      p.stderr.on('data', f);
+      p.on('close', f);
+      p.on('error', reject);
+    });
   }
 
   /**
@@ -150,25 +163,32 @@ export class InvokeSubprocess {
   createNamedPipe(
     pipePath: string,
     {
-      onData,
+      onLine,
       onConnect,
     }: {
-      onData: (data: Buffer, socket: net.Socket) => void;
+      onLine: (line: string, socket: net.Socket) => void;
       onConnect?: (socket: net.Socket) => void;
     },
   ) {
     fs.existsSync(pipePath) && fs.unlinkSync(pipePath);
-    const server = net.createServer();
-    server.listen(pipePath);
+    const server = net
+      .createServer()
+      .listen(pipePath, () =>
+        this.logger.log('Server is listening on', pipePath),
+      );
 
     server.on('connection', (socket) => {
       this.logger.log('Subprocess connected to named pipe');
       onConnect && onConnect(socket);
 
-      socket.on('data', async (data) => onData(data, socket));
+      const rl = readline.createInterface({
+        input: socket,
+        terminal: false,
+      });
+      rl.on('line', (line) => onLine(line, socket));
 
-      socket.on('error', (err) => console.error('Pipe error:', err));
-      socket.on('close', () => console.log('Pipe closed'));
+      socket.on('error', (err) => this.logger.error('Pipe error:', err));
+      socket.on('close', () => this.logger.log('Pipe closed'));
     });
 
     return server;

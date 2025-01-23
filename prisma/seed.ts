@@ -189,7 +189,7 @@ output just json no explanation`,
       name: 'chooseEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -238,7 +238,7 @@ output complete purposes in json format:
       name: 'reChooseEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -291,7 +291,7 @@ output complete purposes in json format:
       name: 'confirmEndpoints',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -330,7 +330,7 @@ Note: Ensure accuracy and avoid assumptions beyond the provided info`,
       name: 'confirmEndpointsArgs',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -392,7 +392,7 @@ Output the argument sourcing in JSON format:
       name: 'reConfirmEndpointsArgs',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -458,7 +458,7 @@ Output the Uncertain arguments sourcing in JSON format:
       name: 'generateTaskScript',
       prompt: `## Input:
 1. **User Requirements**: All Information are provided in conversations for user task goal{{ if (it.files.length) { }}
-   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./uploads\` of local disk{{ } }}
+   - **User uploaded files**: files mentioned in conversation are placed in current dir \`./upload\` of local disk{{ } }}
 2. **OpenAPI Documentation**: documentation for the backend service of chosen endpoints:
    \`\`\`json
    {
@@ -490,7 +490,7 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
    - Persistent Class Field: define public \`resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
      - this is the only field restored to resume the task, task runner will save/load it for you automatically
      - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
-   - Endpoint Invoke Helper: an predefined public member function \`invokeService(purposeKey: string, args:{parameters?:any[],requestBody?:any}): Promise<any>\`
+   - Endpoint Invoke Helper: an predefined public member function \`invokeService(purposeKey: string, args:{parameters?:{[paramName:string]:any},requestBody?:any}): Promise<any>\`
      - You needn't output this method, directly use it to invoke any endpoint
      - this method just relays req/resp, please handle validations/exceptions/retry by yourself
 3. **Modular and Reusable Code**: Implement well-structured member functions to encapsulate specific logic, ensuring the class is modular, reusable, and easy to maintain
@@ -503,7 +503,11 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
    - Thoroughly analyze the input, output, exceptions, and side effects of all dependent API endpoints and resources
    - Handle edge cases and values and errors gracefully to ensure reliability, including args validation, response type checking, error handling
      - strictly use \`Optional Chaining Operators\` to prevent foolish npe errors
-6. Log essential info with progress \`ndices/totals\` and critical failures using \`console\`. Keep logs concisely and readable, no massive logs output
+   - Transaction isolation for disk operations, especially in below cases:
+     - concurrent write access
+     - failover and cleanup on errors
+     - caching on reentrant calls
+6. Log essential info with progress \`indices/totals\` and critical failures using \`console\`. Keep logs concisely and readable, no massive logs output
 
 ## Deliverables:
 1. Describe optimization strategies based on estimated heavy resources loads. All in pullet items.
@@ -517,178 +521,11 @@ short desc in one line
 // os independent full code
 \`\`\`
 5. package.json
+  - don't import Node.js built-in modules
+  - prevent using outdated/deprecated packages or versions, better use the latest stable versions updated within the last 3 years
+  - script is run with \`tsx\`
 \`\`\`json
 \`\`\``,
-    },
-    {
-      name: 'designProcess',
-      prompt: `# Task goal:
-generating js macro class to orchestrate the given service API endpoints to fulfill the user request
-
-## user request:
-\`\`\`javascript
-const request = {
-{{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
-{{ } }}"requested from": "{{=it.cenAdaptor}}",
-"request_object": {{=JSON.stringify(it.req)}},
-}
-\`\`\`
-{{ if (it.req.files?.length) { }}> Note: the files are in current dir, you may access them if needed.
-{{ } }}
-## service endpoints:
-\`\`\`pseudo-openAPI-3-doc
-{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-}
-\`\`\`
-
-## generated js class template:
-\`\`\`javascript
-/** stateless class */
-class RequestMacro {
-  /** @param invokeService - function to invoke a service endpoint */
-  constructor(invokeService){ this.invokeService=invokeService; }
-  /** must have this starting member function */
-  main = (requestArgs, context) => {
-    // ...
-
-    // every endpoint invocation goes like this:
-    const r = await this.invokeService(epName, epArgs);
-    const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
-    if (r.statusCode == 2) return {...r, cbMemberFun}
-    // else sync call the same logic
-    return this[cbMemberFun](r.data, context)
-  };
-
-  // ... more member functions for service endpoints to callback
-}
-\`\`\`
-
-## invokeService signature:
-function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>}
-@returns:
-- {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
-- {data}: errors already thrown on any endpoint failure invocation in invokeService, so you just get successful response object here
-
-**note**: every invokeService may return statusCode 2, so we break the whole logic into member functions
-
-## all member functions(including \`main\`) have same signature:
-function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
-@param asyncResponse
-- for RequestMacro.main: it's requestArgs, matching macroParams schema
-- for any other member functions: it's received endpoint successful response object of previous endpoint invocation
-@param context: the same context object passes through out all member invocations, keeping shared state
-@returns
-- {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
-- {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
-
-## generated code output json format:
-\`\`\`json
-{ "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
-  "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
-  "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
-  "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
-  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
-}
-\`\`\`
-**note**:
-1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
-2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
-   - try best to retrieve the info by invoking service endpoints if possible
-   - or ask user to provide from $.question
-   - before asking user, double check if it's really not possible to retrieve from request_object or endpoints invocations!
-3. if $.question is not empty, set all other prop values empty!
-4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
-5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
-6. each member function should have only 0 or 1 \`invokeService\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
-7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
-8. member functions signature is fixed, please don't change it, use context to pass states!
-9. robust code to handle errors/abnormal vars/timeout/retries`,
-    },
-    {
-      name: 'generateMacroCode',
-      prompt: `# Task goal:
-generating js macro class to orchestrate the given service API endpoints to fulfill the user request
-
-## user request:
-\`\`\`javascript
-const request = {
-{{ if (it.epName) { }}"requesting endpoint": "{{=it.epName}}",
-{{ } }}"requested from": "{{=it.cenAdaptor}}",
-"request_object": {{=JSON.stringify(it.req)}},
-}
-\`\`\`
-{{ if (it.req.files?.length) { }}> Note: the files are in current dir, you may access them if needed.
-{{ } }}
-## service endpoints:
-\`\`\`pseudo-openAPI-3-doc
-{ "Service Name": "{{=it.callgentName}}", "endpoints": { {{~ it.endpoints :ep }}
-  "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
-}
-\`\`\`
-
-## generated js class template:
-\`\`\`javascript
-/** stateless class */
-class RequestMacro {
-  /** @param invokeService - function to invoke a service endpoint */
-  constructor(invokeService){ this.invokeService=invokeService; }
-  /** must have this starting member function */
-  main = (requestArgs, context) => {
-    // ...
-
-    // every endpoint invocation goes like this:
-    const r = await this.invokeService(epName, epArgs);
-    const cbMemberFun = '..'; // meaningful RequestMacro member function name, related to epName, ends with 'Cb', e.g. 'getPetByIdCb'
-    if (r.statusCode == 2) return {...r, cbMemberFun}
-    // else sync call the same logic
-    return this[cbMemberFun](r.data, context)
-  };
-
-  // ... more member functions for service endpoints to callback
-}
-\`\`\`
-
-## invokeService signature:
-function(endpointName, epArgs): Promise<{statusCode:2, message}|{data}>
-@returns:
-- {statusCode:2, message}: means async endpoint invocation, you must immediately return {cbMemberFun:'macro member function which will be async called by endpoint with successful response object'}
-- {data}: errors already thrown on any endpoint failure invocation in invokeService, so you just get successful response object here
-
-**note**: every invokeService may return statusCode 2, so we break the whole logic into member functions
-
-## all member functions(including \`main\`) have same signature:
-function(asyncResponse: any, context:{ [varName:string]:any }): Promise<{cbMemberFun,message}|{data?,statusCode?,message?}>
-@param asyncResponse
-- for RequestMacro.main: it's requestArgs, matching macroParams schema
-- for any other member functions: it's received endpoint successful response object of previous endpoint invocation
-@param context: the same context object passes through out all member invocations, keeping shared state
-@returns
-- {cbMemberFun,message}: tell endpoint to callback \`cbMemberFun\` later
-- {data:'user request's final response, matching one of macroResponse schema',statusCode:'corresponding http-code',message?}
-
-## generated code output json format:
-\`\`\`json
-{ "question": "question to ask the user, if any information not sure or missing while mapping from request to main#requestArgs, *no* guess or assumption of the mapping. set to '' if the args mapping is crystal clear. if question not empty, leave all subsequent props(endpoints, macroParams,..) empty",
-  "endpoints": ["the chosen endpoint names to be invoked"], "summary":"short summary to quickly understand what RequestMacro does", "instruction":"Instruction helps using this service",
-  "macroParams":"schema of main#requestArgs, a formal openAPI format json: {parameters?:[], requestBody?:{"content":{[mediaType]:..}}}", "macroResponse": "schema of final response of the user request, a formal openAPI format json {[http-code]:any}",
-  "requestArgs": "k-v dto following $.macroParams schema(no additional props than $.macroParams defined! optional props can be omitted, default values can be used). all values are semantically extracted from \`request.request_object\`",
-  "memberFunctions": { "main":"full js function implementation code, the code must have not any info from request.request_object, all request info just from requestArgs", [callbackFunName:string]:"full js function code. async service endpoints will callback to these functions with real response" }
-}
-\`\`\`
-**note**:
-1. extract all values matching macroParams schema, from user request_object into \`requestArgs\`, don't put as constant in code! requestArgs must valid json value.
-2. this is real production service invocations, please don't use mock/fake/guess data as \`requestArgs\`. if info absent/ambiguous, you may:
-   - try best to retrieve the info by invoking service endpoints if possible
-   - or ask user to provide from $.question
-   - before asking user, double check if it's really not possible to retrieve from request_object or endpoints invocations!
-3. if $.question is not empty, set all other prop values empty!
-4. \`requestArgs\` will be passed to main(requestArgs, context) as the first argument
-5. you may use \`context\` to pass any shared state between member functions; requestArgs is already shared as \`context.requestArgs\`, you needn't put it again!
-6. each member function should have only 0 or 1 \`invokeService\` invocation, it's response data must be handled in another member function, because of r.statusCode == 2! so use the template code at end of each member function: const cbMemberFun='..';if (r.statusCode == 2) return {...r, cbMemberFun} else return this[cbMemberFun](r.data, context)
-7. \`memberFunctions.keys()\` returns all member function names of \`RequestMacro\`, \`memberFunctions.values()\` are implementation code(please escape newline char so code is valid string in json) for each function. don't print whole class!
-8. member functions signature is fixed, please don't change it, use context to pass states!
-9. robust code to handle errors/abnormal vars/timeout/retries`,
     },
     {
       name: 'convert2Response',

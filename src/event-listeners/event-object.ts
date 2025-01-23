@@ -56,13 +56,14 @@ export class EventObject {
 
   /** get task working dir */
   public getTaskCwd(base: string) {
-    const sp = this.taskId.split('-');
+    const [ts, ...ids] = this.taskId.split('-');
+    const id = ids.join('-');
     return path.join(
       base,
-      sp[0].substring(0, 4), // yyMM
-      sp[0].substring(4), // dd
-      sp[1].at(-1), // id[-1:]
-      sp[1], // id
+      ts.substring(0, 4), // yyMM
+      ts.substring(4), // dd
+      id.at(-1), // id[-1:]
+      id, // id
     );
   }
 

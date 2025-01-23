@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { exec, ExecOptions, spawn, SpawnOptions } from 'child_process';
+import { exec } from 'child_process';
 import { jsonrepair } from 'jsonrepair';
 import { nanoid, urlAlphabet } from 'nanoid';
 import { promisify } from 'util';
@@ -115,53 +115,6 @@ export class Utils {
       exists.add(x[key]);
       return true;
     });
-  }
-
-  static exec(cmd: string, opts: ExecOptions) {
-    return execPromise(cmd, opts);
-  }
-
-  /** @throws Error if exit code not 0 */
-  static spawn(
-    cmd: string,
-    args: readonly string[],
-    opts?: SpawnOptions & {
-      onPid?: (pid: number) => void;
-      onStdout?: (data: string) => void;
-      onStderr?: (data: string) => void;
-    },
-  ) {
-    return new Promise<{ stdout: string; stderr: string; pid: number }>(
-      (resolve, reject) => {
-        const child = spawn(cmd, args, opts);
-        if (opts?.onPid) opts.onPid(child.pid);
-
-        let stdout = '';
-        let stderr = '';
-
-        child.stdout.on('data', (data) => {
-          const s = data.toString();
-          stdout += s;
-          if (opts?.onStdout) opts.onStdout(s);
-        });
-
-        child.stderr.on('data', (data) => {
-          const s = data.toString();
-          stderr += s;
-          if (opts?.onStderr) opts.onStderr(s);
-        });
-
-        child.on('close', (code) => {
-          if (code !== 0) {
-            reject(
-              new Error(`Child process '${cmd}' exited with code ${code}`),
-            );
-          } else resolve({ stdout, stderr, pid: child.pid });
-        });
-
-        child.on('error', (err) => reject(err));
-      },
-    );
   }
 }
 

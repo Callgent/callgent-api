@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { execSync } from 'child_process';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { RequestFile } from '../entries/adaptors/dto/request-requirement.dto';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
@@ -286,8 +287,6 @@ export class ScriptAgentService {
     // write to files, install deps
     const cwd = reqEvent.getTaskCwd(this.filesService.UPLOAD_BASE_DIR);
     await this.installScriptFiles(cwd, scripts, purposes, argsHints);
-
-    return { script: ['ts-node', 'index.ts'] };
   }
 
   protected async chooseEndpoints(
@@ -886,11 +885,10 @@ export class ScriptAgentService {
   ) {
     // generated files
     const p = JSON.parse(packageJson);
-    p.dependencies || (p.dependencies = {});
+    p.devDependencies || (p.devDependencies = {});
     // todo: as config
-    p.dependencies['ts-node'] = '^10.9.2';
-    p.dependencies.typescript = '^5.7.3';
-    p.dependencies.chroot = '^1.0.11';
+    p.devDependencies.tsx = '^4.19.2';
+    p.devDependencies.typescript = '^5.7.3';
     this.filesService.save(
       {
         'main.ts': mainTs,
@@ -925,18 +923,32 @@ export class ScriptAgentService {
           fieldname: '',
           encoding: 'utf8',
         },
+        {
+          originalname: 'tsconfig.json',
+          mimetype: 'application/json',
+          path: './templates/task-runner/tsconfig.json',
+          fieldname: '',
+          encoding: 'utf8',
+        },
       ],
       cwd,
     );
 
     // install packages
-    const { stderr, stdout } = await Utils.exec('pnpm install', { cwd });
-    if (stderr) {
+    try {
+      execSync('pnpm install', {
+        cwd,
+        encoding: 'utf8',
+      });
+    } catch (err) {
+      const { stderr } = err;
       const e = stderr
+        ?.toString()
         .split('\n')
-        .filter((l) => l.indexOf('ebugger') < 0)
+        .filter((l) => l.indexOf('bugger') < 0)
         .join('\n');
-      if (e) throw new Error(stderr);
+      if (!e) return;
+      throw err;
     }
   }
 

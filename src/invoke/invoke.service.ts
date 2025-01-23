@@ -159,13 +159,13 @@ export class InvokeService {
     const cwd = reqEvent.getTaskCwd(this.filesService.UPLOAD_BASE_DIR);
     const cmdPrefix = reqEvent.taskId.substring(reqEvent.taskId.length - 3);
     const child = await this.invokeSubprocess.spawnOrRestore(
-      'ts-node',
-      ['index.ts', cmdPrefix],
+      'npx',
+      ['tsx', 'index.ts', cmdPrefix],
       { cwd },
     );
 
     // create named pipe to communicate with subprocess
-    const pipePath = path.join(cwd, 'pipe.sock');
+    const pipePath = path.join(cwd, 'pipe.socket');
     let frozenKilled = false;
     // FIXME: concurrent invoke, if pending wait for all responses before freeze subprocess
     const server = this.invokeSubprocess.createNamedPipe(pipePath, {
@@ -173,7 +173,7 @@ export class InvokeService {
         if (response)
           socket.write(`${cmdPrefix}-${invokeId}-${JSON.stringify(response)}`);
       },
-      onData: async (data, socket) => {
+      onLine: async (data, socket) => {
         const msg = data.toString();
         const [prefix, invokeId, ...cmd] = msg.split('-');
         if (cmdPrefix != prefix) return;
