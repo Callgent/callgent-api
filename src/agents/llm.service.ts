@@ -1,12 +1,13 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 import * as dot from 'dot';
 import { Utils } from '../infras/libs/utils';
 import { LlmCompletionEvent } from './events/llm-completion.event';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class LLMService {
@@ -342,6 +343,18 @@ export class LLMService {
   }
 
   protected async _completion(req: LLMRequest): Promise<LLMResponse> {
+    const prisma = this.txHost.tx as PrismaClient;
+    const userId = 'TEST_USER_ID'; // FIXME
+    const userBalance = await prisma.userBalance.upsert({
+      where: { userId },
+      create: {
+        userId
+      },
+      update: {}
+    });
+    if (userBalance.balance <= new Decimal(0)) {
+      throw new ForbiddenException('Insufficient balance');
+    }
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
       const url = req.messages
@@ -366,10 +379,11 @@ export class LLMService {
             data.model,
             data.usage,
           );
-          this.eventEmitter.emit(
+          this.eventEmitter.emitAsync(
             LlmCompletionEvent.eventName,
             new LlmCompletionEvent(data),
-          );
+          )
+            .catch(reject);
           resolve(data);
         })
         .catch(reject);

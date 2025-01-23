@@ -102,6 +102,7 @@ function initTestData(
       pricePerCacheHitToken: 0.07,
       token: 1000000,
     },
+    pricingMethod: 'calcPrice_deepseek',
   };
 
   return [

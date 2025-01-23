@@ -587,11 +587,12 @@ model Cached {
 
 /// @DtoIgnoreModel
 model LlmModelPricing {
-  pk        BigInt   @id @default(autoincrement())
-  modelName String   @unique @db.VarChar(150)
-  price     Json     @db.Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  pk            BigInt   @id @default(autoincrement())
+  modelName     String   @unique @db.VarChar(150)
+  price         Json     @db.Json
+  pricingMethod String   @db.VarChar(150)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
 }
 
 /// @DtoIgnoreModel
@@ -612,14 +613,19 @@ model UserBalance {
   TransactionHistory TransactionHistory[]
 }
 
+enum TransactionHistoryType {
+  PAYMENT
+  TOKEN
+}
+
 /// @DtoIgnoreModel
 model TransactionHistory {
-  pk       BigInt  @id @default(autoincrement())
-  type     String  @db.VarChar(50)
-  stripeId String? @unique @db.VarChar(150)
-  price    Json    @db.Json
-  usage    Json?   @db.Json
-  amount   Decimal @db.Decimal(30, 0)
+  pk       BigInt                 @id @default(autoincrement())
+  type     TransactionHistoryType @default(PAYMENT)
+  stripeId String?                @unique @db.VarChar(150)
+  price    Json                   @db.Json
+  usage    Json?                  @db.Json
+  amount   Decimal                @db.Decimal(30, 0)
 
   userBalanceId BigInt @db.BigInt
 

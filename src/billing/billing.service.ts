@@ -1,5 +1,4 @@
 import {
-  Propagation,
   Transactional,
   TransactionHost,
 } from '@nestjs-cls/transactional';
@@ -11,11 +10,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 import Stripe from 'stripe';
-import { LlmCompletionEvent } from '../agents/events/llm-completion.event';
-import { LLMResponse } from '../agents/llm.service';
 
 @Injectable()
 export class BillingService {
@@ -30,79 +26,6 @@ export class BillingService {
     });
   }
 
-  @Transactional(Propagation.RequiresNew)
-  @OnEvent(LlmCompletionEvent.eventName, { async: true })
-  async handleLlmCompletion(event: LlmCompletionEvent) {
-    const prisma = this.txHost.tx as PrismaClient;
-    const { model, usage } = event.response;
-    const { price } = (await prisma.llmModelPricing.findUnique({
-      where: { modelName: model },
-      select: { price: true },
-    })) as any;
-    const { total_price, amount_receivable } = await this.calculateUsageCost(
-      price,
-      usage,
-    );
-    await this.syncTransactionHistory(amount_receivable, total_price, usage);
-  }
-
-  @Transactional()
-  async syncTransactionHistory(
-    amount_receivable: number,
-    total_price: number,
-    usage: LLMResponse['usage'],
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-    const userid = 'TEST_USER_ID'; // FIXME
-    const userBalance = await prisma.userBalance.upsert({
-      where: { userId: userid },
-      update: { balance: { decrement: amount_receivable } },
-      create: {
-        userId: userid,
-        balance: -amount_receivable,
-        currency: 'USD',
-      },
-    });
-    await prisma.transactionHistory.create({
-      data: {
-        userBalanceId: userBalance.pk,
-        type: 'token',
-        amount: -amount_receivable,
-        price: { amount_receivable, total_price },
-        usage,
-      },
-    });
-  }
-
-  @Transactional()
-  async calculateUsageCost(price: any, usage: LLMResponse['usage']) {
-    const pricePerInputToken =
-      (price.pricePerInputToken * 1e9 * 100) / price.token;
-    const pricePerOutputToken =
-      (price.pricePerOutputToken * 1e9 * 100) / price.token;
-    const pricePerCacheHitToken =
-      ((price.pricePerCacheHitToken || price.pricePerInputToken) * 1e9 * 100) /
-      price.token;
-
-    const {
-      prompt_tokens,
-      completion_tokens,
-      prompt_cache_hit_tokens = 0,
-      prompt_cache_miss_tokens = prompt_tokens,
-    } = usage;
-
-    const total_price =
-      prompt_cache_miss_tokens * pricePerInputToken +
-      prompt_cache_hit_tokens * pricePerCacheHitToken +
-      completion_tokens * pricePerOutputToken;
-
-    const amount_receivable = total_price * 1.05;
-
-    return {
-      total_price: total_price,
-      amount_receivable: amount_receivable,
-    };
-  }
 
   // Create a Stripe payment session
   @Transactional()
@@ -139,8 +62,8 @@ export class BillingService {
     await prisma.transactionHistory.create({
       data: {
         userBalanceId: userBalance.pk,
-        type: 'payment',
-        amount: amount * 1000000000,
+        type: 'PAYMENT',
+        amount: amount * 1e9,
         stripeId: session?.id,
         price: { amount },
       },
