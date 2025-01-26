@@ -7,6 +7,9 @@
     "start": "npx tsx index.ts"
   },
   "dependencies": {
+    "zip-lib": "^1.0.5"
+  },
+  "devDependencies": {
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }

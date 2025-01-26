@@ -5,6 +5,7 @@ import fs from 'fs';
 import net from 'net';
 import path from 'path';
 import readline from 'readline';
+import { Utils } from '../infras/libs/utils';
 
 @Injectable()
 export class InvokeSubprocess {
@@ -39,7 +40,7 @@ export class InvokeSubprocess {
       });
 
       const f = (d) => {
-        this.logger.log('Subprocess output: %s', d);
+        this.logger.log('Subprocess std output: %s', d);
         resolve(p as { pid: number });
       };
       p.stdout.on('data', f);
@@ -160,23 +161,23 @@ export class InvokeSubprocess {
   }
 
   /** create a named pipe, waiting for subprocess messages */
-  createNamedPipe(
+  async createNamedPipe(
     pipePath: string,
     {
       onLine,
       onConnect,
     }: {
+      /**
+       * to receive cmd/log/response/error from client, `prefix|executionId:code|result`, where:
+       * - code < 0: client command to server, waiting for server reply
+       * - code >= 0: client response(code=0), or error(code>0) to server, need not reply
+       * - code info|warn|error: client log sent to server
+       */
       onLine: (line: string, socket: net.Socket) => void;
       onConnect?: (socket: net.Socket) => void;
     },
   ) {
-    fs.existsSync(pipePath) && fs.unlinkSync(pipePath);
-    const server = net
-      .createServer()
-      .listen(pipePath, () =>
-        this.logger.log('Server is listening on', pipePath),
-      );
-
+    const server = await this._createNamedPipeServer(pipePath);
     server.on('connection', (socket) => {
       this.logger.log('Subprocess connected to named pipe');
       onConnect && onConnect(socket);
@@ -192,5 +193,25 @@ export class InvokeSubprocess {
     });
 
     return server;
+  }
+
+  private async _createNamedPipeServer(pipePath: string) {
+    for (;;) {
+      try {
+        const server = await new Promise<net.Server>((resolve, reject) => {
+          fs.existsSync(pipePath) && fs.unlinkSync(pipePath);
+          const server = net.createServer();
+          server.listen(pipePath, () => {
+            this.logger.log('Named pipe is listen on %s', pipePath);
+            resolve(server);
+          });
+          server.on('error', reject);
+        });
+        return server;
+      } catch (err) {
+        this.logger.error(`Failed to create Named pipe server`, err);
+        await Utils.sleep(1000);
+      }
+    }
   }
 }

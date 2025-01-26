@@ -844,8 +844,14 @@ export class ScriptAgentService {
     // refactor code
     messages.push({
       role: 'user',
-      content:
-        '- Review and fix bugs\n- simplify `resumingStates`\n- Double check batch processing\n- null check on params/responses\n- avoid over design.\n\nOutput clean, bug-free and robust code, and package.json',
+      content: `- Review and fix bugs
+- simplify \`resumingStates\`
+- Double check batch processing
+- null check on params/responses
+- early return on any errors. since we'll retry execution if any errors, after fixing bugs based on the error message
+- avoid over design.
+
+Output clean, bug-free and robust code, and package.json`,
     });
     const [mainTs, packageJson] = await this.llmService.chat(
       'generateTaskScript',
@@ -887,6 +893,8 @@ export class ScriptAgentService {
     const p = JSON.parse(packageJson);
     p.devDependencies || (p.devDependencies = {});
     // todo: as config
+    if (p.dependencies?.tsx) delete p.dependencies.tsx;
+    if (p.dependencies?.typescript) delete p.dependencies.typescript;
     p.devDependencies.tsx = '^4.19.2';
     p.devDependencies.typescript = '^5.7.3';
     this.filesService.save(

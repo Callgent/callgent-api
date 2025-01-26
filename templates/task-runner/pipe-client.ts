@@ -8,57 +8,72 @@ interface PendingRequest {
 export class PipeClient {
   private client: net.Socket;
   private heartbeatTimer: NodeJS.Timeout | null = null;
-  private pendingRequests: Map<number, PendingRequest> = new Map();
+  private pendingRequests: Map<string, PendingRequest> = new Map();
   private isConnected: boolean = false;
-  private nextRequestId: number = 1; // incremented for each request
+  private shutdown: boolean = false;
+  private nextRequestId: number = 0; // decremented for each request
   private connectionWaiters: (() => void)[] = [];
 
   constructor(
     private readonly pipePath: string,
     private readonly cmdPrefix: string,
+    /** prefixed on requestId */
+    private readonly requestPrefix: string,
+    private readonly logger: Console,
     private readonly heartbeatInterval: number = 1000,
   ) {
     this.client = new net.Socket();
-    this.connect();
   }
 
-  private connect(): void {
-    this.client.connect(this.pipePath, () => {
-      console.log('Connected to the pipe');
-      this.isConnected = true;
-      this.connectionWaiters.forEach((resolve) => resolve());
-      this.connectionWaiters = [];
-      this.startHeartbeat();
-    });
+  init() {
+    this.shutdown = false;
+    return this.connect();
+  }
 
-    this.client.on('data', (data) => {
-      const response = data.toString();
-      const [cmdPrefix, requestIdStr, ...fullResponse] = response.split('-');
-      if (cmdPrefix != this.cmdPrefix) return;
+  private connect() {
+    if (this.shutdown) return this.logger.log('Client is shutdown');
 
-      const requestId = parseInt(requestIdStr, 10);
-      const pendingRequest = this.pendingRequests.get(requestId);
-      if (pendingRequest) {
-        pendingRequest.resolve(fullResponse.join('-'));
-        this.pendingRequests.delete(requestId);
-      }
-    });
+    return new Promise<void>((resolve, reject) => {
+      this.client.connect(this.pipePath, () => {
+        this.logger.log('Connected to the pipe');
+        this.isConnected = true;
+        resolve();
+        this.connectionWaiters.forEach((resolve) => resolve());
+        this.connectionWaiters = [];
+        this.startHeartbeat();
+      });
 
-    this.client.on('error', (err) => {
-      console.error('Pipe client error:', err);
-      this.reconnect();
-    });
+      this.client.on('data', (data) => {
+        const response = data.toString();
+        const [cmdPrefix, requestId, ...fullResponse] = response.split('|');
+        if (cmdPrefix != this.cmdPrefix) return;
 
-    this.client.on('close', () => {
-      console.log('Pipe client closed');
-      this.isConnected = false;
-      this.reconnect();
+        const pendingRequest = this.pendingRequests.get(requestId);
+        if (pendingRequest) {
+          pendingRequest.resolve(fullResponse.join('|'));
+          this.pendingRequests.delete(requestId);
+        } else {
+          this.logger.log('Error: Unexpected requestId ignored: ' + requestId);
+        }
+      });
+
+      this.client.on('error', (err) => {
+        this.logger.log('Error: Pipe client error:', err);
+        reject(err);
+        this.reconnect();
+      });
+
+      this.client.on('close', () => {
+        this.logger.log('Pipe client closed');
+        this.isConnected = false;
+        this.reconnect();
+      });
     });
   }
 
-  private async waitForConnection(requestId: number): Promise<void> {
+  private async waitForConnection(requestId: string): Promise<void> {
     if (this.isConnected) return;
-    console.log('Waiting for connection...', requestId);
+    this.logger.log('Waiting for connection...', requestId);
     return new Promise<void>((resolve) => {
       this.connectionWaiters.push(resolve);
     });
@@ -70,6 +85,7 @@ export class PipeClient {
       this.heartbeatTimer = null;
     }
 
+    this.logger.log('Reconnecting...');
     setTimeout(() => {
       this.client.destroy();
       this.client = new net.Socket();
@@ -80,41 +96,68 @@ export class PipeClient {
   private startHeartbeat(): void {
     this.heartbeatTimer && clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {
-      if (this.isConnected) {
-        this.sendCommand('ping').catch((err) => {
-          this.reconnect();
+      this.isConnected &&
+        this.client.write('ping', 'utf8', (err) => {
+          if (err) {
+            this.logger.log('Error: Heartbeat failed:', err);
+            this.reconnect();
+          }
         });
-      }
     }, this.heartbeatInterval);
   }
 
-  /** command format: `${this.cmdPrefix}-${requestId}-${cmd}` */
+  /** command format: `${cmdPrefix}|${requestId}|${cmd}` */
   public async sendCommand(cmd: string): Promise<string> {
-    const requestId = this.nextRequestId++;
+    const requestId = this.requestPrefix + ':' + --this.nextRequestId;
 
     await this.waitForConnection(requestId);
-    const request = `${this.cmdPrefix}-${requestId}-${cmd}`;
+    const request = `${this.cmdPrefix}|${requestId}|${cmd}`;
 
     return new Promise<string>((resolve, reject) => {
       this.pendingRequests.set(requestId, { resolve, reject });
 
-      this.client.write(request, (err) => {
+      this.client.write(request, 'utf8', (err) => {
         if (err) {
           this.pendingRequests.delete(requestId);
           reject(err);
         }
       });
-      console.log(`Command sent: ${requestId}`);
+      this.logger.log(`Command sent: ${requestId}`);
     });
   }
 
+  /**
+   * @param level log level, or exit code(0 for success, >0 for error)
+   * @param args
+   */
+  public async sendResult(
+    level: number | 'info' | 'warn' | 'error',
+    ...args: any[]
+  ) {
+    const resultKey = this.requestPrefix + ':' + level;
+    await this.waitForConnection(resultKey);
+    const result = JSON.stringify(
+      args.map(
+        (arg) =>
+          (Object.prototype.toString.call(arg) === '[object Error]' &&
+            arg.stack) ||
+          arg,
+      ),
+    );
+    const request = `${this.cmdPrefix}|${resultKey}|${result}`;
+    this.client.write(request, 'utf8', (err) => {
+      if (err) throw err;
+    });
+    this.logger.log('Result sent:', level, result);
+  }
+
   public close(): void {
+    this.shutdown = true;
+
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
-
     this.client.destroy();
-    this.isConnected = false;
   }
 }

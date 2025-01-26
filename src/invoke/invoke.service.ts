@@ -1,5 +1,5 @@
 import { Transactional } from '@nestjs-cls/transactional';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import fs from 'fs';
 import { ClsService } from 'nestjs-cls';
 import path from 'path';
@@ -13,6 +13,7 @@ import { InvokeSubprocess } from './invoke.subprocess';
 @Injectable()
 export class InvokeService {
   private static readonly CTX_KEY_INVOKE_ID = Symbol('invokeId');
+  private readonly logger = new Logger(InvokeService.name);
 
   constructor(
     private readonly invokeSepService: InvokeSepService,
@@ -164,30 +165,62 @@ export class InvokeService {
       { cwd },
     );
 
+    // Only final response or error on subprocess exit is valid
+    let finalResponse: string = undefined;
     // create named pipe to communicate with subprocess
     const pipePath = path.join(cwd, 'pipe.socket');
     let frozenKilled = false;
-    // FIXME: concurrent invoke, if pending wait for all responses before freeze subprocess
-    const server = this.invokeSubprocess.createNamedPipe(pipePath, {
+    const server = await this.invokeSubprocess.createNamedPipe(pipePath, {
       onConnect: async (socket) => {
         if (response)
-          socket.write(`${cmdPrefix}-${invokeId}-${JSON.stringify(response)}`);
+          socket.write(
+            `${cmdPrefix}|${invokeId}|${JSON.stringify(response)}`,
+            'utf8',
+            (err) => {
+              if (err) this.logger.error(err);
+              response = undefined;
+            },
+          );
       },
       onLine: async (data, socket) => {
         const msg = data.toString();
-        const [prefix, invokeId, ...cmd] = msg.split('-');
-        if (cmdPrefix != prefix) return;
+        if (!msg.startsWith(cmdPrefix + '|')) return;
+        const [_, requestKey, ...cmd] = msg.split('|');
+            const cmdString = cmd.join('|');
 
-        // matching command
-        const { epName, args } = JSON.parse(cmd.join('-'));
-        const r = await this._invokeSEP(epName, args, reqEvent, invokeId);
+        const [execId, cmdCode] = requestKey.split(':');
+        switch (cmdCode) {
+          case 'info':
+          case 'warn':
+            // emit request event, RequestLogEvent
+            break;
+          case 'error':
+            // collect error text to fix script bugs
+            break;
+          default:
+            const code = parseInt(cmdCode, 10);
+            if (code == 0) {
+              finalResponse = cmdString; // final response
+            } else {
+              // matching command
+              const { epName, args } = JSON.parse(cmdString);
+              const r = await this._invokeSEP(epName, args, reqEvent, cmdCode);
 
-        //if pending response, freeze subprocess
-        if (r?.statusCode == 2) {
-          this.invokeSubprocess.freezeProcess(child, cwd);
-          frozenKilled = true;
-        } else {
-          socket.write(`${cmdPrefix}-${invokeId}-${JSON.stringify(r)}`);
+              //if pending response, freeze subprocess
+              if (r?.statusCode == 2) {
+                this.invokeSubprocess.freezeProcess(child, cwd);
+                frozenKilled = true;
+              } else {
+                // FIXME retry on error?
+                socket.write(
+                  `${cmdPrefix}|${cmdCode}|${JSON.stringify(r)}`,
+                  'utf8',
+                  (err) => {
+                    if (err) this.logger.error(err);
+                  },
+                );
+              }
+            }
         }
       },
     });
@@ -206,5 +239,11 @@ export class InvokeService {
 
     if (frozenKilled)
       return { data: reqEvent, resumeFunName: 'invokeSEPsCallback' };
+
+    if (finalResponse !== undefined) {
+      reqEvent.context.resp = JSON.parse(finalResponse);
+    } else if (1) {
+      // else no response?
+    }
   }
 }

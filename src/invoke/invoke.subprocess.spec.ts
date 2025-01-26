@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import path from 'path';
 import { Utils } from '../infras/libs/utils';
 import { InvokeSubprocess } from './invoke.subprocess';
+import { spawnSync } from 'child_process';
 
 describe('InvokeSubprocess', () => {
   let service: InvokeSubprocess;
@@ -20,30 +21,33 @@ describe('InvokeSubprocess', () => {
   });
 
   it('spawn a new subprocess', async () => {
-    const cwd = path.join(process.cwd(), './test/e2e/data/invoke-subprocess/');
+    const cwd = path.join(process.cwd(), './templates/task-runner/');
     const pipePath = path.join(cwd, 'pipe.socket');
     console.log(cwd);
 
-    const server = service.createNamedPipe(pipePath, {
-      onConnect: async (socket) => {
+    const server = await service.createNamedPipe(pipePath, {
+      onConnect: async () => {
         console.log('connected');
       },
-      onLine: async (data, socket) => {
-        const msg = data.toString();
-        console.log('data', msg);
+      onLine: (line) => {
+        console.log('pipe data:', line);
       },
     });
 
     try {
+      const p = spawnSync('pnpm', ['install'], { cwd });
+      // (service as any).logger = { ...console };
+      console.log(p.stdout.toString(), p.stderr.toString());
       const child = await service.spawnOrRestore(
         'npx',
         ['tsx', 'index.ts', 'test'],
         { cwd },
       );
+      await service.waitForExit(child);
+      await Utils.sleep(1000);
       expect(child.pid).toBeGreaterThan(0);
-      await Utils.sleep(10000);
     } finally {
       server.close();
     }
-  }, 50000);
+  }, 500000);
 });

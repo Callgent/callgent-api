@@ -343,18 +343,19 @@ export class LLMService {
   }
 
   protected async _completion(req: LLMRequest): Promise<LLMResponse> {
-    const prisma = this.txHost.tx as PrismaClient;
-    const userId = 'TEST_USER_ID'; // FIXME
-    const userBalance = await prisma.userBalance.upsert({
-      where: { userId },
-      create: {
-        userId
-      },
-      update: {}
-    });
-    if (userBalance.balance <= new Decimal(0)) {
-      throw new ForbiddenException('Insufficient balance');
-    }
+    // FIXME: emit LlmCompletionEvent
+    // const prisma = this.txHost.tx as PrismaClient;
+    // const userId = 'TEST_USER_ID'; // FIXME
+    // const userBalance = await prisma.userBalance.upsert({
+    //   where: { userId },
+    //   create: {
+    //     userId
+    //   },
+    //   update: {}
+    // });
+    // if (userBalance.balance <= new Decimal(0)) {
+    //   throw new ForbiddenException('Insufficient balance');
+    // }
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
       const url = req.messages

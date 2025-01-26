@@ -486,7 +486,9 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
 1. **Clear Class Design**: Choose a self-explanatory class name that reflects its purpose based on the user requirements. then default export this class
 2. **Predefined Members**:
    - the default no-argument constructor should be defined
-   - Primary Entry Point: the \`async execute()\` method as the main entry point for executing the required task
+   - Primary Entry Point: the \`async execute(): Promise<any>\` method as the main entry point for executing the required task
+     - return the final result of the task execution, which will be put into conversation history, for further user actions
+     - if task result is too large, only output the summary, and save the full result into a file under \`./result\` dir
    - Persistent Class Field: define public \`resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
      - this is the only field restored to resume the task, task runner will save/load it for you automatically
      - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
@@ -505,9 +507,12 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
      - strictly use \`Optional Chaining Operators\` to prevent foolish npe errors
    - Transaction isolation for disk operations, especially in below cases:
      - concurrent write access
-     - failover and cleanup on errors
-     - caching on reentrant calls
-6. Log essential info with progress \`indices/totals\` and critical failures using \`console\`. Keep logs concisely and readable, no massive logs output
+     - failover and cleanup on errors, since the task runner will retry the task after script fix
+     - caching on reentrant calls, if recall after errors, make sure the cache is valid
+6. Log essential info, keep logs concisely and readable, no massive logs output:
+   - \`console.info\` for progress \`indices/totals\`
+   - \`console.warn\` on failed items, and only errors critical failures
+   - \`console.error\` text will be used to fix the script code and retry execution, so make it clear and concise, no unnecessary info!
 
 ## Deliverables:
 1. Describe optimization strategies based on estimated heavy resources loads. All in pullet items.

@@ -11,17 +11,31 @@ class ExtendedTaskRunner extends TaskRunner {
   public readonly pipeClient: PipeClient;
   private readonly resumingStatesFile = './resumingStates.json';
 
-  constructor(cmdPrefix: string) {
+  constructor(
+    cmdPrefix: string,
+    executionId: string,
+    originalConsole: Console,
+  ) {
     super();
-    this.pipeClient = new PipeClient('./pipe.socket', cmdPrefix);
+    this.pipeClient = new PipeClient(
+      './pipe.socket',
+      cmdPrefix,
+      executionId,
+      originalConsole,
+    );
     this.loadResumingStates();
   }
+
+  async init() {
+    await this.pipeClient.init();
+  }
+
   async invokeService(
     purposeKey: string,
     args: { parameters?: { [paramName: string]: any }; requestBody?: any },
   ) {
     const epName = purposes.find((p) => p.purposeKey === purposeKey)?.epName;
-    if (!epName) throw new Error(`Unknown purposeKey: ${purposeKey}`);
+    if (!epName) throw new Error(`Invalid purposeKey: ${purposeKey}`);
 
     const r = await this.pipeClient.sendCommand(
       JSON.stringify({ epName, args }),
@@ -29,7 +43,7 @@ class ExtendedTaskRunner extends TaskRunner {
     try {
       return JSON.parse(r);
     } catch (e) {
-      console.error('Failed to parse response from pipe client', e);
+      console.warn('Failed to parse response from pipe client', e);
       return r;
     }
   }
@@ -59,24 +73,67 @@ class ExtendedTaskRunner extends TaskRunner {
   }
 }
 
-(() => {
+const urlAlphabet =
+  'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
+function intToBase64(num: number) {
+  if (num === 0) return '0';
+  let result = '';
+  while (num > 0) {
+    result = urlAlphabet[num & 63] + result;
+    num >>>= 6;
+  }
+  return result;
+}
+
+(async () => {
   const cmdPrefix = process.argv[2];
-  console.log('Starting task runner with prefix:', cmdPrefix);
+  const executionId = intToBase64(~~(1e7 * Math.random()));
+  console.log(`Starting task#${executionId} with prefix: ${cmdPrefix}`);
 
   // FIXME: restrict allowed directory
   // const allowedDirectory = __dirname;
 
-  const taskRunner = new ExtendedTaskRunner(cmdPrefix);
+  // redirect console to pipeClient
+  const originalConsole = { ...console };
+
+  const taskRunner = new ExtendedTaskRunner(
+    cmdPrefix,
+    executionId,
+    originalConsole,
+  );
+  await taskRunner.init();
+
+  // console.log = function (...args: any[]) {
+  //   taskRunner.pipeClient.sendResult('log', ...args);
+  // };
+  // console.debug = function (...args: any[]) {
+  //   taskRunner.pipeClient.sendResult('debug', ...args);
+  // };
+  console.info = function (...args: any[]) {
+    taskRunner.pipeClient.sendResult('info', ...args);
+  };
+  console.warn = function (...args: any[]) {
+    taskRunner.pipeClient.sendResult('warn', ...args);
+  };
+  console.error = function (...args: any[]) {
+    taskRunner.pipeClient.sendResult('error', ...args);
+  };
+
   taskRunner
     .execute()
-    .then(() => {
-      // todo
+    .then((result: any) => {
+      if (!result) return;
+      const response = JSON.stringify(result);
+      taskRunner.pipeClient.sendResult(0, response);
     })
     .catch((err) => {
-      console.error('Failed to execute task runner.', err);
+      const msg = err.stack || err.message || err.toString();
+      taskRunner.pipeClient.sendResult(1, msg);
       throw err;
     })
-    .finally(
-      () => (taskRunner.saveResumingStates(), taskRunner.pipeClient?.close()),
-    );
+    .finally(() => {
+      taskRunner.saveResumingStates();
+      taskRunner.pipeClient?.close();
+      originalConsole.info('Task runner finished');
+    });
 })();
