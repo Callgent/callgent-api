@@ -123,88 +123,6 @@ export class ScriptAgentService {
     return { requestArgs: mapped.requestArgs };
   }
 
-  // protected async _map2Endpoints(
-  //   reqEvent: ClientRequestEvent,
-  //   endpoints: EndpointDto[],
-  // ) {
-  //   const {
-  //     id,
-  //     srcId,
-  //     dataType: cenAdaptor,
-  //     context: { callgentName, epName, progressive, req },
-  //   } = reqEvent;
-
-  //   // remove unsuccess responses
-  //   endpoints = endpoints.map((item) => {
-  //     const r = { ...item };
-  //     const successResponse = {};
-  //     Object.entries(item.responses).forEach(([k, v]) => {
-  //       if (k.startsWith('2') || k.startsWith('3') || k == 'default')
-  //         successResponse[k] = v;
-  //     });
-  //     r.responses = successResponse;
-  //     return r;
-  //   });
-
-  //   const mapped = await this.llmService.query(
-  //     'map2Endpoints',
-  //     {
-  //       req,
-  //       epName,
-  //       callgentName,
-  //       cenAdaptor,
-  //       endpoints,
-  //     },
-  //     {
-  //       parseSchema: {
-  //         question: '',
-  //         endpoints: [''],
-  //         summary: '',
-  //         instruction: '',
-  //         requestArgs: {},
-  //         macroParams: { parameters: [], requestBody: {} },
-  //         macroResponse: {},
-  //         memberFunctions: { main: '' },
-  //       },
-  //       bizKey: id,
-  //     },
-  //   );
-
-  //   if (mapped.question) {
-  //     if (!progressive)
-  //       throw new BadRequestException(
-  //         'Question from service: ' + mapped.question,
-  //       );
-
-  //     // emit progressive requesting event
-  //     const data = await this.eventListenersService.emit(
-  //       new ProgressiveRequestEvent(srcId, reqEvent, cenAdaptor, {
-  //         progressive,
-  //         // mapped,
-  //       }),
-  //     );
-  //     if (!data.statusCode)
-  //       // direct return, no persistent async
-  //       return this.map2EndpointsProgressive(data, reqEvent);
-
-  //     if (data.statusCode == 2)
-  //       // pending
-  //       return { data: reqEvent, resumeFunName: 'map2EndpointsProgressive' };
-  //     throw new HttpException(data.message, data.statusCode);
-  //   } else {
-  //     const endpoints = reqEvent.context.endpoints.filter((ep) =>
-  //       mapped.endpoints.includes(ep.name),
-  //     );
-  //     if (!endpoints.length)
-  //       throw new BadRequestException(
-  //         'Error: mapped to none endpoint: ' + mapped,
-  //       );
-  //     reqEvent.context.endpoints = endpoints;
-
-  //     return mapped;
-  //   }
-  // }
-
   /**
    * choose eps, if epName, directly return
    * @returns { purposes: 'purpose of each endpoint', argsHints: 'hints on args sources' }
@@ -958,6 +876,10 @@ Output clean, bug-free and robust code, and package.json`,
       if (!e) return;
       throw err;
     }
+  }
+
+  public async fixScriptError(message: string, reqEvent: ClientRequestEvent) {
+    throw new Error('Method not implemented.');
   }
 
   /**

@@ -27,24 +27,19 @@ export class InvokeService {
    * which may send `invokeService` request,
    * on sep pending response, freeze subprocess by criu, until sep callback: resume subprocess by criu
    * send response to subprocess, script goes on
+   * @returns pending or response, or script error
    */
   @Transactional()
   async invokeSEPs(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+  ): Promise<PendingOrResponse | { statusCode: number; message: string }> {
     const {
       epName,
       map2Endpoints: { requestArgs },
     } = reqEvent.context;
 
     // direct sep invoke and returns, needn't subprocess
-    if (epName) {
-      const r = await this._invokeSEP(epName, requestArgs, reqEvent);
-      if (r?.statusCode == 2)
-        return { data: reqEvent, resumeFunName: 'invokeSEPsCallback' };
-      reqEvent.context.resp = r.data;
-      return;
-    }
+    if (epName) return this._invokeSEP(epName, requestArgs, reqEvent);
 
     // start subprocess to invoke
     return this._spawnOrRestoreSubprocess(reqEvent);
@@ -53,7 +48,7 @@ export class InvokeService {
   @Transactional()
   async invokeSEPsCallback(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+  ): Promise<PendingOrResponse | { statusCode: number; message: string }> {
     const invokeId = this.getInvokeId();
     if (typeof invokeId == 'undefined')
       throw new Error('invokeId is required for invocation callback');
@@ -156,7 +151,7 @@ export class InvokeService {
     reqEvent: ClientRequestEvent,
     response?: ServiceResponse,
     invokeId = '',
-  ) {
+  ): Promise<PendingOrResponse | { statusCode: number; message: string }> {
     const cwd = reqEvent.getTaskCwd(this.filesService.UPLOAD_BASE_DIR);
     const cmdPrefix = reqEvent.taskId.substring(reqEvent.taskId.length - 3);
     const child = await this.invokeSubprocess.spawnOrRestore(
@@ -166,7 +161,8 @@ export class InvokeService {
     );
 
     // Only final response or error on subprocess exit is valid
-    let finalResponse: string = undefined;
+    let finalResponse: string = undefined,
+      finalError: string = undefined;
     // create named pipe to communicate with subprocess
     const pipePath = path.join(cwd, 'pipe.socket');
     let frozenKilled = false;
@@ -186,41 +182,33 @@ export class InvokeService {
         const msg = data.toString();
         if (!msg.startsWith(cmdPrefix + '|')) return;
         const [_, requestKey, ...cmd] = msg.split('|');
-            const cmdString = cmd.join('|');
+        const cmdString = cmd.join('|');
 
-        const [execId, cmdCode] = requestKey.split(':');
-        switch (cmdCode) {
-          case 'info':
-          case 'warn':
-            // emit request event, RequestLogEvent
-            break;
-          case 'error':
-            // collect error text to fix script bugs
-            break;
-          default:
-            const code = parseInt(cmdCode, 10);
-            if (code == 0) {
-              finalResponse = cmdString; // final response
-            } else {
-              // matching command
-              const { epName, args } = JSON.parse(cmdString);
-              const r = await this._invokeSEP(epName, args, reqEvent, cmdCode);
+        const [__, cmdCode] = requestKey.split(':');
+        const code = parseInt(cmdCode, 10);
+        if (code == 0) {
+          finalResponse = cmdString; // final response
+        } else if (code > 0) {
+          finalError = cmdString; // final error
+        } else {
+          // matching command
+          const { epName, args } = JSON.parse(cmdString);
+          const r = await this._invokeSEP(epName, args, reqEvent, cmdCode);
 
-              //if pending response, freeze subprocess
-              if (r?.statusCode == 2) {
-                this.invokeSubprocess.freezeProcess(child, cwd);
-                frozenKilled = true;
-              } else {
-                // FIXME retry on error?
-                socket.write(
-                  `${cmdPrefix}|${cmdCode}|${JSON.stringify(r)}`,
-                  'utf8',
-                  (err) => {
-                    if (err) this.logger.error(err);
-                  },
-                );
-              }
-            }
+          //if pending response, freeze subprocess
+          if (r?.statusCode == 2) {
+            this.invokeSubprocess.freezeProcess(child, cwd);
+            frozenKilled = true;
+          } else {
+            // FIXME retry on error?
+            socket.write(
+              `${cmdPrefix}|${cmdCode}|${JSON.stringify(r)}`,
+              'utf8',
+              (err) => {
+                if (err) this.logger.error(err);
+              },
+            );
+          }
         }
       },
     });
@@ -238,12 +226,23 @@ export class InvokeService {
     }
 
     if (frozenKilled)
-      return { data: reqEvent, resumeFunName: 'invokeSEPsCallback' };
+      return {
+        statusCode: 2,
+        message: 'Subprocess frozen, waiting for callback',
+      };
 
-    if (finalResponse !== undefined) {
-      reqEvent.context.resp = JSON.parse(finalResponse);
-    } else if (1) {
-      // else no response?
-    }
+    if (finalResponse !== undefined)
+      try {
+        const data = finalResponse && JSON.parse(finalResponse);
+        return { data };
+      } catch (e) {
+        finalError = JSON.stringify([finalResponse, e.stack]);
+      }
+
+    // final error
+    return {
+      statusCode: 1,
+      message: finalError,
+    };
   }
 }

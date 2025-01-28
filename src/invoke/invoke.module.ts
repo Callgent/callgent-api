@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CachedModule } from '../cached/cached.module';
 import { CallgentRealmsModule } from '../callgent-realms/callgent-realms.module';
 import { EntriesModule } from '../entries/entries.module';
+import { ScriptRunnerService } from './script-runner.service';
 import { SepAuthProcessor } from './chain/sep-auth.processor';
 import { SepCacheProcessor } from './chain/sep-cache.processor';
 import { SepCachedProcessor } from './chain/sep-cached.processor';
@@ -17,7 +18,8 @@ import { InvokeSubprocess } from './invoke.subprocess';
 @Module({
   imports: [CallgentRealmsModule, CachedModule, EntriesModule],
   providers: [
-    { provide: 'InvokeService', useClass: InvokeService },
+    { provide: 'ScriptRunnerAgent', useClass: ScriptRunnerService },
+    InvokeService,
     InvokeSepService,
     InvokeSubprocess,
     {
@@ -42,6 +44,6 @@ import { InvokeSubprocess } from './invoke.subprocess';
     SepCacheProcessor,
     SepCallbackProcessor,
   ],
-  exports: ['InvokeService'],
+  exports: ['ScriptRunnerAgent'],
 })
 export class InvokeModule {}

@@ -31,9 +31,9 @@ export class PipeClient {
   }
 
   private connect() {
-    if (this.shutdown) return this.logger.log('Client is shutdown');
-
     return new Promise<void>((resolve, reject) => {
+      if (this.shutdown) return this.logger.log('Client is shutdown');
+
       this.client.connect(this.pipePath, () => {
         this.logger.log('Connected to the pipe');
         this.isConnected = true;
@@ -127,20 +127,17 @@ export class PipeClient {
   }
 
   /**
-   * @param level log level, or exit code(0 for success, >0 for error)
+   * @param code exit code: 0 for success, >0 for error
    * @param args
    */
-  public async sendResult(
-    level: number | 'info' | 'warn' | 'error',
-    ...args: any[]
-  ) {
-    const resultKey = this.requestPrefix + ':' + level;
+  public async sendResult(code: number, ...args: any[]) {
+    const resultKey = this.requestPrefix + ':' + code;
     await this.waitForConnection(resultKey);
     const result = JSON.stringify(
       args.map(
         (arg) =>
           (Object.prototype.toString.call(arg) === '[object Error]' &&
-            arg.stack) ||
+            (arg.stack || arg.message)) ||
           arg,
       ),
     );
@@ -148,7 +145,7 @@ export class PipeClient {
     this.client.write(request, 'utf8', (err) => {
       if (err) throw err;
     });
-    this.logger.log('Result sent:', level, result);
+    this.logger.log('Result sent:', code, result);
   }
 
   public close(): void {

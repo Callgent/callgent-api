@@ -171,7 +171,6 @@ export class InvokeSubprocess {
        * to receive cmd/log/response/error from client, `prefix|executionId:code|result`, where:
        * - code < 0: client command to server, waiting for server reply
        * - code >= 0: client response(code=0), or error(code>0) to server, need not reply
-       * - code info|warn|error: client log sent to server
        */
       onLine: (line: string, socket: net.Socket) => void;
       onConnect?: (socket: net.Socket) => void;

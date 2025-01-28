@@ -1,4 +1,5 @@
-import * as fs from 'fs';
+import fs from 'fs';
+import fsPromise from 'fs/promises';
 import { default as TaskRunner } from './main';
 import { PipeClient } from './pipe-client';
 import purposes from './purposes.json';
@@ -8,51 +9,62 @@ import purposes from './purposes.json';
 // - error fixing and retrying
 class ExtendedTaskRunner extends TaskRunner {
   declare resumingStates: any;
-  public readonly pipeClient: PipeClient;
   private readonly resumingStatesFile = './resumingStates.json';
+  public readonly _pipeClient: PipeClient;
+  private readonly _pipePath = './pipe.socket';
+  private readonly _logFile = './task.log';
+  private readonly _originalConsole: Console;
+  private readonly _executionId: string;
 
-  constructor(
-    cmdPrefix: string,
-    executionId: string,
-    originalConsole: Console,
-  ) {
+  constructor(private readonly cmdPrefix: string) {
     super();
-    this.pipeClient = new PipeClient(
-      './pipe.socket',
+    this._executionId = this._intToBase64(1e7 * Math.random());
+    this._originalConsole = { ...console };
+
+    this._pipeClient = new PipeClient(
+      this._pipePath,
       cmdPrefix,
-      executionId,
-      originalConsole,
+      this._executionId,
+      this._originalConsole,
     );
-    this.loadResumingStates();
   }
 
   async init() {
-    await this.pipeClient.init();
+    await Promise.all([
+      this._loadResumingStates(),
+      this._pipeClient.init(),
+      this._redirectLogs2File(),
+    ]);
+    console.log(
+      `Starting task#${this._executionId} with prefix: ${this.cmdPrefix}`,
+    );
   }
 
   async invokeService(
     purposeKey: string,
     args: { parameters?: { [paramName: string]: any }; requestBody?: any },
   ) {
+    console.info(`Invoking service: ${purposeKey}`);
+
     const epName = purposes.find((p) => p.purposeKey === purposeKey)?.epName;
     if (!epName) throw new Error(`Invalid purposeKey: ${purposeKey}`);
 
-    const r = await this.pipeClient.sendCommand(
+    const r = await this._pipeClient.sendCommand(
       JSON.stringify({ epName, args }),
     );
     try {
       return JSON.parse(r);
     } catch (e) {
-      console.warn('Failed to parse response from pipe client', e);
+      console.warn('Failed to parse response from service: ' + r, e);
       return r;
     }
   }
 
-  loadResumingStates() {
+  async _loadResumingStates() {
     if (!('resumingStates' in this) || !fs.existsSync(this.resumingStatesFile))
       return;
     try {
-      const j = fs.readFileSync(this.resumingStatesFile);
+      const j = await fsPromise.readFile(this.resumingStatesFile);
       this.resumingStates = JSON.parse(j.toString());
     } catch (e) {
       console.error('Failed to load resumingStates.json, ignored', e);
@@ -60,7 +72,7 @@ class ExtendedTaskRunner extends TaskRunner {
     }
   }
 
-  saveResumingStates() {
+  _saveResumingStates() {
     if (!this.resumingStates) return;
     try {
       fs.writeFileSync(
@@ -71,69 +83,68 @@ class ExtendedTaskRunner extends TaskRunner {
       console.error('Failed to save resumingStates.json, ignored', e);
     }
   }
-}
 
-const urlAlphabet =
-  'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
-function intToBase64(num: number) {
-  if (num === 0) return '0';
-  let result = '';
-  while (num > 0) {
-    result = urlAlphabet[num & 63] + result;
-    num >>>= 6;
+  private _redirectLogs2File() {
+    // console.debug = function (...args: any[]) {};
+    console.log = (...args: any[]) =>
+      this._write2Log('log', this._executionId, args);
+    console.info = (...args: any[]) =>
+      this._write2Log('info', this._executionId, args);
+    console.warn = (...args: any[]) =>
+      this._write2Log('warn', this._executionId, args);
+    console.error = (...args: any[]) =>
+      this._write2Log('error', this._executionId, args);
+    return fsPromise.unlink(this._logFile);
   }
-  return result;
+
+  private _write2Log(logLevel: string, executionId: string, logs: any[]) {
+    // error into string
+    logs = logs.map(
+      (log) =>
+        (Object.prototype.toString.call(log) === '[object Error]' &&
+          (log.stack || log.message)) ||
+        log,
+    );
+    const time = new Date().toISOString().substring(11, 23); // hh:mm:ss.SSS
+    const line = `${time} [${logLevel}] ${JSON.stringify(logs)}`;
+    fs.appendFile(this._logFile, line + '\n', (err) => {});
+  }
+
+  private _intToBase64(num: number) {
+    const urlAlphabet =
+      'RoLI6m-2WvwVuHdNT1XZblqUDBtseKQAfgan83Myzric7EhjC5pxJSF_G9YO40Pk';
+    if (num === 0) return '0';
+    let result = '';
+    while (num > 0) {
+      result = urlAlphabet[num & 63] + result;
+      num >>>= 6;
+    }
+    return result;
+  }
 }
 
 (async () => {
   const cmdPrefix = process.argv[2];
-  const executionId = intToBase64(~~(1e7 * Math.random()));
-  console.log(`Starting task#${executionId} with prefix: ${cmdPrefix}`);
 
   // FIXME: restrict allowed directory
   // const allowedDirectory = __dirname;
 
-  // redirect console to pipeClient
-  const originalConsole = { ...console };
-
-  const taskRunner = new ExtendedTaskRunner(
-    cmdPrefix,
-    executionId,
-    originalConsole,
-  );
+  const taskRunner = new ExtendedTaskRunner(cmdPrefix);
   await taskRunner.init();
-
-  // console.log = function (...args: any[]) {
-  //   taskRunner.pipeClient.sendResult('log', ...args);
-  // };
-  // console.debug = function (...args: any[]) {
-  //   taskRunner.pipeClient.sendResult('debug', ...args);
-  // };
-  console.info = function (...args: any[]) {
-    taskRunner.pipeClient.sendResult('info', ...args);
-  };
-  console.warn = function (...args: any[]) {
-    taskRunner.pipeClient.sendResult('warn', ...args);
-  };
-  console.error = function (...args: any[]) {
-    taskRunner.pipeClient.sendResult('error', ...args);
-  };
-
   taskRunner
     .execute()
     .then((result: any) => {
       if (!result) return;
       const response = JSON.stringify(result);
-      taskRunner.pipeClient.sendResult(0, response);
+      taskRunner._pipeClient.sendResult(0, response);
     })
     .catch((err) => {
-      const msg = err.stack || err.message || err.toString();
-      taskRunner.pipeClient.sendResult(1, msg);
+      taskRunner._pipeClient.sendResult(1, err);
       throw err;
     })
     .finally(() => {
-      taskRunner.saveResumingStates();
-      taskRunner.pipeClient?.close();
-      originalConsole.info('Task runner finished');
+      taskRunner._saveResumingStates();
+      taskRunner._pipeClient?.close();
+      console.info('Task runner finished');
     });
 })();
