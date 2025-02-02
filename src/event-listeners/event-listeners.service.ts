@@ -20,7 +20,7 @@ import { InvokeService } from '../invoke/invoke.service';
 import { CreateEventListenerDto } from './dto/create-event-listener.dto';
 import { UpdateEventListenerDto } from './dto/update-event-listener.dto';
 import { EventListener } from './entities/event-listener.entity';
-import { EventObject, ServiceResponse } from './event-object';
+import { EventObject } from './event-object';
 
 /**
  * @see https://nodejs.org/api/events.html
@@ -33,7 +33,6 @@ export class EventListenersService {
     private readonly moduleRef: ModuleRef,
     @Inject('EventStoresService')
     private readonly eventStoresService: EventStoresService,
-    @Inject('InvokeService')
     private readonly invokeService: InvokeService,
   ) {}
 
