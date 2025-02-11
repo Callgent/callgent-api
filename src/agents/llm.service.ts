@@ -76,9 +76,9 @@ export class LLMService {
             temperature: 0, // TODO
           };
           if (Array.isArray(this.llmModels)) req.models = this.llmModels;
-          else req.model = this.llmModels;
+          else llmModel = req.model = this.llmModels;
           const resp = await this._completion(req);
-          llmModel = resp.model;
+          resp.model && (llmModel = resp.model);
 
           if (!resp?.choices?.length) {
             valid = false;
@@ -96,7 +96,7 @@ export class LLMService {
         // add error to conversation to optimize result
         errorMessage = e.message;
         this.logger.warn(
-          '[retry %s %d/%d] Fail validating generated content: %s',
+          '[retry %s %d/%d] Failed validating generated content: %s',
           template,
           i + 1,
           maxRetry,
@@ -108,7 +108,7 @@ export class LLMService {
     }
     if (!valid)
       throw new Error(
-        'Fail validating generated content, ' +
+        'Failed validating generated content, ' +
           [llmModel, template, errorMessage],
       );
 
@@ -158,6 +158,7 @@ export class LLMService {
     let [maxRetry, invalidMsg] = [3, ''];
     for (let i = 0; i < maxRetry; i++) {
       try {
+        invalidMsg = '';
         if (!ret) {
           const req: LLMRequest = {
             messages,
@@ -168,7 +169,7 @@ export class LLMService {
           if (Array.isArray(this.llmModels)) req.models = this.llmModels;
           else req.model = this.llmModels;
           const resp = await this._completion(req);
-          llmModel = resp.model;
+          resp.model && (llmModel = resp.model);
 
           if (!resp?.choices?.length) {
             invalidMsg = `LLM service not available, error=${(resp as any)?.error?.message}`;
@@ -184,13 +185,14 @@ export class LLMService {
           invalidMsg = 'Failed validating generated content';
       } catch (e) {
         // add error to conversation to optimize result
+        invalidMsg = 'There was a mistake in generated content:\n' + e.message;
         messages.push({ role: 'assistant', content: llmResult });
         messages.push({
           role: 'user',
-          content: `There was a mistake:\n${e.message}\n\nplease re-generate`,
+          content: invalidMsg + '\n\nplease re-generate',
         });
         this.logger.warn(
-          '[retry %s %d/%d] Fail validating generated content: %s',
+          '[retry %s %d/%d] Failed validating generated content: %s',
           template,
           i + 1,
           maxRetry,
@@ -203,7 +205,7 @@ export class LLMService {
     }
     if (invalidMsg)
       throw new Error(
-        'Fail validating generated content, ' +
+        'Failed validating generated content, ' +
           [llmModel, template, invalidMsg],
       );
 
@@ -380,10 +382,11 @@ export class LLMService {
             data.model,
             data.usage,
           );
-          this.eventEmitter.emitAsync(
-            LlmCompletionEvent.eventName,
-            new LlmCompletionEvent(data),
-          )
+          this.eventEmitter
+            .emitAsync(
+              LlmCompletionEvent.eventName,
+              new LlmCompletionEvent(data),
+            )
             .catch(reject);
           resolve(data);
         })

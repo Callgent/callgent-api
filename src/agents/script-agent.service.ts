@@ -879,7 +879,7 @@ Output clean, bug-free and robust code, and package.json`,
   }
 
   public async fixScriptError(message: string, reqEvent: ClientRequestEvent) {
-    throw new Error('Method not implemented.');
+    // throw new Error('Method not implemented.');
   }
 
   /**

@@ -35,7 +35,7 @@ export class CreateCallgentDtoEx extends CreateCallgentDto {
   })
   @IsNotEmpty()
   @IsInt()
-  @EntityIdExists('tag', 'id')
+  @EntityIdExists('tag', 'pk')
   mainTagId: number;
 }
 

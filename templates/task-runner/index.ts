@@ -35,7 +35,7 @@ class ExtendedTaskRunner extends TaskRunner {
       this._pipeClient.init(),
       this._redirectLogs2File(),
     ]);
-    console.log(
+    console.info(
       `Starting task#${this._executionId} with prefix: ${this.cmdPrefix}`,
     );
   }
@@ -68,7 +68,8 @@ class ExtendedTaskRunner extends TaskRunner {
       this.resumingStates = JSON.parse(j.toString());
     } catch (e) {
       console.error('Failed to load resumingStates.json, ignored', e);
-      fs.unlinkSync(this.resumingStatesFile);
+      fs.existsSync(this.resumingStatesFile) &&
+        fs.unlinkSync(this.resumingStatesFile);
     }
   }
 
@@ -84,17 +85,17 @@ class ExtendedTaskRunner extends TaskRunner {
     }
   }
 
-  private _redirectLogs2File() {
+  private async _redirectLogs2File() {
     // console.debug = function (...args: any[]) {};
-    console.log = (...args: any[]) =>
-      this._write2Log('log', this._executionId, args);
+    // console.log = (...args: any[]) =>
+    //   this._write2Log('log', this._executionId, args);
     console.info = (...args: any[]) =>
       this._write2Log('info', this._executionId, args);
     console.warn = (...args: any[]) =>
       this._write2Log('warn', this._executionId, args);
     console.error = (...args: any[]) =>
       this._write2Log('error', this._executionId, args);
-    return fsPromise.unlink(this._logFile);
+    return fs.existsSync(this._logFile) && fsPromise.unlink(this._logFile);
   }
 
   private _write2Log(logLevel: string, executionId: string, logs: any[]) {

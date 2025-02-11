@@ -39,15 +39,23 @@ export class InvokeSubprocess {
         env: this.subprocessEnv,
       });
 
+      const res = () => resolve(p as { pid: number });
       const f = (d) => {
-        this.logger.log('Subprocess std output: %s', d);
-        resolve(p as { pid: number });
+        this.logger.log('Subprocess stderr: %s', d);
+        // compiling errors
+        this._write2LogFile(cwd, d);
+        res();
       };
-      p.stdout.on('data', f);
+      p.stdout.on('data', res);
       p.stderr.on('data', f);
-      p.on('close', f);
+      p.on('close', res);
       p.on('error', reject);
     });
+  }
+
+  private _write2LogFile(cwd: string, d: any) {
+    const file = path.join(cwd, 'task.log'); // same log file in subprocess
+    fs.appendFile(file, d + '\n', (err) => {});
   }
 
   /**
@@ -201,7 +209,7 @@ export class InvokeSubprocess {
           fs.existsSync(pipePath) && fs.unlinkSync(pipePath);
           const server = net.createServer();
           server.listen(pipePath, () => {
-            this.logger.log('Named pipe is listen on %s', pipePath);
+            this.logger.log('Named pipe is listening on %s', pipePath);
             resolve(server);
           });
           server.on('error', reject);

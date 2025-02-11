@@ -170,20 +170,20 @@ export class CallgentTreeController {
       children: [
         {
           id: 'CLIENT',
-          name: 'Client Entries (CEN)',
-          hint: 'Adaptor to accept request to the callgent',
+          name: 'Client Entries',
+          hint: 'Entries to receive client requests to current callgent',
           children: CEN,
         },
         {
           id: 'SERVER',
-          name: 'Server Entries (SEN)',
-          hint: 'Adaptor to forward the request to actual service',
+          name: 'Service Adaptors',
+          hint: 'Adaptors to forward the requests to actual services',
           children: SEN,
         },
         {
           id: 'EVENT',
-          name: 'Event Entries (EEN)',
-          hint: 'To accept service events and trigger your registered listener',
+          name: 'Event Listeners',
+          hint: 'Listeners to accept service events',
           children: EEN,
         },
       ],

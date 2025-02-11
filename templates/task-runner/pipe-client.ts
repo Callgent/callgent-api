@@ -1,4 +1,5 @@
 import * as net from 'net';
+import path from 'path';
 
 interface PendingRequest {
   resolve: (value: string) => void;
@@ -35,7 +36,7 @@ export class PipeClient {
       if (this.shutdown) return this.logger.log('Client is shutdown');
 
       this.client.connect(this.pipePath, () => {
-        this.logger.log('Connected to the pipe');
+        this.logger.log('Connecting to the pipe');
         this.isConnected = true;
         resolve();
         this.connectionWaiters.forEach((resolve) => resolve());
@@ -145,7 +146,7 @@ export class PipeClient {
     this.client.write(request, 'utf8', (err) => {
       if (err) throw err;
     });
-    this.logger.log('Result sent:', code, result);
+    this.logger.debug('Result sent:', code, result);
   }
 
   public close(): void {

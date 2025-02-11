@@ -387,7 +387,9 @@ Output the argument sourcing in JSON format:
 - Ensure all arg values are sourced from real data as user provided. Do not use imaginary/fake/example/mock/test data as arg values
   - Please Don't make assumption on any missing info, ask the user directly
   - There must be at least one source for each argument
-- One arg may have multiple sources. remove json node flagged as false`,
+- One arg may have multiple sources. remove json node flagged as false
+- at least one source must be identified: retrieved-from-API-calls.length>0 or extracted-from-user-info-or-files.flag is true
+  - don't list optional args, only list args that are necessary to fulfill the task`,
     },
     {
       name: 'reConfirmEndpointsArgs',
@@ -494,7 +496,7 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
      - this is the only field restored to resume the task, task runner will save/load it for you automatically
      - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
    - Endpoint Invoke Helper: an predefined public member function \`invokeService(purposeKey: string, args:{parameters?:{[paramName:string]:any},requestBody?:any}): Promise<any>\`
-     - You needn't output this method, directly use it to invoke any endpoint
+     - don't define this method in the class body, the task runner will inject the implementation for you
      - this method just relays req/resp, please handle validations/exceptions/retry by yourself
 3. **Modular and Reusable Code**: Implement well-structured member functions to encapsulate specific logic, ensuring the class is modular, reusable, and easy to maintain
 4. **Best Performance**: Estimate heavy resources/io/mem/cpu loads, and optimization strategies, especially preload/cache frequently accessed resources/handles out of loops as local vars or files:
@@ -759,6 +761,7 @@ function initTags(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
+  
   const tags: Prisma.TagUncheckedCreateInput[] = [
     {
       pk: -1,

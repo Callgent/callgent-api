@@ -154,11 +154,7 @@ export class InvokeService {
   ): Promise<PendingOrResponse | { statusCode: number; message: string }> {
     const cwd = reqEvent.getTaskCwd(this.filesService.UPLOAD_BASE_DIR);
     const cmdPrefix = reqEvent.taskId.substring(reqEvent.taskId.length - 3);
-    const child = await this.invokeSubprocess.spawnOrRestore(
-      'npx',
-      ['tsx', 'index.ts', cmdPrefix],
-      { cwd },
-    );
+    let child;
 
     // Only final response or error on subprocess exit is valid
     let finalResponse: string = undefined,
@@ -213,11 +209,20 @@ export class InvokeService {
       },
     });
 
+    child = await this.invokeSubprocess.spawnOrRestore(
+      'npx',
+      ['tsx', 'index.ts', cmdPrefix],
+      { cwd },
+    );
+
     try {
       const exitCode = await this.invokeSubprocess.waitForExit(child);
       // frozen process SIGKILL, exit code is 128 + 9 is OK
       if (exitCode && (!frozenKilled || exitCode != 137))
-        throw new Error('Task Subprocess exited with code ' + exitCode);
+        return {
+          statusCode: 1,
+          message: 'Task Subprocess exited with code ' + exitCode,
+        };
     } finally {
       server.close((err) => {
         if (err) console.error(err);

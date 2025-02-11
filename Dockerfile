@@ -7,7 +7,7 @@ RUN criu --version
 # https://chatgpt.com/share/6788670a-a904-8005-803a-0e9fcb01279b
 # RUN criu check
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.15.5
 
 FROM base AS builder
 
