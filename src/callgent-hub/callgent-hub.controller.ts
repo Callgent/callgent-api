@@ -67,15 +67,15 @@ export class CallgentHubController {
   async findAll(
     @Query()
     query: {
-      queryString?: string;
+      query?: string;
       page?: 1;
       perPage?: 10;
       // TODO orderBy?: string;
     },
   ) {
-    const where = query.queryString
+    const where = query.query
       ? {
-          name: { contains: query.queryString },
+          name: { contains: query.query },
         }
       : undefined;
     const list = await this.callgentHubService.findAllInHub({

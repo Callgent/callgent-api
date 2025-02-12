@@ -116,6 +116,28 @@ export class Utils {
       return true;
     });
   }
+
+  /**
+   * @param orders - e.g. 'name:asc,age:desc'
+   */
+  static parseOrderBy<T>(
+    orders: string,
+    fieldsAllowed?: (keyof T)[] | keyof T,
+  ): T[] | undefined {
+    const fields = orders?.split(',');
+    if (!fields?.length) return undefined;
+    const allowed = Array.isArray(fieldsAllowed)
+      ? fieldsAllowed
+      : fieldsAllowed && [fieldsAllowed];
+    return fields.reduce((acc, field) => {
+      const [key, order] = field.split(':');
+      if (!key || !order || (allowed && !allowed.includes(key as keyof T)))
+        return acc;
+      const o = { [key]: order === 'asc' ? 'asc' : 'desc' };
+      acc.push(o as T);
+      return acc;
+    }, [] as T[]);
+  }
 }
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */

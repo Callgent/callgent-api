@@ -82,11 +82,11 @@ export class CallgentsController {
   })
   @Get()
   async findAll(
-    @Query() query: { queryString?: string; page?: 1; perPage?: 10 },
+    @Query() query: { query?: string; page?: 1; perPage?: 10 },
   ) {
-    const where = query.queryString
+    const where = query.query
       ? {
-          name: { contains: query.queryString },
+          name: { contains: query.query },
         }
       : undefined;
     const list = await this.callgentsService.findMany({

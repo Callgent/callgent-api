@@ -1,7 +1,7 @@
 import {
   Propagation,
-  TransactionHost,
   Transactional,
+  TransactionHost,
 } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
@@ -14,9 +14,9 @@ import {
 } from '@nestjs/common';
 import { ModuleRef, ModulesContainer } from '@nestjs/core';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { paginator, PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
-import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
@@ -29,6 +29,8 @@ import { EntryDto } from './dto/entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
 import { EntriesChangedEvent } from './events/entries-changed.event';
+
+const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
 @Injectable()
 export class EntriesService implements OnModuleInit {
@@ -174,6 +176,43 @@ export class EntriesService implements OnModuleInit {
           orderBy,
         }),
       this.defSelect,
+    );
+  }
+
+  @Transactional()
+  findMany({
+    select,
+    where,
+    orderBy = [{ pk: 'desc' }],
+    page,
+    perPage,
+  }: {
+    select?: Prisma.EntrySelect;
+    where?: Prisma.EntryWhereInput;
+    orderBy?: Prisma.EntryOrderByWithRelationInput[];
+    page?: number;
+    perPage?: number;
+  }) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return selectHelper(
+      select,
+      async (select) => {
+        const result = paginate(
+          prisma.entry,
+          {
+            select,
+            where,
+            orderBy,
+          },
+          {
+            page,
+            perPage,
+          },
+        );
+        return result;
+      },
+      this.defSelect,
+      'data',
     );
   }
 

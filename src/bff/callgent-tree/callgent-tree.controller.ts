@@ -68,7 +68,7 @@ export class CallgentTreeController {
       ],
     },
   })
-  @Get('callgent-entries/:id')
+  @Get('callgent-tree/:id')
   async findOne(@Param('id') id: string) {
     const callgent = await this.callgentsService.findOne(id);
     if (!callgent) throw new NotFoundException();
@@ -106,7 +106,7 @@ export class CallgentTreeController {
       ],
     },
   })
-  @Post('callgent-entries')
+  @Post('callgent-tree')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
     let callgent = (await this.callgentsService.getByName(
       dto.name,

@@ -71,7 +71,6 @@ export class ScriptRunnerService {
   ) {
     // try fix script
     const { message } = result;
-    await this.scriptAgentService.fixScriptError(message, reqEvent);
-    return false;
+    return this.scriptAgentService.fixScriptError(message, reqEvent);
   }
 }
