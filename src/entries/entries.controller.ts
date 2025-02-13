@@ -166,7 +166,7 @@ export class EntriesController {
   @ApiQuery({
     name: 'orderBy',
     description:
-      'e.g. createdAt:desc,price:asc. Allowed fields: name,type,adaptorKey,host,createdAt,updatedAt',
+      'e.g. createdAt:desc,price:asc. Allowed fields: name,type,adaptorKey,host,pk,updatedAt',
     required: false,
     type: Number,
   })
@@ -188,27 +188,33 @@ export class EntriesController {
   })
   @UseGuards(JwtGuard)
   @Get('server')
-  list(
+  listServerEntries(
     @Query()
     {
       query,
       adaptor: adaptorKey,
+      callgentId,
       page,
       perPage,
       orderBy: orders,
     }: {
       query?: string;
       adaptor?: string;
+      callgentId?: string;
       page?: 1;
       perPage?: 10;
       orderBy?: string;
     },
   ) {
-    const where: Prisma.EntryWhereInput = { type: 'SERVER', adaptorKey };
+    const where: Prisma.EntryWhereInput = {
+      type: 'SERVER',
+      adaptorKey: adaptorKey || undefined,
+      callgentId: callgentId || undefined,
+    };
     if (query?.trim()) where.name = { contains: query.trim() };
     const orderBy: Prisma.EntryOrderByWithRelationInput[] = Utils.parseOrderBy(
       orders,
-      ['name', 'type', 'adaptorKey', 'host', 'createdAt', 'updatedAt'],
+      ['name', 'type', 'adaptorKey', 'host', 'pk', 'updatedAt'],
     );
     return this.entriesService.findMany({ page, perPage, where, orderBy });
   }

@@ -65,13 +65,13 @@ export class CallgentsService {
   findMany({
     select,
     where,
-    orderBy = { pk: 'desc' },
+    orderBy = [{ pk: 'desc' }],
     page,
     perPage,
   }: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput[];
     page?: number;
     perPage?: number;
   }) {
@@ -144,19 +144,23 @@ export class CallgentsService {
   @Transactional()
   async findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(
-      select,
-      (select) =>
-        prisma.callgent.update({
-          where: { id },
-          select,
-          data: { viewed: { increment: 1 } },
-        }),
-      this.defSelect,
-    ).catch((e) => {
+
+    try {
+      const c = await selectHelper(
+        select,
+        (select) =>
+          prisma.callgent.update({
+            where: { id },
+            select,
+            data: { viewed: { increment: 1 } },
+          }),
+        this.defSelect,
+      );
+      return c;
+    } catch (e) {
       if (e.message.includes(' not found.')) return null;
       throw e;
-    });
+    }
   }
 
   async getByName(name: string, select?: Prisma.CallgentSelect) {

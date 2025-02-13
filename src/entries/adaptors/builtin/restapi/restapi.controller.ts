@@ -105,12 +105,18 @@ export class RestApiController {
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);
+    const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
+    const calledBy = req.user?.sub;
+    const paidBy = calledBy || callgent.createdBy;
 
     const e = new ClientRequestEvent(
       entry.id,
       entry.adaptorKey,
       requirement,
       taskId,
+      title,
+      paidBy,
+      calledBy,
       {
         callgentId,
         callgentName: callgent.name,
@@ -221,6 +227,9 @@ export class RestApiController {
     const { entry, callgent } = await this._load(callgentId, entryId);
     // TODO owner defaults to caller callgent
     const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
+    const title = 'Invoke: ' + epName;
+    const calledBy = req.user?.sub;
+    const paidBy = calledBy || callgent.createdBy;
 
     const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
@@ -228,6 +237,9 @@ export class RestApiController {
         entry.adaptorKey,
         req,
         null,
+        title,
+        paidBy,
+        calledBy,
         {
           callgentId,
           callgentName: callgent.name,

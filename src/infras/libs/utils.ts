@@ -138,6 +138,21 @@ export class Utils {
       return acc;
     }, [] as T[]);
   }
+
+  static truncate(str, maxBytes, encoding: BufferEncoding = 'utf8') {
+    let result = '';
+    let byteLength = 0;
+
+    for (let char of str) {
+      const charByteLength = Buffer.byteLength(char, encoding);
+      if (byteLength + charByteLength > maxBytes) break;
+
+      result += char;
+      byteLength += charByteLength;
+    }
+
+    return result;
+  }
 }
 
 /** to make some props optional, e.g. Optional<SourceType, 'prop2' | 'prop3'> */

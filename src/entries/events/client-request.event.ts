@@ -18,6 +18,9 @@ export class ClientRequestEvent extends EventObject {
     dataType: string,
     req: object,
     taskId: string,
+    title: string,
+    paidBy: string,
+    calledBy: string,
     context: {
       callgentId: string;
       callgentName: string;
@@ -30,7 +33,17 @@ export class ClientRequestEvent extends EventObject {
     },
     callback?: string,
   ) {
-    super(entryId, 'CLIENT_REQUEST', dataType, taskId, callback, 'URL');
+    super(
+      entryId,
+      'CLIENT_REQUEST',
+      dataType,
+      taskId,
+      title,
+      paidBy,
+      calledBy,
+      callback,
+      'URL',
+    );
     Object.assign(this.context, context);
     this.context.req = req;
     this.context.invocations = {};

@@ -70,12 +70,18 @@ export class WebpageController {
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);
+    const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
+    const calledBy = req.user?.sub;
+    const paidBy = calledBy || callgent.createdBy;
 
     const e = new ClientRequestEvent(
       entry.id,
       entry.adaptorKey,
       requirement,
       taskId,
+      title,
+      paidBy,
+      calledBy,
       {
         callgentId,
         callgentName: callgent.name,
@@ -143,6 +149,9 @@ export class WebpageController {
     // preprocess, c-auth, [load code, view route]
 
     const { entry, callgent } = await this._load(callgentId, entryId);
+    const title = 'Invoke: ' + pageName;
+    const calledBy = req.user?.sub;
+    const paidBy = calledBy || callgent.createdBy;
 
     const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
@@ -150,6 +159,9 @@ export class WebpageController {
         entry.adaptorKey,
         req,
         null,
+        title,
+        paidBy,
+        calledBy,
         {
           callgentId,
           callgentName: callgent.name,

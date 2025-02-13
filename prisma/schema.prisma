@@ -522,6 +522,12 @@ model EventStore {
   /// @DtoPlainApiResponse
   id String @unique @db.VarChar(36)
 
+  calledBy String? @db.VarChar(36)
+  /// @description paid by caller, or root callgent creator if caller is null
+  paidBy   String  @db.VarChar(36)
+  /// @description event title
+  title    String? @db.VarChar(144)
+
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(36)
   /// @Description target id to relate several events
@@ -552,6 +558,8 @@ model EventStore {
 
   @@index([srcId])
   @@index([taskId])
+  @@index([paidBy])
+  @@index([calledBy])
 }
 
 /// @DtoSingularModel

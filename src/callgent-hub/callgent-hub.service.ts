@@ -46,7 +46,7 @@ export class CallgentHubService {
   async findAllInHub(params: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput[];
     page?: number;
     perPage?: number;
   }) {

@@ -11,15 +11,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  ApiSecurity,
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiQuery,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { Prisma } from '@prisma/client';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { Utils } from '../infras/libs/utils';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentsService } from './callgents.service';
 import { CallgentDto } from './dto/callgent.dto';
@@ -63,8 +65,16 @@ export class CallgentsController {
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
+  @ApiQuery({ name: 'mainTagId', required: false, type: Number })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'perPage', required: false, type: Number })
+  @ApiQuery({
+    name: 'orderBy',
+    description:
+      'e.g. createdAt:desc,price:asc. Allowed fields: name, favorite, featured, forked, liked, official, viewed, mainTagId, pk, updatedAt',
+    required: false,
+    type: Number,
+  })
   @ApiOkResponse({
     schema: {
       anyOf: [
@@ -81,18 +91,48 @@ export class CallgentsController {
     },
   })
   @Get()
-  async findAll(
-    @Query() query: { query?: string; page?: 1; perPage?: 10 },
+  async list(
+    @Query()
+    {
+      query,
+      mainTagId,
+      page,
+      perPage,
+      orderBy: orders,
+    }: {
+      query?: string;
+      mainTagId?: number;
+      page?: 1;
+      perPage?: 10;
+      orderBy?: string;
+    },
   ) {
-    const where = query.query
-      ? {
-          name: { contains: query.query },
-        }
+    query = query?.trim();
+    let where: Prisma.CallgentWhereInput = query
+      ? { name: { contains: query } }
       : undefined;
+    mainTagId &&
+      (where ? (where.mainTagId = mainTagId) : (where = { mainTagId }));
+
+    const orderBy: Prisma.CallgentOrderByWithRelationInput[] =
+      Utils.parseOrderBy(orders, [
+        'name',
+        'favorite',
+        'featured',
+        'forked',
+        'liked',
+        'official',
+        'viewed',
+        'mainTagId',
+        'pk',
+        'updatedAt',
+      ]);
+
     const list = await this.callgentsService.findMany({
-      page: query.page,
-      perPage: query.perPage,
+      page,
+      perPage,
       where,
+      orderBy,
     });
     list.data?.forEach((item: any) => (item.children = []));
     return list;

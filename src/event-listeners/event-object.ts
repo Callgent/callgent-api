@@ -9,6 +9,9 @@ export class EventObject {
     public readonly eventType: string,
     public readonly dataType: string,
     taskId: string,
+    public readonly title: string,
+    public readonly paidBy: string,
+    public readonly calledBy?: string,
     /** url template for response callback, `callgent:epName[@callgent]` to invoke callgent */
     public callback?: string,
     public readonly callbackType: EventCallbackType = 'EVENT',

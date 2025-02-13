@@ -1,13 +1,12 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 import * as dot from 'dot';
 import { Utils } from '../infras/libs/utils';
 import { LlmCompletionEvent } from './events/llm-completion.event';
-import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class LLMService {
