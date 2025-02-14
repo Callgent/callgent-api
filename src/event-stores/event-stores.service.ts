@@ -136,13 +136,15 @@ export class EventStoresService {
       await prisma.$queryRaw`select count(distinct "taskId") as c from "EventStore" ${sqlWhere}`;
     if (!c) return { data: [], meta: { total: 0, perPage, currentPage: page } };
 
-    const sqlOrder = Prisma.sql`${Prisma.join(
-      orderBy.map((o) => {
-        const key = Object.keys(o)[0];
-        return Prisma.sql`${Prisma.raw(key)} ${Prisma.raw(o[key])}`;
-      }),
-      ',',
-    )}`;
+    const sqlOrder = orderBy?.length
+      ? Prisma.sql`${Prisma.join(
+          orderBy.map((o) => {
+            const key = Object.keys(o)[0];
+            return Prisma.sql`${Prisma.raw(key)} ${Prisma.raw(o[key])}`;
+          }),
+          ',',
+        )}`
+      : Prisma.sql`pk DESC`;
     const pks: { pk: bigint }[] =
       await prisma.$queryRaw`select min("pk") as pk from "EventStore"
       ${sqlWhere} group by "taskId" ORDER BY ${sqlOrder}

@@ -35,7 +35,7 @@ export class EventStoresController {
     description:
       'e.g. createdAt:desc,price:asc. Allowed fields: title, eventType, dataType, taskId, pk, updatedAt',
     required: false,
-    type: Number,
+    type: String,
   })
   @ApiOkResponse({
     description: 'List of my tasks',
@@ -69,12 +69,14 @@ export class EventStoresController {
       eventType?: string;
       dataType?: string;
       taskId?: string;
-      page?: 1;
-      perPage?: 10;
+      page?: number;
+      perPage?: number;
       orderBy?: string;
     },
     @Req() req,
   ) {
+    page = page ? +page : undefined;
+    perPage = perPage ? +perPage : undefined;
     const calledBy = req.user.sub;
     const where: Prisma.EventStoreWhereInput = {
       calledBy,

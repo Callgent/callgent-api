@@ -168,7 +168,7 @@ export class EntriesController {
     description:
       'e.g. createdAt:desc,price:asc. Allowed fields: name,type,adaptorKey,host,pk,updatedAt',
     required: false,
-    type: Number,
+    type: String,
   })
   @ApiOkResponse({
     description: 'List of server entries',
@@ -201,11 +201,13 @@ export class EntriesController {
       query?: string;
       adaptor?: string;
       callgentId?: string;
-      page?: 1;
-      perPage?: 10;
+      page?: number;
+      perPage?: number;
       orderBy?: string;
     },
   ) {
+    page = page ? +page : undefined;
+    perPage = perPage ? +perPage : undefined;
     const where: Prisma.EntryWhereInput = {
       type: 'SERVER',
       adaptorKey: adaptorKey || undefined,

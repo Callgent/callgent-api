@@ -129,7 +129,7 @@ export class Utils {
     const allowed = Array.isArray(fieldsAllowed)
       ? fieldsAllowed
       : fieldsAllowed && [fieldsAllowed];
-    return fields.reduce((acc, field) => {
+    const orderBy = fields.reduce((acc, field) => {
       const [key, order] = field.split(':');
       if (!key || !order || (allowed && !allowed.includes(key as keyof T)))
         return acc;
@@ -137,6 +137,7 @@ export class Utils {
       acc.push(o as T);
       return acc;
     }, [] as T[]);
+    return orderBy.length ? orderBy : undefined;
   }
 
   static truncate(str, maxBytes, encoding: BufferEncoding = 'utf8') {

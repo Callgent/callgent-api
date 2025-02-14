@@ -73,7 +73,7 @@ export class CallgentsController {
     description:
       'e.g. createdAt:desc,price:asc. Allowed fields: name, favorite, featured, forked, liked, official, viewed, mainTagId, pk, updatedAt',
     required: false,
-    type: Number,
+    type: String,
   })
   @ApiOkResponse({
     schema: {
@@ -102,11 +102,14 @@ export class CallgentsController {
     }: {
       query?: string;
       mainTagId?: number;
-      page?: 1;
-      perPage?: 10;
+      page?: number;
+      perPage?: number;
       orderBy?: string;
     },
   ) {
+    page = page ? +page : undefined;
+    perPage = perPage ? +perPage : undefined;
+    mainTagId = mainTagId ? +mainTagId : undefined;
     query = query?.trim();
     let where: Prisma.CallgentWhereInput = query
       ? { name: { contains: query } }
