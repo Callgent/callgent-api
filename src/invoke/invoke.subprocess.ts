@@ -195,8 +195,11 @@ export class InvokeSubprocess {
       });
       rl.on('line', (line) => onLine(line, socket));
 
-      socket.on('error', (err) => this.logger.error('Pipe error:', err));
-      socket.on('close', () => this.logger.log('Pipe closed'));
+      socket.on(
+        'error',
+        (err) => (this.logger.error('Pipe error:', err), rl.close()),
+      );
+      socket.on('close', () => (this.logger.log('Pipe closed'), rl.close()));
     });
 
     return server;

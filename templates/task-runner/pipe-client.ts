@@ -98,7 +98,7 @@ export class PipeClient {
     this.heartbeatTimer && clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = setInterval(() => {
       this.isConnected &&
-        this.client.write('ping', 'utf8', (err) => {
+        this.client.write('ping\n', 'utf8', (err) => {
           if (err) {
             this.logger.log('Error: Heartbeat failed:', err);
             this.reconnect();
@@ -112,7 +112,7 @@ export class PipeClient {
     const requestId = this.requestPrefix + ':' + --this.nextRequestId;
 
     await this.waitForConnection(requestId);
-    const request = `${this.cmdPrefix}|${requestId}|${cmd}`;
+    const request = `${this.cmdPrefix}|${requestId}|${cmd}\n`;
 
     return new Promise<string>((resolve, reject) => {
       this.pendingRequests.set(requestId, { resolve, reject });
@@ -142,7 +142,7 @@ export class PipeClient {
           arg,
       ),
     );
-    const request = `${this.cmdPrefix}|${resultKey}|${result}`;
+    const request = `${this.cmdPrefix}|${resultKey}|${result}\n`;
     this.client.write(request, 'utf8', (err) => {
       if (err) throw err;
     });

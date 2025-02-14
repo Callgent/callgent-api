@@ -92,6 +92,7 @@ export class InvokeService {
         epName,
         args,
       };
+    this.logger.log('Start invoking SEP: ' + invocation.epName);
 
     let resp: PendingOrResponse;
     this.setInvokeId(invokeId);
