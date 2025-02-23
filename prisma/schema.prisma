@@ -26,6 +26,7 @@ datasource db {
 }
 
 // TODO # foreign key using pk, instead of id, for better performance?
+// TODO id uses hash index
 
 // # db sharding base on tenantPk: 
 // 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
@@ -38,12 +39,16 @@ model Tenant {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id         String  @unique @db.VarChar(36)
-  emailHost  String? @unique @db.VarChar(36) /// @description unique tenant email host
+  id         String  @unique @db.VarChar(30)
+  emailHost  String? @unique @db.VarChar(30) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
   statusCode Int     @default(0) /// @description user statusCode: 0: pending, 1: active, -1: inactive.
+
+  /// @description $1 = 1e11
+  balance  Decimal @default(0) @db.Decimal(30, 0)
+  currency String  @default("USD") @db.VarChar(6)
 
   User User[]
 
@@ -60,8 +65,8 @@ model User {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id     String  @unique @db.VarChar(36)
-  name   String  @db.VarChar(36)
+  id     String  @unique @db.VarChar(30)
+  name   String  @db.VarChar(30)
   email  String? @db.VarChar(255) /// @description account primary verified email
   avatar String? @db.VarChar(1023)
   locale String? @default("en_US") @db.VarChar(10)
@@ -93,7 +98,7 @@ model UserIdentity {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  provider       String  @db.VarChar(36)
+  provider       String  @db.VarChar(30)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -118,7 +123,7 @@ model UserIdentity {
   userPk Int
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  userId String @db.VarChar(36)
+  userId String @db.VarChar(30)
 
   // expiresAt DateTime? @db.Timestamp(0) // @description TODO: token expiration time
   createdAt DateTime  @default(now())
@@ -160,7 +165,7 @@ model Callgent {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
@@ -201,7 +206,7 @@ model Callgent {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(30)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -222,7 +227,7 @@ model CallgentTag {
   pk Int @id @default(autoincrement())
 
   tagId      Int
-  callgentId String @db.VarChar(36)
+  callgentId String @db.VarChar(30)
 
   createdAt DateTime @default(now())
 
@@ -244,7 +249,7 @@ model Entry {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
@@ -277,12 +282,12 @@ model Entry {
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   /// @DtoRelationIncludeId
-  callgentId String   @db.VarChar(36) /// @description callgent owning the entry
+  callgentId String   @db.VarChar(30) /// @description callgent owning the entry
   callgent   Callgent @relation(fields: [callgentId], references: [id])
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(30)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -301,7 +306,7 @@ model Endpoint {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
@@ -324,10 +329,10 @@ model Endpoint {
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
-  callgentId String  @db.VarChar(36)
+  callgentId String  @db.VarChar(30)
   /// @description An endpoint is bound to a server entry
   /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infras/repo/validators/entity-exists.validator)
-  entryId    String? @db.VarChar(36)
+  entryId    String? @db.VarChar(30)
   /// @description whether async endpoint, e.g. invoked by email adaptor
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -342,7 +347,7 @@ model Endpoint {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(30)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -369,7 +374,7 @@ model CallgentRealm {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
-  callgentId String @db.VarChar(36)
+  callgentId String @db.VarChar(30)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -380,7 +385,7 @@ model CallgentRealm {
   authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
   /// @description provider defined realm name, or '' for default realm
   /// @IsOptional()
-  realm    String? @default("") @db.VarChar(36)
+  realm    String? @default("") @db.VarChar(30)
   /// @DtoUpdateOptional
   /// @DtoCastType(RealmSchemeVO, ../dto/realm-scheme.vo)
   scheme   Json    @db.Json /// @description security scheme, with all public configs
@@ -409,7 +414,7 @@ model AuthToken {
   /// @DtoEntityHidden
   pk Int @id @default(autoincrement())
 
-  token   String  @unique @db.VarChar(36)
+  token   String  @unique @db.VarChar(30)
   type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
   /// @DtoCastType(JwtPayload, ../infras/auth/jwt/jwt.service)
   payload Json
@@ -455,11 +460,11 @@ model LlmCache {
 model Req2ArgsRepo {
   pk BigInt @id @default(autoincrement())
 
-  cepId    String @db.VarChar(36) /// @description source client endpoint id receiving the request
-  sepId    String @db.VarChar(36) /// @description target server endpoint id processing the request
+  cepId    String @db.VarChar(30) /// @description source client endpoint id receiving the request
+  sepId    String @db.VarChar(30) /// @description target server endpoint id processing the request
   req2Args String @db.VarChar(8192) /// @description js function req2Args(req) to convert request to args
 
-  createdBy String?  @db.VarChar(36)
+  createdBy String?  @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -477,16 +482,16 @@ model EventListener {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
   tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  srcId String @db.VarChar(36) /// @description event source id
+  srcId String @db.VarChar(30) /// @description event source id
 
-  eventType String @db.VarChar(36)
-  dataType  String @db.VarChar(36)
+  eventType String @db.VarChar(30)
+  dataType  String @db.VarChar(30)
   priority  Int?   @default(0)
 
   serviceType ServiceType // callgent, service
@@ -497,7 +502,7 @@ model EventListener {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
+  createdBy String    @db.VarChar(30)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -520,20 +525,20 @@ model EventStore {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id String @unique @db.VarChar(36)
+  id String @unique @db.VarChar(30)
 
-  calledBy String? @db.VarChar(36)
+  calledBy String? @db.VarChar(30)
   /// @description paid by caller, or root callgent creator if caller is null
-  paidBy   String  @db.VarChar(36)
+  paidBy   String  @db.VarChar(30)
   /// @description event title
   title    String? @db.VarChar(144)
 
   /// @Description src entity id which bind to the listener
-  srcId        String            @db.VarChar(36)
+  srcId        String            @db.VarChar(30)
   /// @Description target id to relate several events
-  taskId       String            @db.VarChar(36)
-  eventType    String            @db.VarChar(36)
-  dataType     String            @db.VarChar(36)
+  taskId       String            @db.VarChar(30)
+  eventType    String            @db.VarChar(30)
+  dataType     String            @db.VarChar(30)
   /// @Description callback url or parent event id to invoke
   callback     String?           @db.VarChar(1023)
   /// @Description callback type, 'URL' or 'EVENT'
@@ -546,7 +551,7 @@ model EventStore {
   statusCode      Int     @default(1)
   message         String? @db.VarChar(2047)
   stopPropagation Boolean /// @description stop propagation to next listeners
-  listenerId      String? @db.VarChar(36)
+  listenerId      String? @db.VarChar(30)
   funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
   createdAt DateTime  @default(now())
@@ -569,18 +574,18 @@ model Cached {
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  sepId      String   @db.VarChar(36)
+  sepId      String   @db.VarChar(30)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   /// @description source event id
-  sourceId   String   @db.VarChar(36)
+  sourceId   String   @db.VarChar(30)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   cacheKey   String   @db.VarChar(511)
   /// @DtoCastType(PendingOrResponse, ../../entries/adaptors/entry-adaptor.base)
   response   Json     @db.Json
   /// @description invoke keys: invokeId-eventId
-  invokeKeys String[] @db.VarChar(36)
+  invokeKeys String[] @db.VarChar(30)
 
   createdAt DateTime @default(now())
   /// @description updated when async callback
@@ -594,22 +599,54 @@ model Cached {
 }
 
 /// @DtoIgnoreModel
-model LlmModelPricing {
-  pk            BigInt   @id @default(autoincrement())
-  modelName     String   @unique @db.VarChar(150)
-  price         Json     @db.Json
-  pricingMethod String   @db.VarChar(150)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now()) @updatedAt
+model ModelPricing {
+  pk BigInt @id @default(autoincrement())
+
+  model    String  @db.VarChar(30)
+  alias    String? @db.VarChar(50)
+  provider String  @default("") @db.VarChar(50)
+
+  /// @description $1 = 1e11
+  price    Json   @db.Json
+  currency String @db.VarChar(6)
+
+  /// @description function to calculate amount: (usage, pricing)=>Decimal
+  method    String   @db.VarChar(300)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([model, provider])
 }
 
 /// @DtoIgnoreModel
-model UserBalance {
-  pk       BigInt  @id @default(autoincrement())
-  balance  Decimal @default(0) @db.Decimal(30, 0)
-  currency String  @default("USD") @db.VarChar(3)
+model Transaction {
+  /// @DtoEntityHidden
+  pk      BigInt @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id      String @unique @db.VarChar(30)
+  /// @IsNotEmpty
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @description transaction id from external system
+  txId    String @unique @db.VarChar(150)
+  /// @DtoUpdateHidden
+  /// @DtoEntityHidden
+  /// @description reference data from internal/external system
+  refData Json?  @db.Json
 
-  userId String @unique @db.VarChar(36)
+  /// @description transaction type: 1: RECHARGE, 2: GIFT, 3. REFUND, 4: EXPENSE
+  type     String  @db.VarChar(20)
+  /// @description amount: $1 = 1e11
+  amount   Decimal @db.Decimal(30, 0)
+  /// @description currency: USD, CNY, ...
+  currency String  @db.VarChar(6)
+
+  userId   String @db.VarChar(30)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantPk Int
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -618,33 +655,5 @@ model UserBalance {
   /// @DtoEntityHidden
   deletedAt DateTime? /// @description logical deletion.
 
-  TransactionHistory TransactionHistory[]
-}
-
-enum TransactionHistoryType {
-  PAYMENT
-  TOKEN
-}
-
-/// @DtoIgnoreModel
-model TransactionHistory {
-  pk       BigInt                 @id @default(autoincrement())
-  type     TransactionHistoryType @default(PAYMENT)
-  stripeId String?                @unique @db.VarChar(150)
-  price    Json                   @db.Json
-  usage    Json?                  @db.Json
-  amount   Decimal                @db.Decimal(30, 0)
-
-  userBalanceId BigInt @db.BigInt
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  userBalance UserBalance @relation(fields: [userBalanceId], references: [pk])
-
-  @@index([userBalanceId])
+  @@index([tenantPk])
 }

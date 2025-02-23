@@ -102,16 +102,21 @@ export class EndpointsService {
   // }
 
   @Transactional()
-  async create(data: Prisma.EndpointUncheckedCreateInput) {
+  async create(data: Prisma.EndpointUncheckedCreateInput, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const id = Utils.uuid();
     const ep = await prisma.endpoint.create({ data: { ...data, id } });
-    await this._pubEvent({ entry: { id: ep.entryId }, news: [ep] });
+    await this._pubEvent({ opBy, entry: { id: ep.entryId }, news: [ep] });
     return ep;
   }
 
   protected async _pubEvent(data: {
-    entry: { id: string; summary?: string; instruction?: string };
+    opBy: string;
+    entry: {
+      id: string;
+      summary?: string;
+      instruction?: string;
+    };
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
   }) {
@@ -188,7 +193,7 @@ export class EndpointsService {
     });
 
     // create api endpoints
-    const actionsCount = this.createMany(actMap, entry);
+    const actionsCount = this.createMany(actMap, entry, createdBy);
 
     // 根据adaptor，auth type，判定可选的auth servers
     // FIXME save securitySchemes on entry
@@ -205,6 +210,7 @@ export class EndpointsService {
   async createMany(
     endpoints: Optional<Prisma.EndpointUncheckedCreateInput, 'isAsync'>[],
     entry: EntryDto,
+    opBy: string,
   ) {
     const adaptor = this.entriesService.getAdaptor(
       entry.adaptorKey,
@@ -215,7 +221,7 @@ export class EndpointsService {
       endpoints as Prisma.EndpointUncheckedCreateInput[];
     const prisma = this.txHost.tx as PrismaClient;
     const { count } = await prisma.endpoint.createMany({ data });
-    await this._pubEvent({ entry: entry as any, news: data as any[] });
+    await this._pubEvent({ opBy, entry: entry as any, news: data as any[] });
     return count;
   }
 
@@ -288,17 +294,17 @@ export class EndpointsService {
   }
 
   @Transactional()
-  async delete(id: string) {
+  async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.delete({ select, where: { id } }),
     );
-    await this._pubEvent({ entry: { id: ret.entryId }, olds: [ret] });
+    await this._pubEvent({ opBy, entry: { id: ret.entryId }, olds: [ret] });
     return ret;
   }
 
   @Transactional()
-  async update(dto: UpdateEndpointDto) {
+  async update(dto: UpdateEndpointDto, opBy: string) {
     if (!dto.id) return;
     dto.name = Utils.formalApiName(dto.method, dto.path);
     const prisma = this.txHost.tx as PrismaClient;
@@ -311,6 +317,7 @@ export class EndpointsService {
       }),
     );
     await this._pubEvent({
+      opBy,
       entry: { id: ret.entryId },
       news: [ret],
       olds: [old],

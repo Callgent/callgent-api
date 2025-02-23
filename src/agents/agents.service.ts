@@ -1,28 +1,22 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
-import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { Entry } from '../entries/entities/entry.entity';
-import { EventListenersService } from '../event-listeners/event-listeners.service';
+import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { LLMService } from './llm.service';
 
 /** early validation principle[EVP]: validate generated content ASAP.
  * TODO: forward to user to validate macro signature (progressively)? program validate generated schema */
 @Injectable()
 export class AgentsService {
-  constructor(
-    private readonly llmService: LLMService,
-    private readonly eventListenersService: EventListenersService,
-    private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-  ) {}
+  constructor(private readonly llmService: LLMService) {}
 
   /** convert resp content into one of fun.responses */
   async convert2Response(
     requestArgs: { [name: string]: any },
     resp: string,
     ep: EndpointDto,
-    eventId: string,
+    reqEvent: ClientRequestEvent,
   ) {
     requestArgs = requestArgs
       ? Object.entries(requestArgs).map(([name, value]) => ({ name, value }))
@@ -32,7 +26,8 @@ export class AgentsService {
       { requestArgs, resp, ep },
       {
         parseSchema: { status: 200, statusText: '', data: null },
-        bizKey: eventId,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
       },
     ); // TODO validating `mapping`
 
@@ -44,6 +39,7 @@ export class AgentsService {
    * @returns
    */
   async summarizeEntry(data: {
+    opBy: string;
     entry: {
       id: string;
       summary?: string;
@@ -57,6 +53,7 @@ export class AgentsService {
     const result = await this.llmService.query('summarizeEntry', data, {
       parseSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.entry.id,
+      paidBy: data.opBy,
     });
     return result;
   }
@@ -66,6 +63,7 @@ export class AgentsService {
    * @returns
    */
   async summarizeCallgent(data: {
+    opBy: string;
     callgent: {
       id: string;
       summary?: string;
@@ -78,6 +76,7 @@ export class AgentsService {
     const result = await this.llmService.query('summarizeCallgent', data, {
       parseSchema: { summary: '', instruction: '', totally: true },
       bizKey: data.callgent.id,
+      paidBy: data.opBy,
     });
 
     return result;
@@ -86,7 +85,7 @@ export class AgentsService {
   async genVue1Route(data: {
     requirement: string;
     callgent: { name: string; summary: string; instruction: string };
-    bizKey: string;
+    event: ClientRequestEvent;
   }) {
     const result = await this.llmService.query('genVue1Route', data, {
       parseSchema: [
@@ -101,7 +100,8 @@ export class AgentsService {
           distance: 0,
         },
       ],
-      bizKey: data.bizKey,
+      paidBy: data.event.paidBy,
+      bizKey: data.event.id,
     });
 
     return result;
@@ -138,7 +138,7 @@ export class AgentsService {
       params: [];
     }[];
     packages: string[];
-    bizKey: string;
+    event: ClientRequestEvent;
   }) {
     let compName = '';
     const result = await this.llmService.query('genVue2Components', data, {
@@ -151,7 +151,8 @@ export class AgentsService {
           instruction: '',
         },
       },
-      bizKey: data.bizKey,
+      paidBy: data.event.paidBy,
+      bizKey: data.event.id,
       // validate endpoints exists
       validate: (gen) =>
         Object.entries(gen).every(([compName, comp]) =>
@@ -195,7 +196,7 @@ export class AgentsService {
       getters: object[];
     }[];
     packages: string[];
-    bizKey: string;
+    event: ClientRequestEvent;
   }) {
     const result = await this.llmService.query('genVue3Component', data, {
       parseSchema: {
@@ -211,7 +212,8 @@ export class AgentsService {
           importedComponents: ['ComponentName', 'may empty array'],
         },
       },
-      bizKey: data.bizKey,
+      paidBy: data.event.paidBy,
+      bizKey: data.event.id,
       validate: (gen) =>
         gen.packages.every((p) => {
           if (p.lastIndexOf('@') <= 0)
@@ -246,11 +248,12 @@ export class AgentsService {
     };
     packages: string[];
     apiBaseUrl: string;
-    bizKey: string;
+    event: ClientRequestEvent;
   }) {
     const result = await this.llmService.query('genVue4Store', data, {
       parseSchema: { code: '', packages: [''] },
-      bizKey: data.bizKey,
+      paidBy: data.event.paidBy,
+      bizKey: data.event.id,
       validate: (gen) =>
         gen.packages.every((p) => {
           if (p.lastIndexOf('@') <= 0)
@@ -284,11 +287,12 @@ export class AgentsService {
       spec: object;
     }[];
     packages: string[];
-    bizKey: string;
+    event: ClientRequestEvent;
   }) {
     const result = await this.llmService.query('genVue5View', data, {
       parseSchema: { code: '', packages: [''] },
-      bizKey: data.bizKey,
+      paidBy: data.event.paidBy,
+      bizKey: data.event.id,
       validate: (gen) =>
         gen.packages?.every((p) => {
           if (p.lastIndexOf('@') > 0) return true;

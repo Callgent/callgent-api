@@ -117,7 +117,7 @@ export async function bootstrapForProd(): Promise<NestFastifyApplication> {
         trustProxy: true,
         bodyLimit,
       }),
-      { abortOnError: false, bufferLogs: true },
+      { abortOnError: false, bufferLogs: true, rawBody: true },
     );
   return bootstrap(app, process.env.PORT || '3000');
 }

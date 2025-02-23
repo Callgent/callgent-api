@@ -6,6 +6,7 @@ export class EntriesChangedEvent {
 
   constructor(
     public readonly data: {
+      opBy: string;
       callgent: {
         id: string;
         name?: string;

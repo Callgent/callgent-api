@@ -36,12 +36,16 @@ export class LLMService {
     template: string,
     args: { [key: string]: any },
     {
+      models,
       bizKey,
+      paidBy,
       parseType = 'json',
       parseSchema,
       validate,
     }: {
-      bizKey?: string;
+      models?: string[] | string;
+      bizKey: string;
+      paidBy: string;
       parseType?: 'json' | 'codeBlock';
       parseSchema?: T;
       validate?: (generated: T, retry: number) => boolean | void;
@@ -60,6 +64,17 @@ export class LLMService {
       llmResult = '',
       errorMessage = '';
     let [maxRetry, valid] = [3, undefined];
+
+    const req: LLMRequest = {
+      prompt,
+      stream: false,
+      route: 'fallback',
+      temperature: 0, // TODO
+    };
+    models || (models = this.llmModels);
+    if (Array.isArray(models)) req.models = models;
+    else llmModel = req.model = models;
+
     for (let i = 0; i < maxRetry; i++) {
       try {
         ret = cache as T;
@@ -67,16 +82,12 @@ export class LLMService {
           const promptExt = errorMessage
             ? `${prompt}\n\nPlease retry as you just made a mistake: ${errorMessage}`
             : prompt;
-          const req: LLMRequest = {
-            // messages: [{ role: 'user', content: prompt }],
-            prompt: promptExt,
-            stream: false,
-            route: 'fallback',
-            temperature: 0, // TODO
-          };
-          if (Array.isArray(this.llmModels)) req.models = this.llmModels;
-          else llmModel = req.model = this.llmModels;
-          const resp = await this._completion(req);
+          req.prompt = promptExt;
+
+          const resp = await this._completion(req, paidBy, {
+            bizKey,
+            template,
+          });
           resp.model && (llmModel = resp.model);
 
           if (!resp?.choices?.length) {
@@ -130,12 +141,16 @@ export class LLMService {
     originalMessages: LLMMessage[],
     args: { [key: string]: any },
     {
+      models,
       bizKey,
+      paidBy,
       parseType = 'json',
       parseSchema,
       validate,
     }: {
-      bizKey?: string;
+      models?: string[] | string;
+      bizKey: string;
+      paidBy: string;
       parseType?: 'json' | 'codeBlock';
       parseSchema?: T;
       validate?: (generated: T, retry: number) => boolean | void;
@@ -155,19 +170,25 @@ export class LLMService {
     let ret: T;
     let [llmResult, llmModel] = ['', ''];
     let [maxRetry, invalidMsg] = [3, ''];
+
+    const req: LLMRequest = {
+      messages,
+      stream: false,
+      route: 'fallback',
+      temperature: 0, // TODO
+    };
+    models || (models = this.llmModels);
+    if (Array.isArray(models)) req.models = models;
+    else llmModel = req.model = models;
+
     for (let i = 0; i < maxRetry; i++) {
       try {
         invalidMsg = '';
         if (!ret) {
-          const req: LLMRequest = {
-            messages,
-            stream: false,
-            route: 'fallback',
-            temperature: 0, // TODO
-          };
-          if (Array.isArray(this.llmModels)) req.models = this.llmModels;
-          else req.model = this.llmModels;
-          const resp = await this._completion(req);
+          const resp = await this._completion(req, paidBy, {
+            template,
+            bizKey,
+          });
           resp.model && (llmModel = resp.model);
 
           if (!resp?.choices?.length) {
@@ -211,6 +232,7 @@ export class LLMService {
     originalMessages.push({ role: 'assistant', content: llmResult });
     return ret;
   }
+
   private _parseResultSchema<T extends {}>(
     parseSchema: T,
     parseType: string,
@@ -343,20 +365,17 @@ export class LLMService {
     }
   }
 
-  protected async _completion(req: LLMRequest): Promise<LLMResponse> {
-    // FIXME: emit LlmCompletionEvent
-    // const prisma = this.txHost.tx as PrismaClient;
-    // const userId = 'TEST_USER_ID'; // FIXME
-    // const userBalance = await prisma.userBalance.upsert({
-    //   where: { userId },
-    //   create: {
-    //     userId
-    //   },
-    //   update: {}
-    // });
-    // if (userBalance.balance <= new Decimal(0)) {
-    //   throw new ForbiddenException('Insufficient balance');
-    // }
+  protected async _completion(
+    req: LLMRequest,
+    paidBy: string,
+    ctx: { [key: string]: any },
+  ): Promise<LLMResponse> {
+    // wait sync result, or billing exception
+    await this.eventEmitter.emitAsync(
+      LlmCompletionEvent.eventName,
+      new LlmCompletionEvent(paidBy),
+    );
+
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
       const url = req.messages
@@ -374,20 +393,26 @@ export class LLMService {
       })
         .then((res) => res.json())
         .then((data: LLMResponse) => {
-          data.usage || (data.usage = {} as any);
+          data.usage ||
+            (data.usage = {
+              completion_tokens: 0,
+              prompt_tokens: 0,
+              total_tokens: 0,
+              total_cost: 0,
+            });
           data.usage['duration'] = Date.now() - startTime;
           this.logger.debug(
-            '>>> LLM %s response usage: %j',
+            '>>> LLM %s %s response usage: %j',
             data.model,
+            data.provider || '',
             data.usage,
           );
-          this.eventEmitter
-            .emitAsync(
-              LlmCompletionEvent.eventName,
-              new LlmCompletionEvent(data),
-            )
-            .catch(reject);
           resolve(data);
+          // async billing
+          this.eventEmitter.emitAsync(
+            LlmCompletionEvent.eventName,
+            new LlmCompletionEvent(paidBy, { ...data, ...ctx }),
+          );
         })
         .catch(reject);
     });
@@ -395,7 +420,7 @@ export class LLMService {
 }
 
 // Definitions of subtypes are below
-type LLMRequest = {
+export type LLMRequest = {
   // Either "messages" or "prompt" is required
   messages?: LLMMessage[];
   prompt?: string;
@@ -452,10 +477,11 @@ export type LLMResponse = {
   choices: (NonStreamingChoice | StreamingChoice | NonChatChoice | Error)[];
   created: number; // Unix timestamp
   model: string;
+  provider: string;
   object: 'chat.completion' | 'chat.completion.chunk';
   // For non-streaming responses only. For streaming responses,
   // see "Querying Cost and Stats" below.
-  usage?: {
+  usage: {
     completion_tokens: number; // Equivalent to "native_tokens_completion" in the /generation API
     prompt_tokens: number; // Equivalent to "native_tokens_prompt"
     total_tokens: number; // Sum of the above two fields

@@ -27,7 +27,7 @@ export class EntriesChangedSumCallgentListener {
     this.logger.debug('%j: Handling event,', event);
 
     // re-summarize summary/instruction
-    let { callgent } = event.data;
+    let { opBy, callgent } = event.data;
     if (typeof callgent.name === 'undefined')
       callgent = event.data.callgent = await this.callgentsService.findOne(
         callgent.id,
@@ -49,6 +49,7 @@ export class EntriesChangedSumCallgentListener {
       if (!news.length) return;
 
       result = await this.agentsService.summarizeCallgent({
+        opBy,
         callgent,
         news,
         totally: true,

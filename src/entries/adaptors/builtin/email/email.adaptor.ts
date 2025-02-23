@@ -80,7 +80,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
       ctx.args,
       resp.content.text || resp.content.html,
       fun,
-      reqEvent.id,
+      reqEvent,
     );
     return data;
   }

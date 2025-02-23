@@ -167,9 +167,13 @@ export class EndpointsController {
     },
   })
   @Put('/:id')
-  async update(@Param('id') id: string, @Body() dto: UpdateEndpointDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEndpointDto,
+    @Req() req,
+  ) {
     dto.id = id;
-    return { data: await this.endpointService.update(dto) };
+    return { data: await this.endpointService.update(dto, req.user.sub) };
   }
 
   @ApiOkResponse({
@@ -185,7 +189,7 @@ export class EndpointsController {
     },
   })
   @Delete('/:id')
-  async delete(@Param('id') id: string) {
-    return { data: await this.endpointService.delete(id) };
+  async delete(@Param('id') id: string, @Req() req) {
+    return { data: await this.endpointService.delete(id, req.user.sub) };
   }
 }

@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { BillingService } from './billing.service';
+import { TransactionsModule } from '../transactions/transactions.module';
+import { UsersModule } from '../users/users.module';
 import { BillingController } from './billing.controller';
-import { TransactionHistoryListener } from './listeners/transaction-history.listeners';
+import { BillingService } from './billing.service';
+import { LlmCompletionListener } from './listeners/llm-completion.listeners';
 
 @Module({
   controllers: [BillingController],
-  providers: [
-    BillingService,
-    TransactionHistoryListener
-  ],
+  imports: [TransactionsModule, UsersModule],
+  providers: [BillingService, LlmCompletionListener],
 })
-export class BillingModule { }
+export class BillingModule {}

@@ -1,54 +1,39 @@
-import {
-  Transactional,
-  TransactionHost,
-} from '@nestjs-cls/transactional';
+import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import Stripe from 'stripe';
+import { Utils } from '../infras/libs/utils';
+import { TransactionsService } from '../transactions/transactions.service';
 
 @Injectable()
 export class BillingService {
   private readonly stripe: Stripe;
+  private readonly logger = new Logger(BillingService.name);
 
   constructor(
     private readonly configService: ConfigService,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
+    private readonly transactionsService: TransactionsService,
   ) {
     this.stripe = new Stripe(this.configService.get('STRIPE_KEY'), {
-      apiVersion: this.configService.get('API_VERSION'),
+      apiVersion: this.configService.get('STRIPE_API_VERSION'),
     });
   }
 
-
-  // Create a Stripe payment session
-  @Transactional()
-  async createPaymentSession(amount: number, currency: string, userid: string) {
-    const prisma = this.txHost.tx as PrismaClient;
-    const userBalance = await prisma.userBalance.upsert({
-      where: { userId: userid },
-      update: {},
-      create: {
-        userId: userid,
-        balance: 0,
-        currency: 'USD',
-      },
-    });
+  /** Create a Stripe payment session */
+  async createStripePayment(amount: number, currency: string, userid: string) {
     const redirect_url =
       this.configService.get('CALLGENT_SITE_URL') + '/pricing';
-    const session = await this.stripe.checkout.sessions.create({
+    return this.stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
         {
           price_data: {
             currency,
-            product_data: { name: 'Recharge Token Balance' },
+            product_data: { name: 'Top-up Balance' },
             unit_amount: amount,
           },
           quantity: 1,
@@ -59,106 +44,125 @@ export class BillingService {
       cancel_url: redirect_url,
       metadata: { userid },
     });
-    await prisma.transactionHistory.create({
-      data: {
-        userBalanceId: userBalance.pk,
-        type: 'PAYMENT',
-        amount: amount * 1e9,
-        stripeId: session?.id,
-        price: { amount },
-      },
-    });
-    return session;
   }
 
-  // Payment successful
   @Transactional()
-  async handleStripeWebhook(event: Stripe.Event) {
-    const prisma = this.txHost.tx as PrismaClient;
+  async handleStripeWebhook(payload: string | Buffer, sig: string) {
+    let event: Stripe.Event;
+    try {
+      event = this.stripe.webhooks.constructEvent(
+        payload,
+        sig,
+        this.configService.get('STRIPE_WEBHOOK_SECRET'),
+      );
+    } catch (err) {
+      throw new BadRequestException('Error parsing webhook');
+    }
+
     switch (event.type) {
       case 'checkout.session.completed':
-        const { metadata, amount_subtotal, id, amount_total } =
-          event.data.object;
+        const {
+          id: txId,
+          currency,
+          metadata,
+          amount_total,
+        } = event.data.object;
         const userid = metadata.userid;
-        const balance = await prisma.userBalance.update({
-          where: { userId: userid },
-          data: { balance: { increment: amount_subtotal * 1000000000 } },
-          select: {
-            balance: true,
-            userId: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        });
-        await prisma.transactionHistory.update({
-          where: { stripeId: id },
-          data: {
-            price: { amount_subtotal, amount_total, state: 'completed' },
-          },
-        });
-        return { ...balance, balance: balance.balance };
+        // $1 = 1e11
+        const amount = new Decimal(amount_total * 1e9);
+
+        await this.addRecharge(
+          txId,
+          amount,
+          currency,
+          userid,
+          event.data.object,
+        );
       case 'checkout.session.async_payment_failed':
       case 'checkout.session.expired':
         const session = event.data.object as Stripe.Checkout.Session;
-        const useridFailed = session.metadata.userid;
-        await prisma.transactionHistory.update({
-          where: {
-            stripeId: session.id,
-          },
-          data: {
-            price: {
-              amount_subtotal: session.amount_subtotal,
-              amount_total: session.amount_total,
-              state: 'failed',
-            },
-            deletedAt: new Date(),
-          },
-        });
-        return {
-          message: `Payment failed or expired for user ${useridFailed}`,
-          status: 'failed',
-        };
+        this.logger.warn(`Stripe payment failed or expired %j`, session);
       default:
-        throw new HttpException(
-          `Unhandled event type: ${event.type}`,
-          HttpStatus.BAD_REQUEST,
-        );
+        this.logger.warn(`Unhandled stripe event type: ${event.type}`);
     }
+    return true;
   }
 
   @Transactional()
-  async getPaymentDetails(userId: string) {
-    if (!userId) {
-      throw new UnauthorizedException('User not authorized');
-    }
+  async addRecharge(
+    txId: string,
+    amount: Decimal,
+    currency: string,
+    userId: string,
+    refData: any,
+  ) {
+    if (!txId || !userId || !refData) throw new BadRequestException();
+    return this.transactionsService.create({
+      txId,
+      userId,
+      amount,
+      currency,
+      refData,
+      type: 'RECHARGE',
+    });
+  }
+
+  /**
+   * @param txId unique transaction id from external system
+   */
+  @Transactional()
+  async addModelExpense(
+    txId: string,
+    userId: string,
+    refData: {
+      usage: any;
+      model: string;
+      provider: string;
+      pricing?: any;
+    },
+  ) {
+    if (!txId || !userId || !refData) throw new BadRequestException();
+    const { usage, model, provider = '' } = refData;
     const prisma = this.txHost.tx as PrismaClient;
-    const userBalance = await prisma.userBalance.upsert({
-      where: { userId },
-      update: {},
-      create: {
-        userId,
-        balance: 0,
-        currency: 'USD',
-      },
-    });
-    // FIXME pagination
-    const transactionHistory = await prisma.transactionHistory.findMany({
-      where: {
-        userBalanceId: userBalance.pk,
-        price: {
-          path: ['state'],
-          equals: 'completed',
+
+    // get model price: matching provider or default
+    const models = (
+      await prisma.modelPricing.findMany({
+        select: {
+          model: true,
+          provider: true,
+          method: true,
+          price: true,
+          currency: true,
         },
-      },
-      select: {
-        type: true,
-        amount: true,
-        createdAt: true,
-      },
+        where: { model },
+      })
+    ).filter((m) => !m.provider || m.provider === provider);
+    if (!models.length)
+      throw new BadRequestException('ModelPricing not found: ' + model);
+
+    // calculate amount
+    const pricing =
+      models.length > 1 ? models.find((m) => m.provider) : models[0];
+    refData.pricing = pricing;
+    const amount = this._calcModelAmount(usage, pricing).mul(-1);
+
+    // create transaction
+    return this.transactionsService.create({
+      txId,
+      userId,
+      amount,
+      refData,
+      type: 'EXPENSE',
+      currency: pricing.currency,
     });
-    return {
-      data: transactionHistory,
-      meta: { balance: userBalance.balance },
-    };
+  }
+
+  private _calcModelAmount(usage: any, pricing: { method: string }) {
+    const m = Utils.toFunction(pricing.method); // TODO cache m
+    const amount = m(usage, pricing);
+    if (!(amount > 0))
+      throw new Error('Invalid amount, usage: ' + JSON.stringify(usage));
+    return new Decimal(amount);
   }
 }

@@ -23,6 +23,7 @@ import { AuthModule } from './infras/auth/auth.module';
 import { LoggingModule } from './infras/logging/logging.module';
 import { ReposModule } from './infras/repo/repos.module';
 import { InvokeModule } from './invoke/invoke.module';
+import { TransactionsModule } from './transactions/transactions.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -72,6 +73,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     FilesModule,
     BillingModule,
+    TransactionsModule,
   ],
   providers: [
     {

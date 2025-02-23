@@ -34,6 +34,7 @@ function initData(
     ...initEventListeners(prisma),
     initLlmTemplates(prisma),
     ...initTags(prisma),
+    ...initModelPricing(prisma),
   ];
 }
 
@@ -761,7 +762,6 @@ function initTags(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  
   const tags: Prisma.TagUncheckedCreateInput[] = [
     {
       pk: -1,
@@ -836,4 +836,39 @@ function initTags(
       create: t,
     }),
   );
+}
+function initModelPricing(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
+  const llmModel: Prisma.ModelPricingCreateInput = {
+    pk: 1,
+    model: 'deepseek-chat',
+    alias: 'deepseek-V3',
+    price: {
+      pricePerInputToken: 0.27e11,
+      pricePerOutputToken: 1.1e11,
+      pricePerCacheHitToken: 0.07e11,
+      token: 1e6,
+    },
+    currency: 'USD',
+    method: `(u, p)=> {
+  const pit = u.prompt_cache_miss_tokens * p.pricePerInputToken / p.token;
+  const pot = u.completion_tokens * p.pricePerOutputToken / p.token;
+  const pct = u.prompt_cache_hit_tokens * p.pricePerCacheHitToken / p.token;
+  return pit + pot + pct;
+}`,
+  };
+
+  return [
+    prisma.modelPricing
+      .upsert({
+        where: { pk: llmModel.pk },
+        update: llmModel,
+        create: llmModel,
+      })
+      .then((llmModelPricing) => console.log({ llmModelPricing })),
+  ];
 }

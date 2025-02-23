@@ -59,7 +59,7 @@ export class WebpageService {
     // generate route
     // 1. generate `router/index.js`, only necessary `views` for the requirement
     const viewList = await this.agentsService.genVue1Route({
-      bizKey: data.id,
+      event: data,
       callgent: data.context.callgent,
       requirement: data.context.req.requirement,
     });
@@ -102,7 +102,7 @@ export class WebpageService {
         components,
         endpoints,
         packages: this.initPackagesComponent,
-        bizKey: data.id,
+        event: data,
       });
       Object.entries(cps).forEach(([name, comp]) => {
         const cp = components[name];
@@ -188,7 +188,7 @@ export class WebpageService {
         otherViews,
         stores,
         packages,
-        bizKey: data.id,
+        event: data,
       });
       files[components[compName].file] = component.code;
 
@@ -239,7 +239,7 @@ export class WebpageService {
         packages,
         store: { ...store, endpoints },
         apiBaseUrl,
-        bizKey: data.id,
+        event: data,
       });
       // merge packages
       storeResult.packages?.length &&
@@ -267,7 +267,7 @@ export class WebpageService {
         otherViews,
         components: comps,
         packages,
-        bizKey: data.id,
+        event: data,
       });
       result.packages?.length &&
         (packages = [...new Set([...packages, ...result.packages])]);

@@ -216,7 +216,7 @@ export class CallgentHubService {
               createdBy,
             };
           });
-          return eps.length && this.endpointsService.createMany(eps, en as any);
+          return eps.length && this.endpointsService.createMany(eps, en as any, createdBy);
         }),
       );
       return callgent;

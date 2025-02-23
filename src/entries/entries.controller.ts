@@ -150,8 +150,8 @@ export class EntriesController {
   })
   @UseGuards(JwtGuard)
   @Delete('/:id')
-  async remove(@Param('id') id: string) {
-    return { data: await this.entriesService.delete(id) };
+  async remove(@Param('id') id: string, @Req() req) {
+    return { data: await this.entriesService.delete(id, req.user.sub) };
   }
 
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -218,6 +218,7 @@ export class EntriesController {
       orders,
       ['name', 'type', 'adaptorKey', 'host', 'pk', 'updatedAt'],
     );
+    // FIXME: only list visible entries: mine/team/hub
     return this.entriesService.findMany({ page, perPage, where, orderBy });
   }
 }

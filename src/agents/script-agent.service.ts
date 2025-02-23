@@ -61,6 +61,7 @@ export class ScriptAgentService {
     const {
       id,
       srcId,
+      paidBy,
       dataType: cenAdaptor,
       context: { callgentName, epName, req, tgtEvents },
     } = reqEvent;
@@ -97,6 +98,7 @@ export class ScriptAgentService {
       { req, epName, callgentName, cepAdaptor: cenAdaptor, endpoints },
       {
         parseSchema: { req2Args: '' },
+        paidBy,
         bizKey: id,
         validate: (data) => {
           try {
@@ -163,8 +165,6 @@ export class ScriptAgentService {
     }, []);
 
     const {
-      id,
-      srcId,
       dataType: cenAdaptor,
       context: { callgent, progressive },
     } = reqEvent;
@@ -174,7 +174,7 @@ export class ScriptAgentService {
       endpoints,
       files,
       callgent,
-      id,
+      reqEvent,
     );
 
     // args confirmation //////////////////////
@@ -185,7 +185,7 @@ export class ScriptAgentService {
       purposes,
       callgent,
       files,
-      id,
+      reqEvent,
     );
 
     // resources edge cases analysis //////////////////////
@@ -199,7 +199,7 @@ export class ScriptAgentService {
       argsHints,
       callgent,
       files,
-      id,
+      reqEvent,
     );
 
     // write to files, install deps
@@ -211,8 +211,8 @@ export class ScriptAgentService {
     messages: LLMMessage[],
     endpoints: EndpointDto[],
     files: RequestFile[],
-    callgent,
-    id: string,
+    callgent: any,
+    reqEvent: ClientRequestEvent,
   ) {
     // choose eps //////////////////////
     const purposes0 = await this._chooseEndpoints(
@@ -220,7 +220,7 @@ export class ScriptAgentService {
       endpoints,
       callgent,
       files,
-      id,
+      reqEvent,
     );
     // re-choose eps
     messages.pop(); // remove last assistant message
@@ -230,7 +230,7 @@ export class ScriptAgentService {
       purposes0,
       callgent,
       files,
-      id,
+      reqEvent,
     );
 
     // confirm eps //////////////////////
@@ -264,7 +264,7 @@ export class ScriptAgentService {
       Object.values(purposesSet),
       callgent,
       files,
-      id,
+      reqEvent,
     );
 
     Object.keys(epsMap).forEach((epName) => {
@@ -278,7 +278,7 @@ export class ScriptAgentService {
     endpoints: EndpointDto[],
     callgent: any,
     files: RequestFile[],
-    id: string,
+    reqEvent: ClientRequestEvent,
   ): Promise<
     {
       purposeKey: string;
@@ -297,7 +297,8 @@ export class ScriptAgentService {
         files,
       },
       {
-        bizKey: id,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
         parseSchema: {
           unaddressedAPI: [
             { purposeKey: '', usedFor: '', needExternalAPI: false },
@@ -338,9 +339,9 @@ export class ScriptAgentService {
       usedFor: string;
       needExternalAPI?: boolean;
     }[],
-    callgent: any,
+    callgent: { createdBy: string },
     files: RequestFile[],
-    id: string,
+    reqEvent: ClientRequestEvent,
   ): Promise<
     {
       purposeKey: string;
@@ -365,7 +366,8 @@ export class ScriptAgentService {
         files,
       },
       {
-        bizKey: id,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
         parseSchema: {
           unaddressedAPI: [
             { purposeKey: '', usedFor: '', needExternalAPI: false },
@@ -412,7 +414,7 @@ export class ScriptAgentService {
     }[],
     callgent: any,
     files: RequestFile[],
-    id: string,
+    reqEvent: ClientRequestEvent,
   ) {
     const grouped = [
       purposes.slice(0, 0),
@@ -459,7 +461,8 @@ export class ScriptAgentService {
           files,
         },
         {
-          bizKey: id,
+          bizKey: reqEvent.id,
+          paidBy: reqEvent.paidBy,
           parseSchema: [
             { purposeKey: '', epName: '', description: '', usedFor: '' },
           ],
@@ -495,7 +498,7 @@ export class ScriptAgentService {
     }[],
     callgent: any,
     files: RequestFile[],
-    id: string,
+    reqEvent: ClientRequestEvent,
   ) {
     // validate endpoints/args exist, arg has at least one source
     const parseSchema = [
@@ -582,7 +585,8 @@ export class ScriptAgentService {
         files,
       },
       {
-        bizKey: id,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
         parseSchema,
         validate,
       },
@@ -632,7 +636,8 @@ export class ScriptAgentService {
           files,
         },
         {
-          bizKey: id,
+          bizKey: reqEvent.id,
+          paidBy: reqEvent.paidBy,
           parseSchema,
           validate: (gen) =>
             // all reConfirmArgs exist
@@ -735,7 +740,7 @@ export class ScriptAgentService {
     argsHints: { purposeKey: string; args: { argName: string }[] }[],
     callgent: any,
     files: RequestFile[],
-    id: string,
+    reqEvent: ClientRequestEvent,
   ) {
     // todo: generateTaskScript-{taskType}
 
@@ -750,7 +755,8 @@ export class ScriptAgentService {
         files,
       },
       {
-        bizKey: id,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
         parseType: 'codeBlock',
         parseSchema: new Array(3),
         // validate index.ts and package.json
@@ -782,7 +788,8 @@ Output clean, bug-free and robust code, and package.json`,
         files,
       },
       {
-        bizKey: id,
+        bizKey: reqEvent.id,
+        paidBy: reqEvent.paidBy,
         parseType: 'codeBlock',
         parseSchema: Array(2),
         // validate index.ts and package.json

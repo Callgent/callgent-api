@@ -30,7 +30,7 @@ export class EndpointsChangedSumEntryListener {
     this.logger.debug('%j: Handling event,', event);
 
     // re-summarize entry summary/instruction
-    let { entry: oldEntry } = event.data;
+    let { opBy, entry: oldEntry } = event.data;
     if (!oldEntry.callgentId)
       oldEntry = event.data.entry = await this.entriesService.findOne(
         oldEntry.id,
@@ -45,6 +45,7 @@ export class EndpointsChangedSumEntryListener {
       if (!news.length) return;
 
       result = await this.agentsService.summarizeEntry({
+        opBy,
         entry: event.data.entry,
         news,
         totally: true,
@@ -73,6 +74,7 @@ export class EndpointsChangedSumEntryListener {
     this.eventEmitter.emitAsync(
       EntriesChangedEvent.eventName,
       new EntriesChangedEvent({
+        opBy,
         callgent: { id: oldEntry.callgentId },
         news: [newEntry],
         olds: [{ ...oldEntry, pk: newEntry.pk } as any],

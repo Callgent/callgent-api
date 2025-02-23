@@ -1,5 +1,6 @@
 import { Controller, Get, Inject, Query, Req, UseGuards } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiOkResponse,
   ApiQuery,
   ApiSecurity,
@@ -15,6 +16,7 @@ import { EventStoresService } from './event-stores.service';
 
 @Controller('events')
 @ApiTags('Events')
+@ApiExtraModels(RestApiResponse, EventStoreDto)
 @ApiSecurity('defaultBearerAuth')
 @UseGuards(JwtGuard)
 @Controller('entries')

@@ -6,6 +6,7 @@ export class EndpointsChangedEvent {
 
   constructor(
     public readonly data: {
+      opBy: string;
       entry: {
         id: string;
         summary?: string;

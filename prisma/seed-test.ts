@@ -93,18 +93,6 @@ function initTestData(
     createdBy: userId,
   };
 
-  const llmModel: Prisma.LlmModelPricingCreateInput = {
-    pk: 1,
-    modelName: 'deepseek-chat',
-    price: {
-      pricePerInputToken: 0.27,
-      pricePerOutputToken: 1.1,
-      pricePerCacheHitToken: 0.07,
-      token: 1000000,
-    },
-    pricingMethod: 'calcPrice_deepseek',
-  };
-
   return [
     prisma.tenant
       .upsert({
@@ -159,13 +147,6 @@ function initTestData(
         create: cepDto,
       })
       .then((cep) => console.log({ cep })),
-    prisma.llmModelPricing
-      .upsert({
-        where: { pk: llmModel.pk },
-        update: llmModel,
-        create: llmModel,
-      })
-      .then((llmModelPricing) => console.log({ llmModelPricing })),
     addLlmCache(
       prisma,
       'convert2Response',

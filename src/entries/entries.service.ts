@@ -272,10 +272,10 @@ export class EntriesService implements OnModuleInit {
   }
 
   @Transactional()
-  async delete(id: string) {
+  async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const ret = await selectHelper(
-      { pk: null },
+      { pk: null, callgent: { select: { createdBy: true } } },
       (select) => prisma.entry.delete({ select, where: { id } }),
       this.defSelect,
     );
@@ -283,6 +283,7 @@ export class EntriesService implements OnModuleInit {
     this.eventEmitter.emitAsync(
       EntriesChangedEvent.eventName,
       new EntriesChangedEvent({
+        opBy,
         callgent: { id: ret.callgentId },
         olds: [ret],
       }),

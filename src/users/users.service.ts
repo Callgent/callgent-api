@@ -394,4 +394,20 @@ export class UsersService {
       ui.user.tenant.statusCode !== 1
     );
   }
+
+  @Transactional()
+  async $getTenant(userId: string) {
+    if (!userId) return;
+
+    const prisma = this.txHost.tx as PrismaClient;
+    await this.tenancyService.bypassTenancy(prisma);
+    const t = await prisma.user
+      .findUnique({
+        where: { id: userId },
+        select: { tenant: true },
+      })
+      .then((u) => u?.tenant);
+    await this.tenancyService.bypassTenancy(prisma, false);
+    return t;
+  }
 }
