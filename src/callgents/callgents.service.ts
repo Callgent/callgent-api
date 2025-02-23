@@ -10,6 +10,7 @@ import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.serv
 import { CreateCallgentDto } from './dto/create-callgent.dto';
 import { UpdateCallgentDto } from './dto/update-callgent.dto';
 import { CallgentCreatedEvent } from './events/callgent-created.event';
+import { CallgentDeletedEvent } from './events/callgent-deleted.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -121,11 +122,30 @@ export class CallgentsService {
   // }
 
   @Transactional()
-  delete(id: string) {
+  async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.callgent.delete({ select, where: { id } }),
-    );
+
+    const [ret] = await Promise.all([
+      await selectHelper(this.defSelect, (select) =>
+        prisma.callgent.delete({ select, where: { id } }),
+      ),
+      // directly delete entries, needn't EntriesChangedEvent
+      prisma.entry.deleteMany({
+        where: { callgentId: id },
+      }),
+      // directly delete endpoints, needn't EndpointsChangedEvent
+      prisma.endpoint.deleteMany({
+        where: { callgentId: id },
+      }),
+    ]);
+
+    if (ret)
+      this.eventEmitter.emitAsync(
+        CallgentDeletedEvent.eventName,
+        new CallgentDeletedEvent(ret),
+      );
+
+    return ret;
   }
 
   @Transactional()
@@ -171,7 +191,9 @@ export class CallgentsService {
       (select) =>
         prisma.callgent.findUnique({
           select,
-          where: { tenantPk_name: { tenantPk, name } },
+          where: {
+            tenantPk_name_deletedAt: { tenantPk, name, deletedAt: 0 },
+          },
         }),
       this.defSelect,
     ).then((c) => {

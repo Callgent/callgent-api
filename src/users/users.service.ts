@@ -81,7 +81,7 @@ export class UsersService {
             AND: {
               uid,
               provider,
-              OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
+              OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
             },
           }
         : {
@@ -227,7 +227,7 @@ export class UsersService {
         where: {
           AND: {
             emailHost,
-            OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
+            OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
           },
         },
       }));

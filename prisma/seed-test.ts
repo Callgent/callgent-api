@@ -112,7 +112,13 @@ function initTestData(
             (ui as any).userId = user.id;
             await prisma.userIdentity
               .upsert({
-                where: { provider_uid: { provider: ui.provider, uid: ui.uid } },
+                where: {
+                  provider_uid_deletedAt: {
+                    provider: ui.provider,
+                    uid: ui.uid,
+                    deletedAt: 0,
+                  },
+                },
                 update: ui,
                 create: ui,
               })

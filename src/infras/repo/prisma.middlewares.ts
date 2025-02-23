@@ -5,7 +5,7 @@ import { createSoftDeleteMiddleware } from 'prisma-soft-delete-middleware';
 
 const deleteHandle = {
   field: 'deletedAt',
-  createValue: (deleted: boolean) => (deleted ? new Date() : null),
+  createValue: (deleted: boolean) => (deleted ? Date.now() : 0),
 };
 
 export const mainPrismaServiceOptions = (
@@ -40,10 +40,13 @@ export const mainPrismaServiceOptions = (
           // need to exclude soft deleted records in a compound findUnique operation
           // https://github.com/olivierwilkinson/prisma-soft-delete-middleware?tab=readme-ov-file#excluding-soft-deleted-records-in-a-findunique-operation
           Callgent: { ...deleteHandle, allowCompoundUniqueIndexWhere: true },
-          Endpoint: deleteHandle,
-          Entry: deleteHandle,
-          Transaction: deleteHandle,
+          Endpoint: true,
+          Entry: true,
+          EventListener: true,
+          EventStore: true,
+          Transaction: true,
         },
+        defaultConfig: deleteHandle,
       }),
     ],
   };

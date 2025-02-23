@@ -196,7 +196,7 @@ export class EventListenersService {
     ];
     deleted &&
       AND.push({
-        OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
+        OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
       });
 
     let listeners = await prisma.eventListener.findMany({ where: { AND } });

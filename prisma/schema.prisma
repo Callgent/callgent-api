@@ -52,12 +52,12 @@ model Tenant {
 
   User User[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 }
 
 model User {
@@ -79,12 +79,12 @@ model User {
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }
@@ -126,14 +126,14 @@ model UserIdentity {
   userId String @db.VarChar(30)
 
   // expiresAt DateTime? @db.Timestamp(0) // @description TODO: token expiration time
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
-  @@unique([provider, uid])
+  @@unique([provider, uid, deletedAt])
   @@index([userPk])
   @@index([userId])
   @@index([tenantPk])
@@ -206,17 +206,17 @@ model Callgent {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(30)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   entries Entry[]
 
-  @@unique([tenantPk, name])
+  @@unique([tenantPk, name, deletedAt])
   @@index([tenantPk])
   @@index([forkedPk])
   @@index([mainTagId])
@@ -287,13 +287,13 @@ model Entry {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(30)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
   @@index([callgentId])
@@ -347,15 +347,15 @@ model Endpoint {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(30)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
-  @@unique([callgentId, name])
+  @@unique([callgentId, name, deletedAt])
   @@index([tenantPk])
   @@index([callgentId])
   @@index([entryId])
@@ -502,13 +502,13 @@ model EventListener {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(30)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([tenantPk])
@@ -554,12 +554,12 @@ model EventStore {
   listenerId      String? @db.VarChar(30)
   funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([taskId])
@@ -590,10 +590,6 @@ model Cached {
   createdAt DateTime @default(now())
   /// @description updated when async callback
   updatedAt DateTime @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // deletedAt DateTime? /// @description logical deletion.
 
   @@unique([sepId, cacheKey])
 }
@@ -648,12 +644,12 @@ model Transaction {
   /// @DtoEntityHidden
   tenantPk Int
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt Int      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }
