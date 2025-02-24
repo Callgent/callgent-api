@@ -32,7 +32,7 @@ function initData(
 ) {
   return [
     ...initEventListeners(prisma),
-    initLlmTemplates(prisma),
+    ...initLlmTemplates(prisma),
     ...initTags(prisma),
     ...initModelPricing(prisma),
   ];
@@ -154,7 +154,7 @@ function initEventListeners(
   );
 }
 
-async function initLlmTemplates(
+function initLlmTemplates(
   prisma: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
@@ -753,7 +753,7 @@ NOTE
       where: { name: llmTpl.name },
       update: llmTpl,
       create: llmTpl,
-    })).then((llmTpl) => console.log({ llmTpl })),
+    })).then((llmTpl) => console.log({ name: llmTpl.name })),
   );
 }
 function initTags(
@@ -887,6 +887,6 @@ function initModelPricing(
         update: llmModel,
         create: llmModel,
       })
-      .then((llmModelPricing) => console.log({ llmModelPricing })),
+      .then((llmModelPricing) => console.log({ model: llmModelPricing.model })),
   );
 }

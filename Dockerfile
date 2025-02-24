@@ -35,4 +35,4 @@ COPY --from=builder /app/dist ./dist
 COPY .env.dev ./.env
 
 EXPOSE 3000
-CMD /bin/bash -c 'npx prisma migrate deploy && npx prisma db seed && pnpm start:prod'
+CMD /bin/bash -c 'npx prisma migrate deploy && pnpm start:prod'
