@@ -1,6 +1,6 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
@@ -103,6 +103,7 @@ export class LLMService {
         ret = this._parseResultSchema(parseSchema, parseType, llmResult);
         valid = !validate || validate(ret, i);
       } catch (e) {
+        if (e.status === HttpStatus.PAYMENT_REQUIRED) throw e;
         // add error to conversation to optimize result
         errorMessage = e.message;
         this.logger.warn(
@@ -204,6 +205,7 @@ export class LLMService {
         if (validate && !validate(ret, i))
           invalidMsg = 'Failed validating generated content';
       } catch (e) {
+        if (e.status === HttpStatus.PAYMENT_REQUIRED) throw e;
         // add error to conversation to optimize result
         invalidMsg = 'There was a mistake in generated content:\n' + e.message;
         messages.push({ role: 'assistant', content: llmResult });

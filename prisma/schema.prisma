@@ -57,7 +57,7 @@ model Tenant {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 }
 
 model User {
@@ -84,7 +84,7 @@ model User {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }
@@ -131,7 +131,7 @@ model UserIdentity {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@unique([provider, uid, deletedAt])
   @@index([userPk])
@@ -212,7 +212,7 @@ model Callgent {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   entries Entry[]
 
@@ -293,7 +293,7 @@ model Entry {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
   @@index([callgentId])
@@ -353,7 +353,7 @@ model Endpoint {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@unique([callgentId, name, deletedAt])
   @@index([tenantPk])
@@ -508,7 +508,7 @@ model EventListener {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([tenantPk])
@@ -536,7 +536,7 @@ model EventStore {
   /// @Description src entity id which bind to the listener
   srcId        String            @db.VarChar(30)
   /// @Description target id to relate several events
-  taskId       String            @db.VarChar(30)
+  taskId       String            @db.VarChar(35)
   eventType    String            @db.VarChar(30)
   dataType     String            @db.VarChar(30)
   /// @Description callback url or parent event id to invoke
@@ -559,7 +559,7 @@ model EventStore {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([taskId])
@@ -649,7 +649,7 @@ model Transaction {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt Int      @default(0) /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }

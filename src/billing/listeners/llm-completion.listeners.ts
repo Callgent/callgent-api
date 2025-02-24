@@ -13,7 +13,11 @@ export class LlmCompletionListener {
   ) {}
 
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(LlmCompletionEvent.eventName, { async: true })
+  @OnEvent(LlmCompletionEvent.eventName, {
+    async: true,
+    promisify: true,
+    suppressErrors: false,
+  })
   async handleLlmCompletion(event: LlmCompletionEvent) {
     const { res, paidBy } = event;
     if (!res) return this.transactionsService.check(paidBy);

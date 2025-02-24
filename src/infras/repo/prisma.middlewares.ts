@@ -5,7 +5,7 @@ import { createSoftDeleteMiddleware } from 'prisma-soft-delete-middleware';
 
 const deleteHandle = {
   field: 'deletedAt',
-  createValue: (deleted: boolean) => (deleted ? Date.now() : 0),
+  createValue: (deleted: boolean) => (deleted ? BigInt(Date.now()) : 0n),
 };
 
 export const mainPrismaServiceOptions = (

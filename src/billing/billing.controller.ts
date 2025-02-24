@@ -7,11 +7,14 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
 import { TransactionsService } from '../transactions/transactions.service';
 import { UsersService } from '../users/users.service';
 import { BillingService } from './billing.service';
 
+@ApiTags('Billing')
+@ApiSecurity('defaultBearerAuth')
 @Controller('billing')
 export class BillingController {
   constructor(

@@ -194,10 +194,7 @@ export class EventListenersService {
         OR: [{ dataType }, { dataType: '*' }],
       },
     ];
-    deleted &&
-      AND.push({
-        OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
-      });
+    deleted && AND.push({ deletedAt: { gte: 0 } });
 
     let listeners = await prisma.eventListener.findMany({ where: { AND } });
     listeners = listeners

@@ -277,7 +277,7 @@ export class EntriesService implements OnModuleInit {
 
     const [ret] = await Promise.all([
       selectHelper(
-        { pk: null, callgent: { select: { createdBy: true } } },
+        this.defSelect,
         (select) => prisma.entry.delete({ select, where: { id } }),
         this.defSelect,
       ),

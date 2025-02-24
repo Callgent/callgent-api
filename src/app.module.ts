@@ -52,7 +52,7 @@ import { UsersModule } from './users/users.module';
       },
     ]),
     LoggingModule,
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({ wildcard: true, ignoreErrors: false }),
     ReposModule,
     AuthModule,
     UsersModule,

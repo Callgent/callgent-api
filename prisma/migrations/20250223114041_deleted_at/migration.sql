@@ -13,37 +13,37 @@
 
 */
 -- AlterTable
-ALTER TABLE DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Callgent" DROP COLUMN "deletedAt",
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "Endpoint" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "Entry" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "EventListener" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "EventStore" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "Tenant" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "Transaction" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "User" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;
 
 -- AlterTable
 ALTER TABLE "UserIdentity" DROP COLUMN "deletedAt",
-ADD COLUMN     "deletedAt" INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN     "deletedAt" BIGINT NOT NULL DEFAULT 0;

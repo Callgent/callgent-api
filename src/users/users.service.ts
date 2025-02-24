@@ -77,21 +77,11 @@ export class UsersService {
     try {
       // find user identity
       const where = options?.evenInvalid
-        ? {
-            AND: {
-              uid,
-              provider,
-              OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
-            },
-          }
-        : {
-            AND: { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } },
-          };
+        ? { uid, provider, deletedAt: { gte: 0 } }
+        : { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } };
       const ui = await prisma.userIdentity.findFirst({
         where,
-        include: {
-          user: { include: { tenant: true } },
-        },
+        include: { user: { include: { tenant: true } } },
       });
       return ui;
     } finally {
@@ -152,8 +142,8 @@ export class UsersService {
         this.logger.warn('account is invalid, %j', uiInDb);
         throw new ForbiddenException(
           `Sorry, current account is in ${
-            uiInDb.user?.tenant?.statusCode == 0 ? 'pending' : 'inactive'
-          } statusCode, please try again later.`,
+            uiInDb.user?.tenant?.statusCode === 0 ? 'pending' : 'inactive'
+          } status, please try again later.`,
         );
       }
       this.tenancyService.setTenantId(uiInDb.user.tenant.pk);
@@ -224,12 +214,7 @@ export class UsersService {
     let tenant =
       emailHost &&
       (await prisma.tenant.findFirst({
-        where: {
-          AND: {
-            emailHost,
-            OR: [{ deletedAt: 0 }, { deletedAt: { not: 0 } }],
-          },
-        },
+        where: { emailHost, deletedAt: { gte: 0 } },
       }));
 
     if (!tenant) {
