@@ -843,26 +843,44 @@ function initModelPricing(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  const llmModel: Prisma.ModelPricingCreateInput = {
-    pk: 1,
-    model: 'deepseek-chat',
-    alias: 'deepseek-V3',
-    price: {
-      pricePerInputToken: 0.27e11,
-      pricePerOutputToken: 1.1e11,
-      pricePerCacheHitToken: 0.07e11,
-      token: 1e6,
-    },
-    currency: 'USD',
-    method: `(u, p)=> {
+  let pk = 1;
+  const llmModels: Prisma.ModelPricingCreateInput[] = [
+    {
+      pk: pk++,
+      model: 'deepseek-chat',
+      alias: 'deepseek-V3',
+      price: {
+        pricePerInputToken: 0.27e11,
+        pricePerOutputToken: 1.1e11,
+        pricePerCacheHitToken: 0.07e11,
+        token: 1e6,
+      },
+      currency: 'USD',
+      method: `(u, p)=> {
   const pit = u.prompt_cache_miss_tokens * p.pricePerInputToken / p.token;
   const pot = u.completion_tokens * p.pricePerOutputToken / p.token;
   const pct = u.prompt_cache_hit_tokens * p.pricePerCacheHitToken / p.token;
   return pit + pot + pct;
 }`,
-  };
+    },
+    {
+      pk: pk++,
+      model: 'google/gemini-2.0-flash-001',
+      price: {
+        pricePerInputToken: 0.1e11,
+        pricePerOutputToken: 0.4e11,
+        token: 1e6,
+      },
+      currency: 'USD',
+      method: `(u, p)=> {
+  const pit = u.prompt_tokens * p.pricePerInputToken / p.token;
+  const pot = u.completion_tokens * p.pricePerOutputToken / p.token;
+  return pit + pot;
+}`,
+    },
+  ];
 
-  return [
+  return llmModels.map((llmModel) =>
     prisma.modelPricing
       .upsert({
         where: { pk: llmModel.pk },
@@ -870,5 +888,5 @@ function initModelPricing(
         create: llmModel,
       })
       .then((llmModelPricing) => console.log({ llmModelPricing })),
-  ];
+  );
 }

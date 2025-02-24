@@ -38,6 +38,7 @@ function initTestData(
   const tenant: Prisma.TenantUncheckedCreateInput = {
     id: 'TEST_TENANT_ID',
     statusCode: 1,
+    balance: 1e20,
   };
 
   const userId = 'TEST_USER_ID';

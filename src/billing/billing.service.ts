@@ -118,7 +118,7 @@ export class BillingService {
       usage: any;
       model: string;
       provider: string;
-      pricing?: any;
+      price?: any;
     },
   ) {
     if (!txId || !userId || !refData) throw new BadRequestException();
@@ -144,7 +144,7 @@ export class BillingService {
     // calculate amount
     const pricing =
       models.length > 1 ? models.find((m) => m.provider) : models[0];
-    refData.pricing = pricing;
+    refData.price = pricing.price;
     const amount = this._calcModelAmount(usage, pricing).mul(-1);
 
     // create transaction
@@ -158,9 +158,12 @@ export class BillingService {
     });
   }
 
-  private _calcModelAmount(usage: any, pricing: { method: string }) {
+  private _calcModelAmount(
+    usage: any,
+    pricing: { method: string; price: any },
+  ) {
     const m = Utils.toFunction(pricing.method); // TODO cache m
-    const amount = m(usage, pricing);
+    const amount = m(usage, pricing.price);
     if (!(amount > 0))
       throw new Error('Invalid amount, usage: ' + JSON.stringify(usage));
     return new Decimal(amount);
