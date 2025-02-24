@@ -16,7 +16,7 @@ export default (opts: PrettyOptions) => {
         reqInfo = ` ${id}#${method}:${url}`;
       }
       let resInfo: any = '';
-      const statusCode = (res as any)?.statusCode;
+      const statusCode = (res as any)?.statusCode || (err as any)?.status;
       if (err && (!statusCode || statusCode > 499)) {
         resInfo = `\n\x1b[31m[ERROR ${
           statusCode || ''
@@ -32,9 +32,10 @@ export default (opts: PrettyOptions) => {
           2,
         )},\n${(err as any).stack}\n\n`;
       }
-      const tsInfo = responseTime
-        ? ` \x1b[33m[+${responseTime}ms code:${statusCode}]\x1b[0m`
-        : '';
+      const tsInfo =
+        responseTime || statusCode
+          ? ` \x1b[33m[${responseTime ? responseTime + 'ms ' : ''}${statusCode ? 'code:' + statusCode : ''}]\x1b[0m`
+          : '';
       return `${contextInfo}${tsInfo}\x1b[90m${reqInfo}\x1b[0m \x1b[32m${log[messageKey]}${resInfo}`;
     },
   });
