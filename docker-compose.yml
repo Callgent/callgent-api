@@ -7,11 +7,9 @@ services:
     container_name: nest-api
     restart: always
     ports:
-      - '3000:3000'
+      - '3003:3000'
     depends_on:
       - nest-postgres
-    env_file:
-      - .env
 
   nest-postgres:
     image: postgres:14
@@ -19,11 +17,13 @@ services:
     restart: always
     ports:
       - '5432:5432'
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - nest-postgres:/var/lib/postgresql/data
+      - ./prisma/create-db-user.sql:/docker-entrypoint-initdb.d/create-db-user.sql
 
 volumes:
   nest-postgres:
-    name: nest-postgres-db
+    name: callgent-postgres-db

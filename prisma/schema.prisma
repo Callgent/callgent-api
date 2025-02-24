@@ -7,7 +7,7 @@ generator nestjsDto {
   provider                        = "prisma-generator-nestjs-dto"
   output                          = "../src"
   outputToNestJsResourceStructure = "true"
-  exportRelationModifierClasses   = "true"
+  exportRelationModifierClasses   = "false"
   reExport                        = "false"
   createDtoPrefix                 = "Create"
   updateDtoPrefix                 = "Update"
@@ -20,82 +20,90 @@ generator nestjsDto {
 }
 
 datasource db {
-  provider = "postgres"
-  url      = env("DATABASE_URL")
+  provider     = "postgres"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma" // no foreign constraints in db, pls add @@index on manually
 }
 
-// db sharding base on tenantId: 
-// 1. id segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
-// 2.chard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
+// TODO # foreign key using pk, instead of id, for better performance?
+// TODO id uses hash index
+
+// # db sharding base on tenantPk: 
+// 1. pk segmentation, ALTER SEQUENCE [表名]_[id]_seq RESTART WITH 1001;
+// 2. shard tenant based on tenant_id, eq (0~10000] db1, (10000,20000] db2
 
 //////////////////// Authentication and Account ////////////////////////////
 
 model Tenant {
-  id         Int     @id @default(autoincrement())
+  pk         Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid       String  @unique @db.VarChar(36)
-  mailHost   String? @unique @db.VarChar(36) /// @description unique tenant mail host
+  id         String  @unique @db.VarChar(30)
+  emailHost  String? @unique @db.VarChar(30) /// @description unique tenant email host
   name       String? @db.VarChar(50)
   avatar     String? @db.VarChar(1023)
   type       Int     @default(1) /// @description account type: 1: individual, 2: organization.
   statusCode Int     @default(0) /// @description user statusCode: 0: pending, 1: active, -1: inactive.
 
+  /// @description $1 = 1e11
+  balance  Decimal @default(0) @db.Decimal(30, 0)
+  currency String  @default("USD") @db.VarChar(6)
+
   User User[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 }
 
 model User {
-  id     Int     @id @default(autoincrement())
+  pk     Int     @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid   String  @unique @db.VarChar(36)
-  name   String  @db.VarChar(36)
+  id     String  @unique @db.VarChar(30)
+  name   String  @db.VarChar(30)
   email  String? @db.VarChar(255) /// @description account primary verified email
   avatar String? @db.VarChar(1023)
   locale String? @default("en_US") @db.VarChar(10)
 
-  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  tenant       Tenant         @relation(fields: [tenantPk], references: [pk])
   /// @DtoRelationIncludeId
   // add to migration.sql
-  tenantId     Int            @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk     Int            @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
   /// @DtoReadOnly
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
-  @@index([tenantId])
+  @@index([tenantPk])
 }
 
 model UserIdentity {
-  id             Int     @id @default(autoincrement())
+  pk             Int     @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId       Int     @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk       Int     @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  provider       String  @db.VarChar(36)
+  provider       String  @db.VarChar(30)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   uid            String  @db.VarChar(255) /// @description userId from provider.
-  credentials    String  @db.VarChar(2048) /// @description user cridentials
+  credentials    String  @db.VarChar(2048) /// @description auth secret or token
   name           String? @db.VarChar(255)
   /// @MinLength(6)
   /// @IsEmail
@@ -108,200 +116,307 @@ model UserIdentity {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  info           Json?   @map("info") /// @description  authentication info from realm
+  /// @description  authentication info from realm
+  info           Json?
 
-  user     User   @relation(fields: [userId], references: [id])
-  userId   Int
+  user   User   @relation(fields: [userPk], references: [pk])
+  userPk Int
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  userUuid String @db.VarChar(36)
+  userId String @db.VarChar(30)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  // expiresAt DateTime? @db.Timestamp(0) // @description TODO: token expiration time
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
-  @@unique([provider, uid])
+  @@unique([provider, uid, deletedAt])
+  @@index([userPk])
   @@index([userId])
-  @@index([userUuid])
-  @@index([tenantId])
+  @@index([tenantPk])
 }
 
 /// @DtoIgnoreModel
 /// @description non-organization email hosts
 model PublicMailHost {
-  id      Int    @id @default(autoincrement())
+  pk      Int    @id @default(autoincrement())
   /// @description starts with `.`, e.g.: '.gmail.com', '.hotmail.com'
   dotHost String @unique @db.VarChar(255)
 
   createdAt DateTime @default(now())
 }
 
-//////////////////// Botlet ////////////////////////////
+//////////////////// Callgent ////////////////////////////
 
-model Botlet {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  name    String  @db.VarChar(255)
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  summary String? @db.VarChar(4095)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
+/// @DtoIgnoreModel
+model Tag {
+  pk          Int     @id @default(autoincrement())
+  name        String  @unique @db.VarChar(30)
+  avatar      String? @db.VarChar(1023)
+  description String  @db.VarChar(1024)
 }
 
-model BotletFunction {
+model Callgent {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  name      String   @db.VarChar(255)
-  /// @description js function name to invoke this botlet function
-  funName   String   @db.VarChar(255)
-  params    String[] @db.VarChar(31)
-  /// @description js function api docs
-  documents String   @db.VarChar(4095)
-  /// @description js actual code to invoke this botlet function
-  fullCode  String   @db.VarChar(1023)
-  /// @description endpoint uuid or command or code
-  content   Json     @db.Json
+  name        String  @db.VarChar(255)
+  avatar      String? @db.VarChar(1023)
+  /// @description Summary to quickly understand in what scenarios to use this service.
+  summary     String? @db.VarChar(4095)
+  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
+  instruction String? @db.VarChar(4095)
 
-  // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid   String  @db.VarChar(36)
-  /// @description actual server endpoint, when action type is `ENDPOINT`
-  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  endpointUuid String? @db.VarChar(36)
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@unique([botletUuid, name])
-  @@index([tenantId])
-  @@index([botletUuid])
-}
-
-model Task {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  statusCode Int     @default(-1) /// @description Task statusCode, -1: pending, 0: done, <-1: failed
-  name       String? @db.VarChar(64) /// @description task name
-  brief      String? @db.VarChar(255) /// @description task brief or description
-  content    Json? /// @description optional task content
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index([tenantId])
-}
-
-model TaskAction {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  liked    Int @default(0)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  viewed   Int @default(0)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  forked   Int @default(0)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  favorite Int @default(0)
 
-  // client side information
-  /// @description action owner botlet uuid, responsible for progressive response
-  cepUuid     String? @db.VarChar(36) /// @description client endpoint uuid
-  funName     String? @db.VarChar(255) /// @description optional botlet function name
-  cAdaptor    String  @db.VarChar(36) /// @description client adaptor key
-  callback    Json?   @db.Json /// @description callback url template or botlet function
-  progressive String? @db.VarChar(36) /// @description progressive requesting url template or botlet function
-
-  // processing
-  returns    Boolean @default(false) /// @description whether action has response object
-  req        Json    @db.Json /// @description request object
-  res        Json?   @db.Json /// @description response object
-  stage      Int     @default(-1) /// @description processing stage in the task, -1: init; 0: done
-  statusCode Int     @default(0) /// execution status code
-  message    String? @db.VarChar(255) /// @description error message
-
-  // @DtoReadOnly
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  taskUuid String @db.VarChar(36)
+  official Boolean @default(false)
+  featured Boolean @default(false)
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36) /// @description user uuid, anonymous ip, etc.
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  forkedPk  Int? /// @description forked from
+  /// @CustomValidator(EntityIdExists, 'tag', 'pk', ../../infras/repo/validators/entity-exists.validator)
+  mainTagId Int?
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
-  @@index([tenantId])
-  @@index([taskUuid])
+  entries Entry[]
+
+  @@unique([tenantPk, name, deletedAt])
+  @@index([tenantPk])
+  @@index([forkedPk])
+  @@index([mainTagId])
 }
 
 /// @DtoIgnoreModel
+model CallgentTag {
+  pk Int @id @default(autoincrement())
+
+  tagId      Int
+  callgentId String @db.VarChar(30)
+
+  createdAt DateTime @default(now())
+
+  @@unique([callgentId, tagId])
+  @@index([tagId])
+  @@index([callgentId])
+}
+
+enum EntryType {
+  CLIENT
+  SERVER
+  EVENT
+}
+
+/// @description a callgent may have multiple entries, including client/server/event entries
+model Entry {
+  /// @DtoEntityHidden
+  pk       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id       String @unique @db.VarChar(30)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+
+  name        String    @default("") @db.VarChar(2047)
+  /// @description Summary to quickly understand in what scenarios to use this service.
+  summary     String?   @db.VarChar(4095)
+  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
+  instruction String?   @db.VarChar(4095)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  type        EntryType /// @description entry type: CLIENT, SERVER OR EVENT
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  adaptorKey  String    @db.VarChar(127) /// @description entry adaptor key
+  priority    Int       @default(0) /// @description priority in the callgent
+
+  /// @DtoCreateOptional
+  host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
+  initParams Json?  @db.Json /// @description initializing parameters
+  content    Json?  @db.Json /// @description generated content/code by init method
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
+  securities Json[] @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmPk]: RealmSecurityItem }
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
+  /// @DtoRelationIncludeId
+  callgentId String   @db.VarChar(30) /// @description callgent owning the entry
+  callgent   Callgent @relation(fields: [callgentId], references: [id])
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt BigInt      @default(0) /// @description logical deletion.
+
+  @@index([tenantPk])
+  @@index([callgentId])
+}
+
+/// @description endpoint in openAPI.json format
+model Endpoint {
+  /// @DtoEntityHidden
+  pk       Int    @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id       String @unique @db.VarChar(30)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  name        String  @db.VarChar(1023) /// @description `${method} ${path}`
+  path        String  @db.VarChar(1000) /// @description openAPI path
+  method      String  @db.VarChar(15) /// @description openAPI method
+  summary     String? @db.VarChar(2047)
+  description String? @db.VarChar(4095)
+  servers     Json[]  @db.Json /// @description openAPI servers
+  /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
+  securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
+  params      Json?   @db.Json /// @description declaration of API params
+  responses   Json?   @db.Json /// @description declaration of API responses
+  rawJson     Json    @db.Json
+
+  // @DtoReadOnly
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
+  callgentId String  @db.VarChar(30)
+  /// @description An endpoint is bound to a server entry
+  /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infras/repo/validators/entity-exists.validator)
+  entryId    String? @db.VarChar(30)
+  /// @description whether async endpoint, e.g. invoked by email adaptor
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  isAsync    Boolean @db.Boolean
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  adaptorKey String  @db.VarChar(127) /// @description entry adaptor key
+  cacheKey   String? @db.VarChar(511) /// @description {string | (endpoint, request)=> string}; if empty&method=='get': cache by name, else no cache
+  cacheTtl   Int?    @default(0) @db.Integer /// @description in seconds. < 0 means no cache, 0&isAsync means cache pending response, else >0 cache
+
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt BigInt      @default(0) /// @description logical deletion.
+
+  @@unique([callgentId, name, deletedAt])
+  @@index([tenantPk])
+  @@index([callgentId])
+  @@index([entryId])
+}
+
+/// @description security realms for callgent
+model CallgentRealm {
+  /// @DtoReadOnly
+  /// @DtoPlainApiResponse
+  pk       Int @id @default(autoincrement())
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  // add to migration.sql
+  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
+  callgentId String @db.VarChar(30)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  realmKey   String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
+  /// @description provider defined realm name, or '' for default realm
+  /// @IsOptional()
+  realm    String? @default("") @db.VarChar(30)
+  /// @DtoUpdateOptional
+  /// @DtoCastType(RealmSchemeVO, ../dto/realm-scheme.vo)
+  scheme   Json    @db.Json /// @description security scheme, with all public configs
+  secret   Json?   @db.Json /// @description security secret, with all private configs
+
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  perUser Boolean @default(false) /// @description whether the realm is per user auth
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  enabled Boolean @default(true) /// @description whether the realm is enabled
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([callgentId, realmKey])
+  @@index(callgentId)
+  @@index(tenantPk)
+}
+
+/// @description Platform auth tokens
+/// @DtoIgnoreModel
 model AuthToken {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
-  token   String  @unique @db.VarChar(36)
+  token   String  @unique @db.VarChar(30)
   type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
-  /// @DtoCastType(JwtPayload, ../infra/auth/jwt/jwt.service)
+  /// @DtoCastType(JwtPayload, ../infras/auth/jwt/jwt.service)
   payload Json
   revoked Boolean @default(false)
 
@@ -310,96 +425,13 @@ model AuthToken {
   updatedAt DateTime  @default(now()) @updatedAt
 }
 
-enum EndpointType {
-  CLIENT
-  SERVER
-  EVENT
-}
-
-/// @description a botlet may have multiple endpoints, including receiver & sender
-model Endpoint {
-  /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  type       EndpointType /// @description endpoint type: CLIENT, SERVER OR EVENT
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  adaptorKey String       @db.VarChar(127) /// @description endpoint adaptor key
-  priority   Int          @default(0) /// @description priority in the botlet
-
-  host       Json  @db.Json /// @description host address & configs
-  initParams Json? @db.Json /// @description initializing parameters
-  content    Json? @db.Json /// @description generated content/code by init method
-
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36) /// @description botlet owning the endpoint
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
-
-  @@index([tenantId])
-  @@index([botletUuid])
-}
-
-enum EndpointAuthType {
-  NONE /// @description no auth, or treat auth as normal progressive params
-  APP /// @description all task same auth
-  USER /// @description auth each task owner/assignee
-}
-
-/// @description endpoint app or user auth credentials
-model EndpointAuth {
-  /// @DtoEntityHidden
-  id       Int @id @default(autoincrement())
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
-
-  /// @CustomValidator(EntityIdExists, 'endpoint', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  endpointUuid String  @db.VarChar(36) /// @description endpoint uuid.
-  userKey      String? @db.VarChar(63) /// @description unique user key, e.g. assignee userId
-
-  credentials Json @db.Json /// @description auth credentials
-
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String   @db.VarChar(36)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  @@unique([endpointUuid, userKey])
-  @@index([tenantId])
-  @@index([endpointUuid])
-}
-
 /// @DtoIgnoreModel
 model LlmTemplate {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
   name   String @db.VarChar(32)
-  prompt String @db.VarChar(4096)
+  prompt String @db.VarChar(8191)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -410,73 +442,76 @@ model LlmTemplate {
 /// @DtoIgnoreModel
 model LlmCache {
   /// @DtoEntityHidden
-  id Int @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   name   String @db.VarChar(32)
-  prompt String @db.VarChar(4096)
-  result String @db.VarChar(4096)
+  model  String @db.VarChar(127)
+  prompt String @db.VarChar(8191)
+  result String @db.VarChar(8191)
 
   createdAt DateTime @default(now())
 
-  @@unique([prompt, name])
+  @@index([prompt], type: Hash)
+  @@index([model, name])
 }
 
-model PersistedAsync {
-  /// @DtoEntityHidden
-  id BigInt @id @default(autoincrement())
+/// @DtoIgnoreModel
+/// @description repo to store req2Args mapping code when invoking(not requesting) sep from cep
+model Req2ArgsRepo {
+  pk BigInt @id @default(autoincrement())
 
-  statusCode Int    @default(-1) /// @description statusCode, -1: pending, 1: sent, 0: done, <-1: failed
-  service    String @db.VarChar(127) /// @description callback service name
-  method     String @db.VarChar(127) /// @description callback method name
+  cepId    String @db.VarChar(30) /// @description source client endpoint id receiving the request
+  sepId    String @db.VarChar(30) /// @description target server endpoint id processing the request
+  req2Args String @db.VarChar(8192) /// @description js function req2Args(req) to convert request to args
 
-  parentAsyncId BigInt? @db.BigInt /// @description parent async id
+  createdBy String?  @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-  deletedAt DateTime? /// @description logical deletion.
+  @@unique([cepId, sepId])
 }
 
 enum ServiceType {
   SERVICE
-  BOTLET
+  CALLGENT
 }
 
 model EventListener {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk       Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  srcUuid String @db.VarChar(36) /// @description event source id
+  srcId String @db.VarChar(30) /// @description event source id
 
-  eventType String @db.VarChar(36)
-  dataType  String @db.VarChar(36)
+  eventType String @db.VarChar(30)
+  dataType  String @db.VarChar(30)
   priority  Int?   @default(0)
 
-  serviceType ServiceType // botlet, service
+  serviceType ServiceType // callgent, service
   serviceName String      @db.VarChar(255)
   funName     String      @db.VarChar(255)
+  description String      @default("") @db.VarChar(2000)
   // TODO add the listener's input/output props in event.context, for automatic checking
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String    @db.VarChar(36)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdBy String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
-  @@index([srcUuid])
-  @@index([tenantId])
+  @@index([srcId])
+  @@index([tenantPk])
 }
 
 enum EventCallbackType {
@@ -486,47 +521,135 @@ enum EventCallbackType {
 
 model EventStore {
   /// @DtoEntityHidden
-  id       Int    @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  uuid     String @unique @db.VarChar(36)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantId Int    @default(dbgenerated("(current_setting('tenancy.tenantId')::int)"))
+  id String @unique @db.VarChar(30)
 
-  /// @Description src entity uuid which bind to the listener
-  srcId        String            @db.VarChar(36)
-  /// @Description target uuid to relate several events
-  targetId     String?           @db.VarChar(36)
-  eventType    String            @db.VarChar(36)
-  dataType     String            @db.VarChar(36)
-  /// @Description callback url or parent event id
+  calledBy String? @db.VarChar(30)
+  /// @description paid by caller, or root callgent creator if caller is null
+  paidBy   String  @db.VarChar(30)
+  /// @description event title
+  title    String? @db.VarChar(144)
+
+  /// @Description src entity id which bind to the listener
+  srcId        String            @db.VarChar(30)
+  /// @Description target id to relate several events
+  taskId       String            @db.VarChar(35)
+  eventType    String            @db.VarChar(30)
+  dataType     String            @db.VarChar(30)
+  /// @Description callback url or parent event id to invoke
   callback     String?           @db.VarChar(1023)
   /// @Description callback type, 'URL' or 'EVENT'
   callbackType EventCallbackType @default(EVENT)
 
-  data    Json? @db.Json
+  // data    Json? @db.Json
   context Json? @db.Json
 
-  /// @description statusCode, -1: processing, 0: done, 1: pending, >1: error
-  statusCode       Int     @default(-1)
-  message          String? @db.VarChar(255)
-  stopPropagation  Boolean
-  defaultPrevented Boolean
-  listenerUuid     String? @db.VarChar(36)
-  funName          String? @db.VarChar(255)
+  /// @description statusCode, 1: processing, 0: done, 2: pending: waiting for external event trigger to to resume calling current-listener.funName, <0: error
+  statusCode      Int     @default(1)
+  message         String? @db.VarChar(2047)
+  stopPropagation Boolean /// @description stop propagation to next listeners
+  listenerId      String? @db.VarChar(30)
+  funName         String? @db.VarChar(255) /// @description listener's function to call on pending event activated.
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt DateTime? /// @description logical deletion.
+  deletedAt BigInt      @default(0) /// @description logical deletion.
 
   @@index([srcId])
-  @@index([targetId])
-  @@index([tenantId])
-  @@index([uuid])
+  @@index([taskId])
+  @@index([paidBy])
+  @@index([calledBy])
+}
+
+/// @DtoSingularModel
+model Cached {
+  /// @DtoEntityHidden
+  pk BigInt @id @default(autoincrement())
+
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  sepId      String   @db.VarChar(30)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @description source event id
+  sourceId   String   @db.VarChar(30)
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  cacheKey   String   @db.VarChar(511)
+  /// @DtoCastType(PendingOrResponse, ../../entries/adaptors/entry-adaptor.base)
+  response   Json     @db.Json
+  /// @description invoke keys: invokeId-eventId
+  invokeKeys String[] @db.VarChar(30)
+
+  createdAt DateTime @default(now())
+  /// @description updated when async callback
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([sepId, cacheKey])
+}
+
+/// @DtoIgnoreModel
+model ModelPricing {
+  pk BigInt @id @default(autoincrement())
+
+  model    String  @db.VarChar(30)
+  alias    String? @db.VarChar(50)
+  provider String  @default("") @db.VarChar(50)
+
+  /// @description $1 = 1e11
+  price    Json   @db.Json
+  currency String @db.VarChar(6)
+
+  /// @description function to calculate amount: (usage, pricing)=>Decimal
+  method    String   @db.VarChar(300)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([model, provider])
+}
+
+/// @DtoIgnoreModel
+model Transaction {
+  /// @DtoEntityHidden
+  pk      BigInt @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id      String @unique @db.VarChar(30)
+  /// @IsNotEmpty
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  /// @description transaction id from external system
+  txId    String @unique @db.VarChar(150)
+  /// @DtoUpdateHidden
+  /// @DtoEntityHidden
+  /// @description reference data from internal/external system
+  refData Json?  @db.Json
+
+  /// @description transaction type: 1: RECHARGE, 2: GIFT, 3. REFUND, 4: EXPENSE
+  type     String  @db.VarChar(20)
+  /// @description amount: $1 = 1e11
+  amount   Decimal @db.Decimal(30, 0)
+  /// @description currency: USD, CNY, ...
+  currency String  @db.VarChar(6)
+
+  userId   String @db.VarChar(30)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  tenantPk Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt BigInt      @default(0) /// @description logical deletion.
+
+  @@index([tenantPk])
 }

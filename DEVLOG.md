@@ -1,95 +1,123 @@
 # Developer Guide
 
+This is guide for developers to setup the development environment. Before you start to get prepared for the develop environment, you need to make sure your basic tools are installed correctly.
+
+* Nodejs (Notice: To build the project, the right version is needed, otherwise installation can not be corrected, see .node-version)
+* pnpm
+* docker
+
 ## Development Setup
 
-- copy `.env.dev` to `.env`
-- install postgres with vector plugin
+* copy `.env.dev` to `.env`
 
-    ```shell
-    docker pull ankane/pgvector
-    ```
+* install dependencies
 
-- init db
+  ```shell
+  pnpm i
+  ```
 
-    ```shell
-    npx prisma generate # generate PrismaClient
-    npx prisma migrate dev # init db schema
-    npx prisma db seed # init db data
-    ```
+* install dababase postgres with vector plugin
 
-  - init db test data
+  ```shell
+  docker pull ankane/pgvector
+  ```
 
-    ```shell
-    SEED_TEST_DATA=1 npx prisma db seed
-    ```
+* start postgres db in docker
 
-- start server
+  ```shell
+  docker run --name callgent-postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e PG_VECTOR_EXTENSION=true -d ankane/pgvector
+  ```
+
+* init db
+
+  ```shell
+  npx prisma generate # generate PrismaClient
+  npx prisma migrate dev # init db schema
+  npx prisma db seed # init db data
+  ```
+
+* init db test data
+
+  ```shell
+  npx prisma migrate reset # reset db to initial state
+  pnpm run prisma:seed-test # init db test data
+  ```
+
+* start server
 
   ```shell
   pnpm run start:dev
+  ```
+
+If all the above steps are done, and nothing failed, you can access the API at `http://localhost:3000/api`
+
+* run tests
+
+  ```shell
+  pnpm run test:e2e
   ```
 
 ## Development Logs
 
 ### init project
 
-- init project
+* init project
 
-    ```shell
-    pnpm i -g @nestjs/cli
-    nest new botlet-api
-    cd botlet-api
-    ```
+  ```shell
+  pnpm i -g @nestjs/cli
+  nest new callgent-api
+  cd callgent-api
+  ```
 
 ### add dependencies
 
 ### integrate prisma
 
-- automatically setup the library, scripts and Docker files
+* automatically setup the library, scripts and Docker files
 
-    ```shell
-    nest add nestjs-prisma
-    ```
+  ```shell
+  nest add nestjs-prisma
+  ```
 
-- integrate prisma plugins
-- ReposModule
-- init db
+* integrate prisma plugins
+* ReposModule
+* init db
 
-    ```shell
-    npx prisma init
-    ```
+  ```shell
+  npx prisma init
+  ```
 
-- create prisma schema, then init db
+* create prisma schema, then init db
 
-    ```shell
-    npx prisma migrate dev --name init
-    ```
+  ```shell
+  npx prisma migrate dev --name init
+  ```
 
 ### multi-tenancy
 
-1. write default value for `tenancy.tenantId` in db
+1. write default value for `tenancy.tenantPk` in db
 
-   ```text
-   tenantId Int  @default(dbgenerated("(current_setting('tenancy.tenantId'))::int"))
-   ```
+  ```text
+  tenantPk Int  @default(dbgenerated("(current_setting('tenancy.tenantPk'))::int"))
+  ```
 
-2. enable postgres row level security(RLS), so that we can filter data by `tenantId` automatically:
+1. enable postgres row level security(RLS), so that we can filter data by `tenantPk` automatically:
    config in prisma/migrations/01_row_level_security/migration.sql,
    @see <https://github.com/prisma/prisma-client-extensions/tree/main/row-level-security>
 
-3. set `tenantId` into `cls` context:
+2. set `tenantPk` into `cls` context:
 
    ```ts
    cls.set('TENANT_ID', ..
    ```
 
-4. extend `PrismaClient` to set `tenantId` before any query
+3. extend `PrismaClient` to set `tenantPk` before any query
 
    ```sql
-   SELECT set_config('tenancy.tenantId', cls.get('TENANT_ID') ...
+   SELECT set_config('tenancy.tenantPk', cls.get('TENANT_ID') ...
    ```
 
-5. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
+4. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
 
    ```sql
    CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
@@ -113,9 +141,9 @@ all validation is based on bearer token, with payload:
 
   ```js
   {
-    sub: user.id.toString(),
-    iss: user.tenantId.toString(),
-    aud: user.uuid,
+    sub: user.pk.toString(),
+    iss: user.tenantPk.toString(),
+    aud: user.id,
   }
   ```
 
@@ -177,9 +205,9 @@ login with email and password, TODO: email verification is required.
 
 need NOT scope to get user email:
 
-- google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
-- github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
-- facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
+* google: add '<https://www.googleapis.com/auth/userinfo.email>' scope on oauth screen <https://console.cloud.google.com/apis/credentials/consent/edit?hl=zh-cn&project=skilled-bonus-381610>
+* github, contains email by default, <https://docs.github.com/en/rest/users/users?apiVersion=2022-11-28#get-the-authenticated-user>
+* facebook?: add 'email' scope on oauth screen <https://developers.facebook.com/docs/facebook-login/permissions/overview>
 
 ##### to add a new oauth client
 
@@ -207,9 +235,9 @@ You may annotate it to your DTO property like this:
 export class CreateTaskDto {
   // ...
 
-  // automatically validation check if the botlet exists in db on controller requesting
-  @EntityIdExists('botlet', 'uuid') // @EntityIdExists('entityType', 'fieldName')
-  botletUuid: string;
+  // automatically validation check if the callgent exists in db on controller requesting
+  @EntityIdExists('callgent', 'id') // @EntityIdExists('entityType', 'fieldName')
+  callgentId: string;
 }
 ```
 
@@ -220,8 +248,8 @@ Based on `prisma-generator-nestjs-dto`, you may also annotate this decorator in 
 ```prisma
 model Task {
   // ...
-  /// @CustomValidator(EntityIdExists, 'botlet', 'uuid', ../../infra/repo/validators/entity-exists.validator)
-  botletUuid String @db.VarChar(36)
+  /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infra/repo/validators/entity-exists.validator)
+  callgentId String @db.VarChar(36)
 }
 ```
 
@@ -229,10 +257,10 @@ This makes the generated DTO to be annotated with `@EntityIdExists` decorator.
 
 #### Retrieves the entity instance
 
-This makes sure the `botletUuid` field is a valid UUID of a botlet in the database.  
+This makes sure the `callgentId` field is a valid UUID of a callgent in the database.  
 you can retrieve the entity instance directly from the dto:
 
 ```typescript
-const botlet = EntityIdExists.entity<Botlet>(dto, 'botletUuid') ||
-          (await prisma.botlet.findUnique({ where: {uuid: dto.botletUuid} }));
+const callgent = EntityIdExists.entity<Callgent>(dto, 'callgentId') ||
+          (await prisma.callgent.findUnique({ where: {id: dto.callgentId} }));
 ```

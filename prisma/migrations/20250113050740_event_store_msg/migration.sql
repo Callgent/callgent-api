@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "EventStore" ALTER COLUMN "message" SET DATA TYPE VARCHAR(2047);

@@ -1,4 +1,5 @@
 import { PrismaTestingHelper } from '@chax-at/transactional-prisma-testing';
+import { ConfigService } from '@nestjs/config';
 import { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
@@ -10,9 +11,8 @@ import { bootstrapForTest } from '../src/bootstrap';
 import {
   TENANTED_PRISMA_SERVICE,
   prismaTenancyUseFactory,
-} from '../src/infra/repo/tenancy/prisma-tenancy.provider';
-import { PrismaTenancyService } from '../src/infra/repo/tenancy/prisma-tenancy.service';
-import { ConfigService } from '@nestjs/config';
+} from '../src/infras/repo/tenancy/prisma-tenancy.provider';
+import { PrismaTenancyService } from '../src/infras/repo/tenancy/prisma-tenancy.service';
 
 export let testApp: NestFastifyApplication;
 let moduleFixture: TestingModule;
@@ -69,7 +69,10 @@ const initOriginalPrismaService = (
   process.env.LOG_LEVELS_PRISMA = JSON.stringify(log);
 
   // create as same as prod, from mainPrismaServiceOptions
-  originalPrismaService = prismaTenancyUseFactory(prisma, store);
+  originalPrismaService = prismaTenancyUseFactory(
+    prisma,
+    new PrismaTenancyService(store),
+  );
 
   log_level > 3 &&
     prisma.$on('query', (e) => {
@@ -129,10 +132,10 @@ export async function beforeEachFn() {
   console.log('Starting new transaction.');
 }
 
-export async function beforeEachFnTenanted(tenantId = 1) {
+export async function beforeEachFnTenanted(tenantPk = 1) {
   await prismaTestingHelper.startNewTransaction({ timeout: 888888 });
-  testApp.get(PrismaTenancyService).setTenantId(tenantId);
-  console.log('Starts test transaction, tenantId:', tenantId);
+  testApp.get(PrismaTenancyService).setTenantId(tenantPk);
+  console.log('Starts test transaction, tenantPk:', tenantPk);
 }
 
 // This function must be called after every test

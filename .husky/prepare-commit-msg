@@ -1,6 +1,8 @@
+#!/bin/sh
+
 # check 'Signed-off-by' in commit message
-git_commit_message=$(cat $1)
-if [[ "$git_commit_message" != *"Signed-off-by: "* ]]; then
+git_commit_message=$(cat "$1")
+if [ -z "$(echo "$git_commit_message" | grep 'Signed-off-by: ')" ]; then
     echo
     echo "\033[31mError\033[0m:"
     echo "Commit message is missing the Signed-off-by line."

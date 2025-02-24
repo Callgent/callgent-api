@@ -1,8 +1,9 @@
+import { Transactional } from '@nestjs-cls/transactional';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import axios from 'axios';
-import { AuthLoginEvent } from '../../infra/auth/events/auth-login.event';
-import { JwtPayload } from '../../infra/auth/jwt/jwt.service';
+import { AuthLoginEvent } from '../../infras/auth/events/auth-login.event';
+import { JwtPayload } from '../../infras/auth/jwt/jwt-auth.service';
 import { CreateUserIdentityDto } from '../../user-identities/dto/create-user-identity.dto';
 import { UserDto } from '../dto/user.dto';
 import { UsersService } from '../users.service';
@@ -12,9 +13,11 @@ export class AuthLoginListener {
   private readonly logger = new Logger(AuthLoginListener.name);
   constructor(private readonly usersService: UsersService) {}
 
-  @OnEvent(AuthLoginEvent.eventName, { async: false })
+  // sync return user payload
+  @Transactional()
+  @OnEvent(AuthLoginEvent.eventName, { suppressErrors: false })
   async handleEvent(event: AuthLoginEvent) {
-    this.logger.debug('Handling event: %j', {
+    this.logger.debug('%j: Handling event,', {
       ...event,
       request: undefined,
       credentials: '***',
@@ -37,11 +40,11 @@ export class AuthLoginListener {
     } else throw new BadRequestException('Invalid auth type:' + event.authType);
 
     const payload: JwtPayload = {
-      tenantId: user.tenantId,
-      id: user.id,
-      sub: user.uuid,
+      tenantPk: user.tenantPk,
+      id: user.pk,
+      sub: user.id,
       iss: event.provider,
-      aud: user.uuid,
+      aud: user.id,
     };
     return payload;
   }

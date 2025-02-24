@@ -1,0 +1,16 @@
+{
+  "name": "postman-collection-importer",
+  "version": "1.0.0",
+  "description": "A utility to import Postman collections into Callgent Hub.",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx tsx index.ts"
+  },
+  "dependencies": {
+    "zip-lib": "^1.0.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

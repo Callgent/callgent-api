@@ -10,5 +10,6 @@ import { UsersService } from './users.service';
   imports: [AuthTokensModule],
   controllers: [UsersController, AuthController],
   providers: [UsersService, AuthLoginListener, AuthLoginedListener],
+  exports: [UsersService],
 })
 export class UsersModule {}

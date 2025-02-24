@@ -1,32 +1,17 @@
 import { Module } from '@nestjs/common';
-import { MailAdaptor } from './adaptors/builtin/mail/mail.adaptor';
-import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
-import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
-import { WebpageAdaptor } from './adaptors/builtin/web/webpage.adaptor';
+import { CallgentRealmsModule } from '../callgent-realms/callgent-realms.module';
+import { EntriesModule } from '../entries/entries.module';
 import { EndpointsController } from './endpoints.controller';
 import { EndpointsService } from './endpoints.service';
-import { BotletCreatedListener } from './listeners/botlet-created.listener';
-import { BotletsModule } from '../botlets/botlets.module';
+import { EndpointsChangedSumEntryListener } from './listeners/endpoints-changed.listener';
 
 @Module({
-  imports: [BotletsModule],
+  imports: [EntriesModule, CallgentRealmsModule],
   providers: [
     { provide: 'EndpointsService', useClass: EndpointsService },
-    BotletCreatedListener,
-    {
-      provide: 'restAPI-EndpointAdaptor',
-      useClass: RestAPIAdaptor,
-    },
-    {
-      provide: 'webpage-EndpointAdaptor',
-      useClass: WebpageAdaptor,
-    },
-    {
-      provide: 'webpage-EndpointAdaptor',
-      useClass: MailAdaptor,
-    },
+    EndpointsChangedSumEntryListener,
   ],
-  controllers: [EndpointsController, RestApiController],
+  controllers: [EndpointsController],
   exports: ['EndpointsService'],
 })
 export class EndpointsModule {}

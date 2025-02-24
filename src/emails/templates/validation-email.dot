@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title>{{=it.resetPwd ? 'Reset password instructions' : 'Verify your email address' }}</title>
+<!-- { token, resetPwd, create, to, sender, configs } -->
 </head>
 <body>
-<p>Welcome {{=it.to[0].name}}!</p>
+<p>Welcome {{=it.to[0].name }}!</p>
 
 <p>{{=it.resetPwd ? 'Someone has requested a link to change your password. You can do this' : 'You can confirm your account email' }} through the link below:</p>
 

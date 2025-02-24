@@ -1,14 +1,22 @@
-import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
+import {
+  Propagation,
+  TransactionHost,
+  Transactional,
+} from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { EventStore, Prisma, PrismaClient, ServiceType } from '@prisma/client';
-import { Utils } from '../infra/libs/utils';
+import { EventStoresService } from '../event-stores/event-stores.service';
+import { Utils } from '../infras/libs/utils';
+import { InvokeService } from '../invoke/invoke.service';
 import { CreateEventListenerDto } from './dto/create-event-listener.dto';
 import { UpdateEventListenerDto } from './dto/update-event-listener.dto';
 import { EventListener } from './entities/event-listener.entity';
@@ -23,57 +31,70 @@ export class EventListenersService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly moduleRef: ModuleRef,
+    @Inject('EventStoresService')
+    private readonly eventStoresService: EventStoresService,
+    private readonly invokeService: InvokeService,
   ) {}
 
   /**
-   * @returns: { event, message?, statusCode?: -1-processing, 0-done, 1-pending, >1-error}
+   * @returns: { data: event, message?, statusCode?: 1-processing, 0-done, 2-pending, (<0 || >399)-error}
    */
   @Transactional()
-  async emit<T extends EventObject>(
-    event: T,
-    timeout = 0,
-  ): Promise<{ event: T; statusCode?: number; message?: string }> {
+  async emit<T extends EventObject>(data: T, timeout = 0): Promise<T> {
     // load persist listeners
-    const listeners = await this.loadListeners(event);
+    const listeners = await this.loadListeners(data);
 
-    const result = this._invokeListeners(listeners, event).then((result) =>
+    // timeout response will cause current tx close, so Propagation.RequiresNew!
+    const result = this._invokeListeners(listeners, data).then((result) =>
       this._invokeCallback(result, true),
     );
 
     return timeout > 0
       ? Promise.race([
           result,
-          Utils.sleep(timeout).then(() => {
-            return {
-              event,
-              statusCode: event.statusCode,
-              message: `Sync invocation timeout(${timeout}ms), respond via callback`,
-            };
-          }),
+          Utils.sleep(timeout).then(() => ({
+            ...data,
+            statusCode: 1,
+            message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
+          })),
         ])
       : result;
   }
 
-  /** resume pending event, from external callback */
+  loadEvent = (eventId: string) => this.eventStoresService.findOne(eventId);
+
+  /**
+   * resume pending event, from external callback
+   * @param invokeKey: `invokeId-eventId`
+   */
   @Transactional()
   async resume<T extends EventObject>(
-    eventId: string,
-  ): Promise<{ event: T; statusCode?: number; message?: string }> {
-    const prisma = this.txHost.tx as PrismaClient;
-    const event = await prisma.eventStore.findUnique({
-      where: { uuid: eventId },
-    });
-    if (!event) throw new NotFoundException('Event not found, uuid=' + eventId);
-    // -1: processing, 0: done, 1: pending, >1: error
-    if (event.statusCode <= 0)
+    invokeKey: string,
+    callbackResponse: any,
+  ): Promise<T> {
+    const { eventId, invokeId } = this.invokeService.parseInvokeKey(invokeKey);
+    const event = await this.loadEvent(eventId);
+    if (!event) throw new NotFoundException('Event not found, id=' + invokeId);
+    if (event.statusCode != 2)
       throw new BadRequestException(
-        `Cannot resume event with status ${event.statusCode}, uuid=${eventId}`,
+        `Cannot resume event with status ${event.statusCode}, id=${invokeId}`,
       );
 
+    // prepare callback context
+    this.invokeService.setCallbackResponse(
+      invokeId,
+      callbackResponse,
+      event as any,
+    );
     const listeners = await this.resumeListeners(event);
+    if (!listeners.length)
+      throw new UnprocessableEntityException(
+        `Failed to resume: no listeners found for event, id=${invokeId}`,
+      );
+
     const result = await this._invokeListeners(
       listeners,
-      event as any,
+      event as any, // TODO?
       event.funName,
     );
     return this._invokeCallback(result);
@@ -83,78 +104,97 @@ export class EventListenersService {
    * @param urlOnly `EVENT` type callback only applicable on resuming
    */
   protected async _invokeCallback<T extends EventObject>(
-    result: { event: T; statusCode?: number; message?: string },
+    data: T,
     urlOnly = true,
-  ): Promise<{ event: T; statusCode?: number; message?: string }> {
-    if (result.statusCode) return result; // not done, no cb
+  ): Promise<T> {
+    if (data.statusCode) return data; // not done, no cb
 
-    const {
-      event: { callbackType, callback },
-    } = result;
-    if (!callback) return result;
+    // FIXME
+    const { callbackType, callback } = data;
+    if (!callback) return data;
     if (callbackType === 'EVENT')
-      return urlOnly ? result : this.resume(callback);
+      return urlOnly ? data : this.resume('', callback); // FIXME
 
     // URL callback
   }
 
-  private async _invokeListeners<T extends EventObject>(
+  /** timeout response will cause current tx close, so Propagation.RequiresNew! */
+  @Transactional(Propagation.RequiresNew)
+  protected async _invokeListeners<T extends EventObject>(
     listeners: EventListener[],
     event: T,
     funName?: string,
-  ): Promise<{ event: T; statusCode?: number; message?: string }> {
+  ): Promise<T> {
     // invoke listeners, supports persisted-async
-    let statusCode = -1;
-    for (let idx = 0; idx < listeners.length; ) {
-      const listener = listeners[idx++];
-      try {
-        const result = await this._invokeListener(listener, event, funName);
-        if (result) {
-          result.event && (event = result.event);
-          result.funName && (funName = result.funName);
-        } else funName = undefined;
+    let idx = 0;
+    event.statusCode = 1; // processing
+    try {
+      for (; idx < listeners.length; ) {
+        if (event.stopPropagation) break;
 
-        statusCode = funName
-          ? 1 // pending
-          : event.stopPropagation || idx >= listeners.length
-          ? 0 // done
-          : -1; // processing
-        if (funName || event.stopPropagation) break;
-      } catch (e) {
-        statusCode = e.status || 2; // error
-        const message = (event.message = `[ERROR] ${e.name}: ${e.message}`);
-        e.status < 500 || this.logger.error(e);
-        return { event, statusCode, message };
-      } finally {
-        const nextListener =
-          statusCode > 0 ? listener : statusCode == 0 ? null : listeners[idx];
-        await this.upsertEvent(event, funName, nextListener?.uuid, statusCode);
+        const listener = listeners[idx++];
+        try {
+          const result = await this._invokeListener(listener, event, funName);
+          // if no result, reuse event
+          result?.data && (event = result.data);
+          // if no result, empty funName
+          funName = result?.resumeFunName;
+
+          event.statusCode = funName
+            ? 2 // pending
+            : event.stopPropagation || idx >= listeners.length
+              ? 0 // done
+              : 1; // processing
+          if (funName || event.stopPropagation) break;
+        } catch (e) {
+          event.statusCode = e.status || -1; // error
+          event.message = e.response?.data?.message || `${e.message}`;
+          e.status < 500 || this.logger.error(e);
+          return event;
+        }
       }
+      return event;
+    } finally {
+      const nextListener =
+        event.statusCode == 1
+          ? listeners[idx] // processing: next
+          : event.statusCode == 0 ||
+              (event.statusCode > 2 && event.statusCode < 399)
+            ? null // success: null
+            : listeners[idx - 1]; // error/pending: current
+      await this.eventStoresService.upsertEvent(
+        event,
+        funName || null,
+        nextListener?.id || null,
+      );
     }
-    return { event, statusCode };
   }
 
   async loadListeners(
-    event: {
+    {
+      srcId,
+      eventType,
+      dataType,
+    }: {
       srcId: string;
       eventType: string;
       dataType: string;
     },
     deleted = false,
   ) {
-    const { srcId: srcUuid, eventType, dataType } = event;
-
     const prisma = this.txHost.tx as PrismaClient;
     const AND: Prisma.EventListenerWhereInput[] = [
       {
-        OR: [{ srcUuid }, { tenantId: 0, srcUuid: 'GLOBAL' }],
+        OR: [{ srcId }, { srcId: '*' }],
       },
-      { OR: [{ eventType }, { dataType }] },
+      {
+        OR: [{ eventType }, { eventType: '*' }],
+      },
+      {
+        OR: [{ dataType }, { dataType: '*' }],
+      },
     ];
-    deleted &&
-      AND.push({
-        OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
-      });
+    deleted && AND.push({ deletedAt: { gte: 0 } });
 
     let listeners = await prisma.eventListener.findMany({ where: { AND } });
     listeners = listeners
@@ -166,7 +206,7 @@ export class EventListenersService {
       .sort((a, b) => {
         const diff =
           a.priority - b.priority ||
-          (a.srcUuid === 'GLOBAL' ? -1 : 1) - (b.srcUuid === 'GLOBAL' ? -1 : 1);
+          (a.srcId === '*' ? -1 : 1) - (b.srcId === '*' ? -1 : 1);
         return diff;
       });
     if (!listeners.length)
@@ -176,59 +216,63 @@ export class EventListenersService {
     return listeners;
   }
 
-  /** load listeners by event id after event.listenerUuid[including] */
-  async resumeListeners(event: EventStore) {
-    let listeners = await this.loadListeners(event, true);
-    if (event.listenerUuid) {
-      const idx = listeners.findIndex(
-        (listener) => listener.uuid === event.listenerUuid,
-      );
+  /** load listeners by event id after event.listenerId[including] */
+  async resumeListeners(data: EventStore) {
+    const listeners = await this.loadListeners(data, true);
+
+    if (data.listenerId) {
+      const idx = listeners.findIndex((l) => l.id == data.listenerId);
       if (idx < 0)
         throw new NotFoundException(
-          `Invalid listener uuid ${event.listenerUuid} for event ${event.uuid}`,
+          `Invalid listener id ${data.listenerId} for event ${data.id}`,
         );
-
-      listeners = listeners.splice(0, idx);
+      idx > 0 && listeners.splice(0, idx);
     }
+
     return listeners.filter((listener) => !listener.deletedAt);
   }
 
+  @Transactional()
   protected async _invokeListener<T extends EventObject>(
     listener: EventListener,
     event: T,
     funName?: string,
-  ): Promise<{ event: T; funName?: string }> {
-    if (listener.serviceType == ServiceType.BOTLET) {
-      return this._invokeBotlet(listener, event, funName);
+  ): Promise<{ data: T; resumeFunName?: string }> {
+    if (listener.serviceType == ServiceType.CALLGENT) {
+      return this._invokeCallgent(listener, event, funName);
     } else {
       return this._invokeService(listener, event, funName);
     }
   }
+
+  /** service.func_signature(event): Promise<{ data: T; funName?: string }> */
+  @Transactional()
   protected async _invokeService<T extends EventObject>(
-    target: { uuid: string; serviceName: string; funName: string },
+    target: { id: string; serviceName: string; funName: string },
     event: EventObject,
     funName?: string,
-  ): Promise<{ event: T; funName?: string }> {
+  ): Promise<{ data: T; funName?: string }> {
     const service = this.moduleRef.get(target.serviceName, { strict: false });
     if (!service)
       throw new Error(
-        `Service ${target.serviceName} not found for event listener#${target.uuid}`,
+        `Service ${target.serviceName} not found for event listener#${target.id}`,
       );
     const fun = service[funName || target.funName];
     if (!fun)
       throw new Error(
-        `Service ${target.serviceName}.${target.funName} not found for event listener#${target.uuid}`,
+        `Service ${target.serviceName}.${target.funName} not found for event listener#${target.id}`,
       );
 
     return fun.apply(service, [event]);
   }
 
-  protected async _invokeBotlet<T extends EventObject>(
-    target: { uuid: string; serviceName: string; funName: string },
+  @Transactional()
+  protected async _invokeCallgent<T extends EventObject>(
+    target: { id: string; serviceName: string; funName: string },
     event: T,
     funName?: string,
-  ): Promise<{ event: T; funName?: string }> {
-    return { event };
+  ): Promise<{ data: T; resumeFunName?: string }> {
+    return { data: event };
   }
 
   @Transactional()
@@ -236,9 +280,9 @@ export class EventListenersService {
     data.eventType || (data.eventType = '*');
     data.dataType || (data.dataType = '*');
 
-    const uuid = Utils.uuid();
+    const id = Utils.uuid();
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.eventListener.create({ data: { ...data, uuid, createdBy } });
+    return prisma.eventListener.create({ data: { ...data, id, createdBy } });
   }
 
   @Transactional()
@@ -248,27 +292,5 @@ export class EventListenersService {
 
     const prisma = this.txHost.tx as PrismaClient;
     return prisma.eventListener.deleteMany({ where });
-  }
-
-  @Transactional()
-  upsertEvent(
-    event: EventObject,
-    funName: string,
-    listenerUuid: string,
-    status: number,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-    event.statusCode = status;
-    const data: Prisma.EventStoreCreateInput = {
-      ...event,
-      funName,
-      listenerUuid,
-    };
-    delete (data as any).rawReq;
-    return prisma.eventStore.upsert({
-      where: { uuid: event.uuid },
-      create: data,
-      update: data,
-    });
   }
 }

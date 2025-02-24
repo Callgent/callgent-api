@@ -1,21 +1,29 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AgentsModule } from './agents/agents.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthTokensModule } from './auth-tokens/auth-tokens.module';
-import { BotletFunctionsModule } from './botlet-functions/botlet-functions.module';
-import { BotletsModule } from './botlets/botlets.module';
+import { CallgentTreeModule } from './bff/callgent-tree/callgent-tree.module';
+import { BffEndpointsModule } from './bff/endpoints/bff-endpoints.module';
+import { BillingModule } from './billing/billing.module';
+import { CachedModule } from './cached/cached.module';
+import { CallgentHubModule } from './callgent-hub/callgent-hub.module';
+import { CallgentRealmsModule } from './callgent-realms/callgent-realms.module';
+import { CallgentsModule } from './callgents/callgents.module';
 import { EmailsModule } from './emails/emails.module';
 import { EndpointsModule } from './endpoints/endpoints.module';
+import { EntriesModule } from './entries/entries.module';
 import { EventListenersModule } from './event-listeners/event-listeners.module';
 import { EventStoresModule } from './event-stores/event-stores.module';
-import { AuthModule } from './infra/auth/auth.module';
-import { LoggingModule } from './infra/logging/logging.module';
-import { ReposModule } from './infra/repo/repos.module';
-import { TaskActionsModule } from './task-actions/task-actions.module';
-import { TasksModule } from './tasks/tasks.module';
+import { FilesModule } from './files/files.module';
+import { HealthModule } from './health/health.module';
+import { AuthModule } from './infras/auth/auth.module';
+import { LoggingModule } from './infras/logging/logging.module';
+import { ReposModule } from './infras/repo/repos.module';
+import { InvokeModule } from './invoke/invoke.module';
+import { TransactionsModule } from './transactions/transactions.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -26,23 +34,52 @@ import { UsersModule } from './users/users.module';
       expandVariables: true,
       envFilePath: ['.env.' + (process.env.NODE_ENV || 'dev'), '.env'],
     }),
+    ThrottlerModule.forRoot([
+      // {
+      //   name: 'short',
+      //   ttl: 1000,
+      //   limit: 3,
+      // },
+      // {
+      //   name: 'medium',
+      //   ttl: 10000,
+      //   limit: 20,
+      // },
+      {
+        name: 'long',
+        ttl: 60000,
+        limit: 60,
+      },
+    ]),
     LoggingModule,
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({ wildcard: true, ignoreErrors: false }),
     ReposModule,
     AuthModule,
     UsersModule,
-    BotletsModule,
-    TasksModule,
+    CallgentsModule,
     AuthTokensModule,
+    EntriesModule,
     EndpointsModule,
-    BotletFunctionsModule,
     AgentsModule,
-    TaskActionsModule,
     EventListenersModule,
     EventStoresModule,
     EmailsModule,
+    CallgentTreeModule,
+    BffEndpointsModule,
+    CallgentHubModule,
+    CallgentRealmsModule,
+    CachedModule,
+    InvokeModule,
+    HealthModule,
+    FilesModule,
+    BillingModule,
+    TransactionsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
