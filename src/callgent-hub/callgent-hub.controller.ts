@@ -14,30 +14,33 @@ import {
   ApiOperation,
   ApiProperty,
   ApiQuery,
+  ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty } from 'class-validator';
 import { CallgentDto } from '../callgents/dto/callgent.dto';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CallgentHubService } from './callgent-hub.service';
-import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
 
 export class CreateCallgentDtoEx extends CreateCallgentDto {
   @ApiProperty({
     type: 'integer',
     format: 'int32',
     required: true,
+    nullable: false,
   })
   @IsNotEmpty()
   @IsInt()
-  @EntityIdExists('tag', 'id')
+  @EntityIdExists('tag', 'pk')
   mainTagId: number;
 }
 
 @ApiTags('Hub')
+@ApiSecurity('defaultBearerAuth')
 @Controller('hub')
 export class CallgentHubController {
   constructor(private readonly callgentHubService: CallgentHubService) {}
@@ -64,15 +67,15 @@ export class CallgentHubController {
   async findAll(
     @Query()
     query: {
-      queryString?: string;
+      query?: string;
       page?: 1;
       perPage?: 10;
       // TODO orderBy?: string;
     },
   ) {
-    const where = query.queryString
+    const where = query.query
       ? {
-          name: { contains: query.queryString },
+          name: { contains: query.query },
         }
       : undefined;
     const list = await this.callgentHubService.findAllInHub({

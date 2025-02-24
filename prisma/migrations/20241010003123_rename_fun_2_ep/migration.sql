@@ -51,6 +51,6 @@ ALTER TABLE "Endpoint" ENABLE ROW LEVEL SECURITY;
 -- Force Row Level Security for table owners
 ALTER TABLE "Endpoint" FORCE ROW LEVEL SECURITY;
 -- Create row security policies
-CREATE POLICY tenant_isolation_policy ON "Endpoint" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "Endpoint" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
 -- Create policies to bypass RLS (optional)
 CREATE POLICY bypass_rls_policy ON "Endpoint" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');

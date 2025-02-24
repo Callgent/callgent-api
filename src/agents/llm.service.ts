@@ -1,11 +1,11 @@
 import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 import * as dot from 'dot';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
 import { LlmCompletionEvent } from './events/llm-completion.event';
 
 @Injectable()
@@ -17,83 +17,334 @@ export class LLMService {
     private readonly eventEmitter: EventEmitter2,
   ) {
     dot.templateSettings.strip = false;
+    this.llmModels = this.configService.get('LLM_MODELS');
+    if (this.llmModels[0] == '[')
+      this.llmModels = JSON.parse(this.llmModels as string);
   }
+  protected llmModels: string[] | string;
+  private readonly logger = new Logger(LLMService.name);
 
   /**
+   * single round request-response query
+   *
    * @param template prompt template name
    * @param args  prompt args
-   * @param returnType if not empty, try to parse the response as the specified json
+   * @param args { parseSchema: "returning json schema", validate: "validate function to check generated json" }
    */
   @Transactional()
-  async template<T>(
+  async query<T>(
     template: string,
     args: { [key: string]: any },
-    returnType?: T,
-    bizKey?: string,
+    {
+      models,
+      bizKey,
+      paidBy,
+      parseType = 'json',
+      parseSchema,
+      validate,
+    }: {
+      models?: string[] | string;
+      bizKey: string;
+      paidBy: string;
+      parseType?: 'json' | 'codeBlock';
+      parseSchema?: T;
+      validate?: (generated: T, retry: number) => boolean | void;
+    },
   ): Promise<T> {
     const prompt = await this._prompt(template, args);
 
-    let result: string;
+    let cache: string, llmModel: string;
     let notCached = this.configService.get('LLM_CACHE_ENABLE');
-    if (notCached)
-      notCached = !(result = (await this._llmCache(template, prompt))?.result);
+    if (notCached) {
+      [cache, llmModel] = await this._llmCacheLoad(template, prompt);
+      notCached = !cache;
+    }
 
-    if (!result) {
-      const resp = await this._completion({
-        messages: [{ role: 'user', content: prompt }],
-        model: this.configService.get('LLM_MODEL'),
-        temperature: 0.5,
-      });
+    let ret: T,
+      llmResult = '',
+      errorMessage = '';
+    let [maxRetry, valid] = [3, undefined];
 
-      if (!resp?.choices?.length)
-        throw new Error(
-          `LLM service not available: template=${template} bizKey=${bizKey}`,
+    const req: LLMRequest = {
+      prompt,
+      stream: false,
+      route: 'fallback',
+      temperature: 0, // TODO
+    };
+    models || (models = this.llmModels);
+    if (Array.isArray(models)) req.models = models;
+    else llmModel = req.model = models;
+
+    for (let i = 0; i < maxRetry; i++) {
+      try {
+        ret = cache as T;
+        if (!ret) {
+          const promptExt = errorMessage
+            ? `${prompt}\n\nPlease retry as you just made a mistake: ${errorMessage}`
+            : prompt;
+          req.prompt = promptExt;
+
+          const resp = await this._completion(req, paidBy, {
+            bizKey,
+            template,
+          });
+          resp.model && (llmModel = resp.model);
+
+          if (!resp?.choices?.length) {
+            valid = false;
+            errorMessage = `LLM service not available, error=${(resp as any)?.error?.message}`;
+            break;
+          }
+
+          const choice = resp.choices[0] as NonChatChoice;
+          llmResult = choice.text as any;
+        }
+
+        ret = this._parseResultSchema(parseSchema, parseType, llmResult);
+        valid = !validate || validate(ret, i);
+      } catch (e) {
+        if (e.status === HttpStatus.PAYMENT_REQUIRED) throw e;
+        // add error to conversation to optimize result
+        errorMessage = e.message;
+        this.logger.warn(
+          '[retry %s %d/%d] Failed validating generated content: %s',
+          template,
+          i + 1,
+          maxRetry,
+          errorMessage,
         );
-
-      const choice = resp.choices[0] as NonStreamingChoice;
-      result = choice.message?.content;
+        continue; // default retry
+      }
+      break; // force stop;
     }
+    if (!valid)
+      throw new Error(
+        'Failed validating generated content, ' +
+          [llmModel, template, errorMessage],
+      );
 
-    let ret = result as T;
-    if (returnType) {
-      const isArray = Array.isArray(returnType);
-      ret = Utils.toJSON(result, isArray);
-      // check type
-      this._checkJsonType(returnType, ret, isArray);
-    }
-
-    if (notCached) await this._llmCache(template, prompt, result);
+    if (notCached) await this._llmCache(template, llmModel, prompt, llmResult);
 
     return ret;
   }
 
-  protected _checkJsonType(returnType: any, val: any, isArray: boolean) {
-    const keys = Object.keys(isArray ? returnType[0] : returnType);
+  /**
+   * multi-turn chat. not cached
+   *
+   * @param template system prompt template
+   * @param messages conversation messages, including current user message
+   * @param args { parseSchema: "parsing schema", validate: "validate function to check generated json", parseType }, if parseType is markdown codeBlock, parseSchema must only `new Array(n)`
+   * @returns assistant response will be appended to messages
+   */
+  @Transactional()
+  async chat<T>(
+    template: string,
+    originalMessages: LLMMessage[],
+    args: { [key: string]: any },
+    {
+      models,
+      bizKey,
+      paidBy,
+      parseType = 'json',
+      parseSchema,
+      validate,
+    }: {
+      models?: string[] | string;
+      bizKey: string;
+      paidBy: string;
+      parseType?: 'json' | 'codeBlock';
+      parseSchema?: T;
+      validate?: (generated: T, retry: number) => boolean | void;
+    },
+  ): Promise<T> {
+    const prompt = await this._prompt(template, args);
+    // template prompt as system message
+    const messages: LLMMessage[] = [
+      { role: 'system', content: prompt },
+      ...originalMessages,
+    ];
+
+    const usrMsg = messages.at(-1);
+    if (usrMsg.role !== 'user')
+      throw new Error('Current message must be role=user');
+
+    let ret: T;
+    let [llmResult, llmModel] = ['', ''];
+    let [maxRetry, invalidMsg] = [3, ''];
+
+    const req: LLMRequest = {
+      messages,
+      stream: false,
+      route: 'fallback',
+      temperature: 0, // TODO
+    };
+    models || (models = this.llmModels);
+    if (Array.isArray(models)) req.models = models;
+    else llmModel = req.model = models;
+
+    for (let i = 0; i < maxRetry; i++) {
+      try {
+        invalidMsg = '';
+        if (!ret) {
+          const resp = await this._completion(req, paidBy, {
+            template,
+            bizKey,
+          });
+          resp.model && (llmModel = resp.model);
+
+          if (!resp?.choices?.length) {
+            invalidMsg = `LLM service not available, error=${(resp as any)?.error?.message}`;
+            break;
+          }
+
+          const choice = resp.choices[0] as NonStreamingChoice;
+          llmResult = choice.message.content as any;
+        }
+
+        ret = this._parseResultSchema(parseSchema, parseType, llmResult);
+        if (validate && !validate(ret, i))
+          invalidMsg = 'Failed validating generated content';
+      } catch (e) {
+        if (e.status === HttpStatus.PAYMENT_REQUIRED) throw e;
+        // add error to conversation to optimize result
+        invalidMsg = 'There was a mistake in generated content:\n' + e.message;
+        messages.push({ role: 'assistant', content: llmResult });
+        messages.push({
+          role: 'user',
+          content: invalidMsg + '\n\nplease re-generate',
+        });
+        this.logger.warn(
+          '[retry %s %d/%d] Failed validating generated content: %s',
+          template,
+          i + 1,
+          maxRetry,
+          e.message,
+        );
+        ret = undefined;
+        continue; // default retry
+      }
+      break; // force stop;
+    }
+    if (invalidMsg)
+      throw new Error(
+        'Failed validating generated content, ' +
+          [llmModel, template, invalidMsg],
+      );
+
+    originalMessages.push({ role: 'assistant', content: llmResult });
+    return ret;
+  }
+
+  private _parseResultSchema<T extends {}>(
+    parseSchema: T,
+    parseType: string,
+    llmResult: string,
+  ): T {
+    if (!parseSchema) return llmResult as any;
+    if (!llmResult) throw new Error('LLM result must not empty');
+
+    let ret: T;
+    const isArray = Array.isArray(parseSchema);
+    switch (parseType) {
+      case 'json':
+        ret = Utils.toJSON(llmResult, isArray);
+        // check type
+        this._checkJsonType(parseSchema, ret, isArray);
+        break;
+      case 'codeBlock':
+        const size = (parseSchema as any).length;
+        if (!size)
+          throw new Error(
+            'for parseType="codeBlock", parseSchema must be array',
+          );
+        const split = llmResult.split(/^\s*```[\w\s]*$/m);
+        if (split.length < 2 * size + 1)
+          throw new Error(
+            size + ' code blocks expected, got: ' + ~~split.length / 2,
+          );
+        // pick from the end
+        const a = Array(size);
+        for (let i = -1; i >= -size; i--)
+          a[size + i] = split[split.length + i * 2].trim();
+        ret = a as any;
+        break;
+      default:
+        throw new Error('Unknown llm result parseType:' + parseType);
+    }
+    return ret;
+  }
+
+  protected _checkJsonType(parseSchema: any, val: any, isArray: boolean) {
+    const entries = Object.entries(isArray ? parseSchema[0] : parseSchema);
     const a = isArray ? val : [val];
     for (const v of a) {
-      if (!keys.every((key) => key in v))
-        throw new Error(
-          `Return type error, props=${keys.join(',')}, val=${JSON.stringify(
-            val,
-          )}`,
-        );
+      entries.forEach(([key, type]) => {
+        if (!type) return; // any type
+        // key may be '': means { [key]:.. }
+        if (key && !(key in v)) throw new Error(`Json key=${key} is missing`);
+        const value = key ? v[key] : Object.values(v)[0];
+        if (
+          value &&
+          (typeof value !== typeof type ||
+            Array.isArray(type) != Array.isArray(value))
+        )
+          throw new Error(
+            `Value type of json key=${key} should match example value: ${JSON.stringify(type)}, got: ${JSON.stringify(value)}}`,
+          );
+      });
     }
   }
 
-  protected async _llmCache(name: string, prompt: string, result?: string) {
-    if (prompt.length > 8190) return;
-    const prisma = this.txHost.tx as PrismaClient;
-    if (result)
-      return prisma.llmCache.upsert({
-        where: { prompt_name: { prompt, name } },
-        create: { name, prompt, result },
-        update: { name, prompt, result },
-      });
+  protected async _llmCacheLoad(name: string, prompt: string) {
+    let result: string, llmModel: string;
+    if (prompt.length <= this.CACHE_PROMPT_MAX_LEN) {
+      for (llmModel of this.llmModels) {
+        result = (await this._llmCache(name, llmModel, prompt))?.result;
+        if (result) break;
+      }
+    }
+    return [result, llmModel];
+  }
 
-    return prisma.llmCache.findUnique({
-      where: { prompt_name: { prompt, name } },
-      select: { result: true },
+  protected readonly CACHE_PROMPT_MAX_LEN = 8190;
+  protected async _llmCache(
+    name: string,
+    model: string,
+    prompt: string,
+    result?: string,
+  ) {
+    if (prompt.length > this.CACHE_PROMPT_MAX_LEN) {
+      this.logger.warn(
+        '>>> Prompt too long to cache: name: %s, prompt: \n%s\n\n\tresult: %s',
+        name,
+        prompt,
+        result,
+      );
+      return;
+    }
+    const prisma = this.txHost.tx as PrismaClient;
+    const ret = await prisma.llmCache.findFirst({
+      where: { prompt, model, name },
+      select: { pk: true, result: true },
     });
+
+    if (!result) {
+      ret && this.logger.debug('>>> Hit LLM result cache: %s, %s', name, model);
+      return ret;
+    }
+
+    this.logger.debug(
+      '>>>> Write LLM result to cache: name: %s, prompt: %s\n\n\tresult: %s',
+      name,
+      prompt,
+      result,
+    );
+    return ret
+      ? prisma.llmCache.update({
+          where: { pk: ret.pk },
+          data: { result },
+        })
+      : prisma.llmCache.create({ data: { name, model, prompt, result } });
   }
 
   protected async _prompt(template: string, args: { [key: string]: any }) {
@@ -107,7 +358,7 @@ export class LLMService {
       if (!tplStr?.prompt)
         throw new Error(`LLM Template ${template} not found`);
 
-      this.template[template] = tpl = dot.template(tplStr.prompt);
+      this.templates[template] = tpl = dot.template(tplStr.prompt);
     }
     try {
       return tpl(args);
@@ -116,14 +367,26 @@ export class LLMService {
     }
   }
 
-  protected async _completion(req: LLMRequest): Promise<LLMResponse> {
+  protected async _completion(
+    req: LLMRequest,
+    paidBy: string,
+    ctx: { [key: string]: any },
+  ): Promise<LLMResponse> {
+    // wait sync result, or billing exception
+    await this.eventEmitter.emitAsync(
+      LlmCompletionEvent.eventName,
+      new LlmCompletionEvent(paidBy),
+    );
+
     return new Promise((resolve, reject) => {
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const startTime = Date.now();
+      const url = req.messages
+        ? this.configService.get('LLM_CHAT_URL')
+        : this.configService.get('LLM_COMPLETION_URL');
+      fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.configService.get(
-            'OPENROUTER_API_KEY',
-          )}`,
+          Authorization: `Bearer ${this.configService.get('LLM_API_KEY')}`,
           'HTTP-Referer': `${this.configService.get('CALLGENT_SITE_URL')}`,
           'X-Title': `${this.configService.get('CALLGENT_SITE_NAME')}`,
           'Content-Type': 'application/json',
@@ -131,12 +394,27 @@ export class LLMService {
         body: JSON.stringify(req),
       })
         .then((res) => res.json())
-        .then((data) => {
-          this.eventEmitter.emit(
-            LlmCompletionEvent.eventName,
-            new LlmCompletionEvent(data),
+        .then((data: LLMResponse) => {
+          data.usage ||
+            (data.usage = {
+              completion_tokens: 0,
+              prompt_tokens: 0,
+              total_tokens: 0,
+              total_cost: 0,
+            });
+          data.usage['duration'] = Date.now() - startTime;
+          this.logger.debug(
+            '>>> LLM %s %s response usage: %j',
+            data.model,
+            data.provider || '',
+            data.usage,
           );
           resolve(data);
+          // async billing
+          this.eventEmitter.emitAsync(
+            LlmCompletionEvent.eventName,
+            new LlmCompletionEvent(paidBy, { ...data, ...ctx }),
+          );
         })
         .catch(reject);
     });
@@ -144,9 +422,9 @@ export class LLMService {
 }
 
 // Definitions of subtypes are below
-type LLMRequest = {
+export type LLMRequest = {
   // Either "messages" or "prompt" is required
-  messages?: Message[];
+  messages?: LLMMessage[];
   prompt?: string;
 
   // If "model" is unspecified, uses the user's default
@@ -201,14 +479,17 @@ export type LLMResponse = {
   choices: (NonStreamingChoice | StreamingChoice | NonChatChoice | Error)[];
   created: number; // Unix timestamp
   model: string;
+  provider: string;
   object: 'chat.completion' | 'chat.completion.chunk';
   // For non-streaming responses only. For streaming responses,
   // see "Querying Cost and Stats" below.
-  usage?: {
+  usage: {
     completion_tokens: number; // Equivalent to "native_tokens_completion" in the /generation API
     prompt_tokens: number; // Equivalent to "native_tokens_prompt"
     total_tokens: number; // Sum of the above two fields
     total_cost: number; // Number of credits used by this generation
+    prompt_cache_hit_tokens?: number; // Number of tokens served from cache for the prompt
+    prompt_cache_miss_tokens?: number; // Number of tokens that missed the cache and were processed normally
   };
 };
 
@@ -274,7 +555,7 @@ type ImageContentPart = {
 
 type ContentPart = TextContent | ImageContentPart;
 
-type Message = {
+export type LLMMessage = {
   role: 'user' | 'assistant' | 'system' | 'tool';
   // ContentParts are only for the 'user' role:
   content: string | ContentPart[];

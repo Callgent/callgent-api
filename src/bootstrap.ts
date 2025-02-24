@@ -1,4 +1,4 @@
-import compression from '@fastify/compress';
+// import compression from '@fastify/compress';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -20,10 +20,12 @@ import { FastifyRequest } from 'fastify';
 import fastifyIp from 'fastify-ip';
 import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { AppModule } from './app.module';
-import { AuthUtils } from './infra/auth/auth.utils';
-import { JwtAuthService } from './infra/auth/jwt/jwt.service';
+import { AuthUtils } from './infras/auth/auth.utils';
+import { JwtAuthService } from './infras/auth/jwt/jwt-auth.service';
 
 async function bootstrap(app: NestFastifyApplication, port: string) {
+  const configService = app.get(ConfigService);
+
   // (BigInt.prototype as any).toJSON = function () {
   //   return this.toString();
   // };
@@ -31,10 +33,18 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   // pino logger
   const logger: ConsoleLogger = registerLogger(app);
 
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled Rejection:', reason);
+  });
+
   app.register(helmet);
   app.register(fastifyIp);
-  app.register(fastifyMultipart);
-  app.register(compression, { encodings: ['gzip', 'deflate'] });
+  const fileSize = configService.get('REQUEST_BODY_LIMIT', 1048576); // 1M
+  app.register(fastifyMultipart, {
+    throwFileSizeLimit: true,
+    limits: { fileSize: parseInt(fileSize), files: 8 },
+  });
+  // app.register(compression);
 
   // express compatibility
   const fastifyInstance = app.getHttpAdapter().getInstance();
@@ -54,7 +64,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
     app,
     1,
     'Callgent APIs',
-    'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs',
+    'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs. Download <a href="api-json" target="_blank">Callgent-openAPI.json</a>, or <a href="api-yaml" target="_blank">Callgent-openAPI.yaml</a>',
     logger,
   );
 
@@ -77,7 +87,6 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   ///// validator injection: e.g. EntityIdExistsRule
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  const configService = app.get(ConfigService);
   if (configService.get('ALLOW_CORS'))
     app.register(fastifyCors, {
       origin: [
@@ -93,21 +102,22 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
   if (AuthUtils.getAuthCookieName(configService))
     await app.register(fastifyCookie);
 
-  await app.listen(port, '0.0.0.0', () =>
+  await app.listen(port, '::', () =>
     logger.warn('Application is listening on port ' + port),
   );
   return app;
 }
 
 export async function bootstrapForProd(): Promise<NestFastifyApplication> {
+  const bodyLimit = parseInt(process.env.REQUEST_BODY_LIMIT) || 1048576;
   const app: NestFastifyApplication =
     await NestFactory.create<NestFastifyApplication>(
       AppModule,
-      new FastifyAdapter(),
-      {
-        abortOnError: false,
-        bufferLogs: true,
-      },
+      new FastifyAdapter({
+        trustProxy: true,
+        bodyLimit,
+      }),
+      { abortOnError: false, bufferLogs: true, rawBody: true },
     );
   return bootstrap(app, process.env.PORT || '3000');
 }
@@ -129,8 +139,8 @@ export async function bootstrapForTest(
 /**
  * swagger doc is enabled only in dev mode, when devDocVersion is not empty.
  *
- * @param testUserId used on dev swagger doc
- * @returns { defaultApiVersion, devDocVersion }
+ * @param {sting} testUserId used on dev swagger doc
+ * @returns {{ defaultApiVersion, devDocVersion }} api/doc versions
  */
 function registerApi(
   app: NestFastifyApplication,

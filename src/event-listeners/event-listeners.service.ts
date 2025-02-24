@@ -15,7 +15,8 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { EventStore, Prisma, PrismaClient, ServiceType } from '@prisma/client';
 import { EventStoresService } from '../event-stores/event-stores.service';
-import { Utils } from '../infra/libs/utils';
+import { Utils } from '../infras/libs/utils';
+import { InvokeService } from '../invoke/invoke.service';
 import { CreateEventListenerDto } from './dto/create-event-listener.dto';
 import { UpdateEventListenerDto } from './dto/update-event-listener.dto';
 import { EventListener } from './entities/event-listener.entity';
@@ -32,16 +33,14 @@ export class EventListenersService {
     private readonly moduleRef: ModuleRef,
     @Inject('EventStoresService')
     private readonly eventStoresService: EventStoresService,
+    private readonly invokeService: InvokeService,
   ) {}
 
   /**
    * @returns: { data: event, message?, statusCode?: 1-processing, 0-done, 2-pending, (<0 || >399)-error}
    */
   @Transactional()
-  async emit<T extends EventObject>(
-    data: T,
-    timeout = 0,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
+  async emit<T extends EventObject>(data: T, timeout = 0): Promise<T> {
     // load persist listeners
     const listeners = await this.loadListeners(data);
 
@@ -54,7 +53,7 @@ export class EventListenersService {
       ? Promise.race([
           result,
           Utils.sleep(timeout).then(() => ({
-            data,
+            ...data,
             statusCode: 1,
             message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
           })),
@@ -64,31 +63,38 @@ export class EventListenersService {
 
   loadEvent = (eventId: string) => this.eventStoresService.findOne(eventId);
 
-  /** resume pending event, from external callback */
+  /**
+   * resume pending event, from external callback
+   * @param invokeKey: `invokeId-eventId`
+   */
   @Transactional()
   async resume<T extends EventObject>(
-    event: string | EventStore,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
-    if (typeof event === 'string')
-      event = (await this.loadEvent(event)) || event;
-    if (!event || typeof event === 'string')
-      throw new NotFoundException('Event not found, id=' + event);
-
-    // 1: processing, 0: done, 2: pending, <0: error
+    invokeKey: string,
+    callbackResponse: any,
+  ): Promise<T> {
+    const { eventId, invokeId } = this.invokeService.parseInvokeKey(invokeKey);
+    const event = await this.loadEvent(eventId);
+    if (!event) throw new NotFoundException('Event not found, id=' + invokeId);
     if (event.statusCode != 2)
       throw new BadRequestException(
-        `Cannot resume event with status ${event.statusCode}, id=${event.id}`,
+        `Cannot resume event with status ${event.statusCode}, id=${invokeId}`,
       );
 
+    // prepare callback context
+    this.invokeService.setCallbackResponse(
+      invokeId,
+      callbackResponse,
+      event as any,
+    );
     const listeners = await this.resumeListeners(event);
     if (!listeners.length)
       throw new UnprocessableEntityException(
-        `Failed to resume: no listeners found for event, id=${event.id}`,
+        `Failed to resume: no listeners found for event, id=${invokeId}`,
       );
 
     const result = await this._invokeListeners(
       listeners,
-      event as any,
+      event as any, // TODO?
       event.funName,
     );
     return this._invokeCallback(result);
@@ -98,17 +104,16 @@ export class EventListenersService {
    * @param urlOnly `EVENT` type callback only applicable on resuming
    */
   protected async _invokeCallback<T extends EventObject>(
-    result: { data: T; statusCode?: number; message?: string },
+    data: T,
     urlOnly = true,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
-    if (result.statusCode) return result; // not done, no cb
+  ): Promise<T> {
+    if (data.statusCode) return data; // not done, no cb
 
-    const {
-      data: { callbackType, callback },
-    } = result;
-    if (!callback) return result;
+    // FIXME
+    const { callbackType, callback } = data;
+    if (!callback) return data;
     if (callbackType === 'EVENT')
-      return urlOnly ? result : this.resume(callback);
+      return urlOnly ? data : this.resume('', callback); // FIXME
 
     // URL callback
   }
@@ -119,16 +124,13 @@ export class EventListenersService {
     listeners: EventListener[],
     event: T,
     funName?: string,
-  ): Promise<{ data: T; statusCode?: number; message?: string }> {
+  ): Promise<T> {
     // invoke listeners, supports persisted-async
-    let [statusCode, idx] = [1, 0];
+    let idx = 0;
+    event.statusCode = 1; // processing
     try {
       for (; idx < listeners.length; ) {
         if (event.stopPropagation) break;
-        if (event.preventDefault) {
-          event.preventDefault = false;
-          continue;
-        }
 
         const listener = listeners[idx++];
         try {
@@ -138,40 +140,32 @@ export class EventListenersService {
           // if no result, empty funName
           funName = result?.resumeFunName;
 
-          statusCode = funName
+          event.statusCode = funName
             ? 2 // pending
             : event.stopPropagation || idx >= listeners.length
-            ? 0 // done
-            : 1; // processing
+              ? 0 // done
+              : 1; // processing
           if (funName || event.stopPropagation) break;
         } catch (e) {
-          statusCode = e.status || -1; // error
-          const message =
-            e.response?.data?.message || `[${e.name}] ${e.message}`;
+          event.statusCode = e.status || -1; // error
+          event.message = e.response?.data?.message || `${e.message}`;
           e.status < 500 || this.logger.error(e);
-          return {
-            data: { ...event, context: undefined },
-            statusCode,
-            message,
-          };
+          return event;
         }
       }
-      return {
-        data: { ...event, context: undefined },
-        statusCode,
-      };
+      return event;
     } finally {
       const nextListener =
-        statusCode == 1
+        event.statusCode == 1
           ? listeners[idx] // processing: next
-          : statusCode == 0 || (statusCode > 2 && statusCode < 399)
-          ? null // success: null
-          : listeners[idx - 1]; // error/pending: current
+          : event.statusCode == 0 ||
+              (event.statusCode > 2 && event.statusCode < 399)
+            ? null // success: null
+            : listeners[idx - 1]; // error/pending: current
       await this.eventStoresService.upsertEvent(
         event,
         funName || null,
         nextListener?.id || null,
-        statusCode,
       );
     }
   }
@@ -191,14 +185,16 @@ export class EventListenersService {
     const prisma = this.txHost.tx as PrismaClient;
     const AND: Prisma.EventListenerWhereInput[] = [
       {
-        OR: [{ srcId }, { tenantPk: 0, srcId: 'GLOBAL' }],
+        OR: [{ srcId }, { srcId: '*' }],
       },
-      { OR: [{ eventType }, { dataType }] },
+      {
+        OR: [{ eventType }, { eventType: '*' }],
+      },
+      {
+        OR: [{ dataType }, { dataType: '*' }],
+      },
     ];
-    deleted &&
-      AND.push({
-        OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
-      });
+    deleted && AND.push({ deletedAt: { gte: 0 } });
 
     let listeners = await prisma.eventListener.findMany({ where: { AND } });
     listeners = listeners
@@ -210,7 +206,7 @@ export class EventListenersService {
       .sort((a, b) => {
         const diff =
           a.priority - b.priority ||
-          (a.srcId === 'GLOBAL' ? -1 : 1) - (b.srcId === 'GLOBAL' ? -1 : 1);
+          (a.srcId === '*' ? -1 : 1) - (b.srcId === '*' ? -1 : 1);
         return diff;
       });
     if (!listeners.length)

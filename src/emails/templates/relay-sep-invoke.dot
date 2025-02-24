@@ -3,43 +3,43 @@
 <head>
 <meta charset="utf-8">
 <!-- relay email title always ends with #relayId -->
-<title>[Callgent] Function calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. #{{=it.relayId}}</title>
-<!-- { relayId, fun, sep, args[], responses[], to, sender, configs } -->
+<title>[Callgent] Function calling: '{{=it.endpoint.name}}' of Callgent {{=it.callgentName}}. #{{=it.relayId}}</title>
+<!-- { relayId, endpoint, callgentName, params, responses[], to, sender, configs } -->
 </head>
 <body>
-<p>Hello {{=it.to[0].name }}!</p>
+<p>Hello {{=it.to[0].name }}, howdy!</p>
 
-<p>Somebody is calling: '{{=it.fun.name}}' from Callgent {{=it.sep.callgent.name}}. Below is the detailed request information:</p>
+<p>Someone is calling: '{{=it.endpoint.name}}' from Callgent {{=it.callgentName}}. Below is the detailed request information:</p>
 <hr/>
 
 <div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
     <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Calling Function:</span>
     <div>
         <span style="display: inline-block; width: 8em;font-weight: bold">Name:</span>
-        <span>{{=it.fun.name}}</span>
+        <span>{{=it.endpoint.name}}</span>
     </div>
-    {{ if (it.fun.summary) { }}
+    {{ if (it.endpoint.summary) { }}
     <div>
         <span style="display: inline-block; width: 8em;font-weight: bold">Summary:</span>
-        <span>{{=it.fun.summary}}</span>
+        <span>{{=it.endpoint.summary}}</span>
     </div>
     {{ } }}
-    {{ if (it.fun.description) { }}
+    {{ if (it.endpoint.description) { }}
     <div>
         <span style="display: inline-block; width: 8em;font-weight: bold">Description:</span>
-        <span>{{=it.fun.description}}</span>
+        <span>{{=it.endpoint.description}}</span>
     </div>
     {{ } }}
 </div>
 
-{{ if (it.args.length) { }}
+{{ if (it.params.length) { }}
 <div style="padding: 1em 1em 1.5em 1em; margin: 2em 0; border: 1px solid #ccc;">
     <span style="font-size: larger; font-weight: bold; display: block; margin-bottom: 0.5em;">Function Arguments:</span>
-    {{~it.args :arg}}
+    {{~it.params :param}}
     <div>
-        <span style="display: inline-block; width: 8em;font-weight: bold">{{=arg.name}}{{=arg.required ? '<span style="color: red;">*</span>' : ''}}:</span>
-        <span>{{=arg.description}}</span>
-        <div style="padding-left:8em">{{=JSON.stringify(arg.value)}}</div>
+        <span style="display: inline-block; width: 8em;font-weight: bold">{{=param.name}}{{=param.required ? '<span style="color: red;">*</span>' : ''}}:</span>
+        <span>{{=param.description}}</span>
+        <div style="padding-left:8em">{{=JSON.stringify(param.value)}}</div>
     </div>
     {{~}}
 </div>
@@ -58,6 +58,8 @@
     {{~}}
 </div>
 {{ } }}
+<br/>
+<b>Note:</b> You may reply this request in natural language text, and make sure all required information in the Response Schema is provided!
 <br/>
 <br/>
 <!-- TODO: TZ -->

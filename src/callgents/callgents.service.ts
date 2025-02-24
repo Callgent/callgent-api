@@ -4,12 +4,13 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Callgent, Prisma, PrismaClient } from '@prisma/client';
-import { Utils } from '../infra/libs/utils';
-import { selectHelper } from '../infra/repo/select.helper';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { Utils } from '../infras/libs/utils';
+import { selectHelper } from '../infras/repo/select.helper';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 import { CreateCallgentDto } from './dto/create-callgent.dto';
 import { UpdateCallgentDto } from './dto/update-callgent.dto';
 import { CallgentCreatedEvent } from './events/callgent-created.event';
+import { CallgentDeletedEvent } from './events/callgent-deleted.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -53,6 +54,7 @@ export class CallgentsService {
       });
     }
 
+    // await all handlers final results
     await this.eventEmitter.emitAsync(
       CallgentCreatedEvent.eventName,
       new CallgentCreatedEvent({ ...data, ...ret }),
@@ -64,13 +66,13 @@ export class CallgentsService {
   findMany({
     select,
     where,
-    orderBy = { pk: 'desc' },
+    orderBy = [{ pk: 'desc' }],
     page,
     perPage,
   }: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput[];
     page?: number;
     perPage?: number;
   }) {
@@ -120,11 +122,30 @@ export class CallgentsService {
   // }
 
   @Transactional()
-  delete(id: string) {
+  async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
-      prisma.callgent.delete({ select, where: { id } }),
-    );
+
+    const [ret] = await Promise.all([
+      await selectHelper(this.defSelect, (select) =>
+        prisma.callgent.delete({ select, where: { id } }),
+      ),
+      // directly delete entries, needn't EntriesChangedEvent
+      prisma.entry.deleteMany({
+        where: { callgentId: id },
+      }),
+      // directly delete endpoints, needn't EndpointsChangedEvent
+      prisma.endpoint.deleteMany({
+        where: { callgentId: id },
+      }),
+    ]);
+
+    if (ret)
+      this.eventEmitter.emitAsync(
+        CallgentDeletedEvent.eventName,
+        new CallgentDeletedEvent(ret),
+      );
+
+    return ret;
   }
 
   @Transactional()
@@ -143,20 +164,23 @@ export class CallgentsService {
   @Transactional()
   async findOne(id: string, select?: Prisma.CallgentSelect) {
     const prisma = this.txHost.tx as PrismaClient;
-    await prisma.callgent.update({
-      where: { id },
-      select: { id: true },
-      data: { viewed: { increment: 1 } },
-    });
-    return selectHelper(
-      select,
-      (select) =>
-        prisma.callgent.findUnique({
-          select,
-          where: { id },
-        }),
-      this.defSelect,
-    );
+
+    try {
+      const c = await selectHelper(
+        select,
+        (select) =>
+          prisma.callgent.update({
+            where: { id },
+            select,
+            data: { viewed: { increment: 1 } },
+          }),
+        this.defSelect,
+      );
+      return c;
+    } catch (e) {
+      if (e.message.includes(' not found.')) return null;
+      throw e;
+    }
   }
 
   async getByName(name: string, select?: Prisma.CallgentSelect) {
@@ -167,7 +191,9 @@ export class CallgentsService {
       (select) =>
         prisma.callgent.findUnique({
           select,
-          where: { tenantPk_name: { tenantPk, name } },
+          where: {
+            tenantPk_name_deletedAt: { tenantPk, name, deletedAt: 0 },
+          },
         }),
       this.defSelect,
     ).then((c) => {

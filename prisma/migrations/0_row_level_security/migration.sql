@@ -234,15 +234,15 @@ ALTER TABLE "Task" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "TaskAction" FORCE ROW LEVEL SECURITY;
 
 -- Create row security policies
-CREATE POLICY tenant_isolation_policy ON "User" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "UserIdentity" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "Callgent" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "CallgentFunction" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "Endpoint" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "EndpointAuth" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "EventListener" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "Task" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
-CREATE POLICY tenant_isolation_policy ON "TaskAction" USING ("tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "User" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "UserIdentity" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "Callgent" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "CallgentFunction" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "Endpoint" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "EndpointAuth" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "EventListener" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "Task" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
+CREATE POLICY tenant_isolation_policy ON "TaskAction" USING ("tenantPk" = 0 or "tenantPk" = COALESCE(NULLIF(current_setting('tenancy.tenantPk', TRUE), ''), '0')::int);
 
 -- Create policies to bypass RLS (optional)
 CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');

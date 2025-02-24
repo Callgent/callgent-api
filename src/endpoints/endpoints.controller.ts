@@ -22,8 +22,8 @@ import {
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
 import { EntryDto } from '../entries/dto/entry.dto';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
-import { EntityIdExists } from '../infra/repo/validators/entity-exists.validator';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
 import { EndpointsService } from './endpoints.service';
 import { EndpointDto } from './dto/endpoint.dto';
@@ -144,11 +144,11 @@ export class EndpointsController {
   // })
   // @Get()
   // async findAll(
-  //   @Query() query: { queryString?: string; page?: 1; perPage?: 10 },
+  //   @Query() query: { query?: string; page?: 1; perPage?: 10 },
   // ) {
-  //   const where = query.queryString
+  //   const where = query.query
   //     ? {
-  //         name: { contains: query.queryString },
+  //         name: { contains: query.query },
   //       }
   //     : undefined;
   //   return this.endpointService.findAll({
@@ -167,9 +167,13 @@ export class EndpointsController {
     },
   })
   @Put('/:id')
-  async update(@Param('id') id: string, @Body() dto: UpdateEndpointDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEndpointDto,
+    @Req() req,
+  ) {
     dto.id = id;
-    return { data: await this.endpointService.update(dto) };
+    return { data: await this.endpointService.update(dto, req.user.sub) };
   }
 
   @ApiOkResponse({
@@ -185,7 +189,7 @@ export class EndpointsController {
     },
   })
   @Delete('/:id')
-  async delete(@Param('id') id: string) {
-    return { data: await this.endpointService.delete(id) };
+  async delete(@Param('id') id: string, @Req() req) {
+    return { data: await this.endpointService.delete(id, req.user.sub) };
   }
 }

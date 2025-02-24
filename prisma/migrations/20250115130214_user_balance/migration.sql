@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "UserBalance" ALTER COLUMN "userId" SET DATA TYPE VARCHAR(36);

@@ -2,8 +2,8 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { JwtPayload } from '../infra/auth/jwt/jwt.service';
-import { Utils } from '../infra/libs/utils';
+import { JwtPayload } from '../infras/auth/jwt/jwt-auth.service';
+import { Utils } from '../infras/libs/utils';
 
 /** TODO redis */
 @Injectable()
@@ -18,7 +18,7 @@ export class AuthTokensService {
    */
   @Transactional()
   async issue(payload: JwtPayload, type: 'JWT' | 'API_KEY') {
-    const token = payload.jti || (payload.jti = Utils.uuid());
+    const token = payload.jti || (payload.jti = Utils.uuid({ raw: true }));
     const expiresAt = payload.exp
       ? new Date(Date.now() + payload.exp * 1000)
       : undefined;

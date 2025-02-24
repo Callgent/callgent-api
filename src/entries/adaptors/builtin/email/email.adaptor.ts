@@ -15,12 +15,15 @@ import {
 import { EndpointDto } from '../../../../endpoints/dto/endpoint.dto';
 import { EntryDto } from '../../../dto/entry.dto';
 import { Entry } from '../../../entities/entry.entity';
-import { ClientRequestEvent } from '../../../events/client-request.event';
-import { EntryAdaptor } from '../../entry-adaptor.base';
-import { EntryAdaptorName } from '../../entry-adaptor.decorator';
+import {
+  ClientRequestEvent,
+  InvokeStatus,
+} from '../../../events/client-request.event';
+import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
+import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorName('Email', 'both')
-export class EmailAdaptor extends EntryAdaptor {
+@EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
+export class EmailAdaptor extends BothEntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,
     private readonly emailsService: EmailsService,
@@ -28,8 +31,13 @@ export class EmailAdaptor extends EntryAdaptor {
     super(agentsService);
   }
 
-  protected _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
-    data.host = `invoke+${data.id}@my.callgent.com`;
+  isAsync = () => true;
+
+  _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
+    data.host = this.emailsService.getRelayAddress(
+      data.callgentId,
+      EmailRelayKey.callgent,
+    );
   }
 
   getCallback(callback: string, reqEntry?: EntryDto): Promise<string> {
@@ -56,28 +64,25 @@ export class EmailAdaptor extends EntryAdaptor {
   }
 
   @Transactional()
-  async postprocess(reqEvent: ClientRequestEvent, fun: EndpointDto) {
-    const resp = reqEvent?.context?.resp as unknown as RelayEmail;
+  async postprocess(
+    resp: RelayEmail,
+    reqEvent: ClientRequestEvent,
+    fun: EndpointDto,
+    ctx: InvokeStatus,
+  ) {
     if (!resp?.content?.html)
       throw new BadRequestException(
         'Missing response for reqEvent#' + reqEvent.id,
       );
 
     // convert resp to api format
-    reqEvent.context.resp = await this.agentsService.convert2Response(
-      reqEvent?.context?.map2Endpoints?.args,
+    const data = await this.agentsService.convert2Response(
+      ctx.args,
       resp.content.text || resp.content.html,
       fun,
-      reqEvent.id,
+      reqEvent,
     );
-  }
-
-  readData(name: string, hints?: { [key: string]: any }): Promise<any> {
-    throw new NotImplementedException('Method not implemented.');
-  }
-
-  req2Json(req: object) {
-    throw new NotImplementedException('Method not implemented.');
+    return data;
   }
 
   callback(resp: any): Promise<boolean> {
@@ -87,42 +92,74 @@ export class EmailAdaptor extends EntryAdaptor {
   /**
    * constructs an email sent to sep.host
    *
-   * @param fun - endpoint
+   * @param endpoint - function
    * @param args - function arguments
-   * @param sep - server entry
-   * @param reqEvent - client request event
+   * @param sentry - config
+   * @param reqEvent - context event
    */
   async invoke(
-    fun: EndpointDto,
+    endpoint: EndpointDto,
     args: object,
-    sep: Entry,
+    sentry: Entry,
     reqEvent: ClientRequestEvent,
+    ctx: InvokeStatus,
   ) {
     const emailFrom = this.emailsService.getRelayAddress(
       reqEvent.id,
       EmailRelayKey.request,
     );
-    const { host: emailTo } = sep;
+    const { host: emailTo } = sentry;
 
-    const responses = this._responses30x(fun.responses);
+    const params = this._params30x(endpoint.params, args);
+    const responses = this._responses30x(endpoint.responses);
     return this.emailsService
       .sendTemplateEmail(
         emailTo,
         'relay-sep-invoke',
-        { relayId: reqEvent.id, fun, sep, args, responses },
+        {
+          relayId: `${ctx.invokeId}-${reqEvent.id}`, // todo
+          callgentName: reqEvent.context.callgentName,
+          endpoint,
+          params,
+          responses,
+        },
         { email: emailFrom, name: 'Callgent Invoker' },
       )
-      .then((res) => ({
-        statusCode: res ? 2 : 500, // pending or error
-        data: reqEvent,
-        resumeFunName: 'postInvokeSEP',
-        message: res
-          ? 'Service called via email, please wait for async response'
-          : 'Failed to call service via email',
-      }));
+      .then((res): PendingOrResponse => {
+        return res
+          ? {
+              statusCode: 2,
+              message: 'Service called via email, please wait for reply.',
+            }
+          : {
+              data: {
+                status: 500,
+                statusText: 'Failed to call service via email ' + emailTo,
+              },
+            };
+      });
   }
 
-  private _responses30x(responses: any) {
+  /** openAPI 3.0.x */
+  protected _params30x(params: any, args: object) {
+    const ret = [];
+    const { parameters, requestBody } = params;
+    parameters?.forEach((p) => {
+      ret.push({ ...p, value: args[p.name] });
+    });
+    if (requestBody) {
+      const item: any = { name: 'requestBody' };
+      // item.content = this._formatMediaType(requestBody.content);
+      item.value = args['requestBody'];
+      if (requestBody.required) item.required = requestBody.required;
+      if (requestBody.description) item.description = requestBody.description;
+      ret.push(item);
+    }
+    return ret;
+  }
+
+  /** openAPI 3.0.x */
+  protected _responses30x(responses: any) {
     const list = [];
     if (!responses) return list;
     if (responses.default)
@@ -140,7 +177,7 @@ export class EmailAdaptor extends EntryAdaptor {
     return list;
   }
 
-  private _formatMediaType(content: any) {
+  protected _formatMediaType(content: any) {
     const list = [];
     if (!content) return content;
 

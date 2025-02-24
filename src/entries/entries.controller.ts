@@ -15,11 +15,14 @@ import {
   ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
+  ApiQuery,
   ApiSecurity,
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { JwtGuard } from '../infra/auth/jwt/jwt.guard';
+import { Prisma } from '@prisma/client';
+import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
+import { Utils } from '../infras/libs/utils';
 import { RestApiResponse } from '../restapi/response.interface';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { EntryDto } from './dto/entry.dto';
@@ -29,7 +32,6 @@ import { EntriesService } from './entries.service';
 @ApiTags('Entries')
 @ApiSecurity('defaultBearerAuth')
 @ApiExtraModels(EntryDto)
-@UseGuards(JwtGuard)
 @Controller('entries')
 export class EntriesController {
   constructor(
@@ -37,9 +39,27 @@ export class EntriesController {
     private readonly entriesService: EntriesService,
   ) {}
 
+  @ApiOkResponse({
+    description: 'returns { [adaptorKey: string]: "icon-url" }',
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: {
+              type: 'object',
+              additionalProperties: {
+                type: 'string',
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
   @Get('adaptors')
   listAdaptors(@Query('client') client?: boolean) {
-    return this.entriesService.list(client);
+    return { data: this.entriesService.listAdaptors(client) };
   }
 
   // @ApiOkResponse({ type: EntryConfig })
@@ -59,6 +79,7 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Post(':adaptorKey/create')
   async createEntry(
     @Req() req,
@@ -82,6 +103,7 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Put(':id')
   async updateEntry(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
     return {
@@ -102,15 +124,17 @@ export class EntriesController {
   // }
 
   @Post(':id/init')
+  @UseGuards(JwtGuard)
   initEntry(@Param('id') id: string, @Body() initParams: object) {
     this.entriesService.init(id, initParams);
   }
 
-  /** manual test entry */
-  @Post(':id/test')
-  testEntry(@Param('id') id: string, @Body() any: any) {
-    //
-  }
+  // /** manual test entry */
+  // @Post(':id/test')
+  // @UseGuards(JwtGuard)
+  // testEntry(@Param('id') id: string, @Body() any: any) {
+  //   //
+  // }
 
   @ApiOkResponse({
     schema: {
@@ -124,8 +148,77 @@ export class EntriesController {
       ],
     },
   })
+  @UseGuards(JwtGuard)
   @Delete('/:id')
-  async remove(@Param('id') id: string) {
-    return { data: await this.entriesService.delete(id) };
+  async remove(@Param('id') id: string, @Req() req) {
+    return { data: await this.entriesService.delete(id, req.user.sub) };
+  }
+
+  @ApiQuery({ name: 'query', required: false, type: String })
+  @ApiQuery({
+    name: 'adaptor',
+    description: 'Service adaptor type',
+    required: false,
+    type: String,
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'perPage', required: false, type: Number })
+  @ApiQuery({
+    name: 'orderBy',
+    description:
+      'e.g. createdAt:desc,price:asc. Allowed fields: name,type,adaptorKey,host,pk,updatedAt',
+    required: false,
+    type: String,
+  })
+  @ApiOkResponse({
+    description: 'List of server entries',
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        {
+          properties: {
+            data: {
+              type: 'array',
+              items: { $ref: getSchemaPath(EntryDto) },
+            },
+          },
+        },
+      ],
+    },
+  })
+  @UseGuards(JwtGuard)
+  @Get('server')
+  listServerEntries(
+    @Query()
+    {
+      query,
+      adaptor: adaptorKey,
+      callgentId,
+      page,
+      perPage,
+      orderBy: orders,
+    }: {
+      query?: string;
+      adaptor?: string;
+      callgentId?: string;
+      page?: number;
+      perPage?: number;
+      orderBy?: string;
+    },
+  ) {
+    page = page ? +page : undefined;
+    perPage = perPage ? +perPage : undefined;
+    const where: Prisma.EntryWhereInput = {
+      type: 'SERVER',
+      adaptorKey: adaptorKey || undefined,
+      callgentId: callgentId || undefined,
+    };
+    if (query?.trim()) where.name = { contains: query.trim() };
+    const orderBy: Prisma.EntryOrderByWithRelationInput[] = Utils.parseOrderBy(
+      orders,
+      ['name', 'type', 'adaptorKey', 'host', 'pk', 'updatedAt'],
+    );
+    // FIXME: only list visible entries: mine/team/hub
+    return this.entriesService.findMany({ page, perPage, where, orderBy });
   }
 }

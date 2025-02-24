@@ -12,12 +12,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
 import { EmailsService } from '../emails/emails.service';
-import { AuthLoginEvent } from '../infra/auth/events/auth-login.event';
-import { AuthLoginedEvent } from '../infra/auth/events/auth-logined.event';
-import { JwtPayload } from '../infra/auth/jwt/jwt.service';
-import { Utils } from '../infra/libs/utils';
-import { selectHelper } from '../infra/repo/select.helper';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { AuthLoginEvent } from '../infras/auth/events/auth-login.event';
+import { AuthLoginedEvent } from '../infras/auth/events/auth-logined.event';
+import { JwtPayload } from '../infras/auth/jwt/jwt-auth.service';
+import { Utils } from '../infras/libs/utils';
+import { selectHelper } from '../infras/repo/select.helper';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';
 
@@ -44,12 +44,13 @@ export class UsersService {
    * @throws UnauthorizedException
    */
   async login(email: string, password: string) {
-    const ui = await this.findUserIdentity(email, 'local', {
+    const ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
     });
 
     let valid = !!ui?.credentials;
     valid = valid && (await Utils.hashCompare(password, ui.credentials));
+    // Utils.hashSalted(password).then((s)=>console.log(s));
 
     if (valid) return ui.user;
     throw new UnauthorizedException();
@@ -62,7 +63,8 @@ export class UsersService {
    * @param prisma
    * @param options {noTenant: 'true: w/o tenant limitation', evenInvalid: 'true: return deleted or any tenant.statusCode'}
    */
-  async findUserIdentity(
+  @Transactional()
+  async $findUserIdentity(
     uid: string,
     provider: string,
     options?: {
@@ -75,21 +77,11 @@ export class UsersService {
     try {
       // find user identity
       const where = options?.evenInvalid
-        ? {
-            AND: {
-              uid,
-              provider,
-              OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
-            },
-          }
-        : {
-            AND: { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } },
-          };
+        ? { uid, provider, deletedAt: { gte: 0 } }
+        : { uid, provider, user: { tenant: { statusCode: { gt: 0 } } } };
       const ui = await prisma.userIdentity.findFirst({
         where,
-        include: {
-          user: { include: { tenant: true } },
-        },
+        include: { user: { include: { tenant: true } } },
       });
       return ui;
     } finally {
@@ -113,6 +105,7 @@ export class UsersService {
 
   /**
    * register a new user if identity not existing; return user if existing and valid;
+   * Note: tenant ctx will be set
    * @param ui - { email?, uid, provider, name?, credentials }
    * @returns user. undefined if existing but pending
    * @throws ForbiddenException if any of userIdentity/user/tenant is softly deleted
@@ -125,7 +118,7 @@ export class UsersService {
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
 
     const prisma = this.txHost.tx as PrismaClient;
-    let uiInDb = await this.findUserIdentity(ui.uid, ui.provider, {
+    let uiInDb = await this.$findUserIdentity(ui.uid, ui.provider, {
       noTenant: true,
       evenInvalid: true,
     });
@@ -149,10 +142,11 @@ export class UsersService {
         this.logger.warn('account is invalid, %j', uiInDb);
         throw new ForbiddenException(
           `Sorry, current account is in ${
-            uiInDb.user?.tenant?.statusCode == 0 ? 'pending' : 'inactive'
-          } statusCode, please try again later.`,
+            uiInDb.user?.tenant?.statusCode === 0 ? 'pending' : 'inactive'
+          } status, please try again later.`,
         );
       }
+      this.tenancyService.setTenantId(uiInDb.user.tenant.pk);
     } else {
       // register tenant from email host
       const tenant = await this.registerTenant(emailHost);
@@ -180,6 +174,7 @@ export class UsersService {
       };
 
       // create user and identity
+      this.tenancyService.setTenantId(tenant.pk);
       if (ui.provider === 'local' && ui.credentials)
         ui.credentials = await this.updateLocalPassword(ui.credentials);
       uiInDb = await prisma.userIdentity.create({
@@ -219,12 +214,7 @@ export class UsersService {
     let tenant =
       emailHost &&
       (await prisma.tenant.findFirst({
-        where: {
-          AND: {
-            emailHost,
-            OR: [{ deletedAt: null }, { deletedAt: { not: null } }],
-          },
-        },
+        where: { emailHost, deletedAt: { gte: 0 } },
       }));
 
     if (!tenant) {
@@ -239,6 +229,7 @@ export class UsersService {
         },
       });
     }
+    this.tenancyService.setTenantId(tenant.pk);
     return tenant;
   }
 
@@ -261,7 +252,7 @@ export class UsersService {
   @Transactional()
   async sendValidationEmail(args: ValidationEmailVo, userId: string) {
     const { email, create } = args;
-    const ui = await this.findUserIdentity(email, 'local', {
+    const ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
       evenInvalid: true,
     });
@@ -295,6 +286,7 @@ export class UsersService {
     );
   }
 
+  /** tenant ctx will be set */
   @Transactional()
   async validateEmail(token: string, pwd?: string) {
     const payload = await this.authTokensService.verify(token, 'API_KEY', true);
@@ -302,7 +294,7 @@ export class UsersService {
 
     const { sub: email, resetPwd, create, userId } = payload;
 
-    let ui = await this.findUserIdentity(email, 'local', {
+    let ui = await this.$findUserIdentity(email, 'local', {
       noTenant: true,
       evenInvalid: true,
     });
@@ -318,11 +310,13 @@ export class UsersService {
       if (resetPwd) await this.updateLocalPassword(pwd, ui.pk);
       else if (ui.email_verified)
         throw new BadRequestException(email + ' is already verified');
-      else
+      else {
+        this.tenancyService.setTenantId(ui.user.tenant.pk);
         prisma.userIdentity.update({
           where: { pk: ui.pk },
           data: { email_verified: true },
         });
+      }
     } else {
       if (!create)
         throw new BadRequestException(
@@ -384,5 +378,21 @@ export class UsersService {
       ui.user.tenant.deletedAt ||
       ui.user.tenant.statusCode !== 1
     );
+  }
+
+  @Transactional()
+  async $getTenant(userId: string) {
+    if (!userId) return;
+
+    const prisma = this.txHost.tx as PrismaClient;
+    await this.tenancyService.bypassTenancy(prisma);
+    const t = await prisma.user
+      .findUnique({
+        where: { id: userId },
+        select: { tenant: true },
+      })
+      .then((u) => u?.tenant);
+    await this.tenancyService.bypassTenancy(prisma, false);
+    return t;
   }
 }

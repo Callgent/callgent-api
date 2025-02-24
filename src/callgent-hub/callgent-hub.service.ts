@@ -7,13 +7,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CallgentRealm, Prisma, PrismaClient } from '@prisma/client';
-import { EndpointsService } from '../endpoints/endpoints.service';
 import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { CallgentsService } from '../callgents/callgents.service';
 import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
+import { EndpointsService } from '../endpoints/endpoints.service';
 import { EntriesService } from '../entries/entries.service';
-import { PrismaTenancyService } from '../infra/repo/tenancy/prisma-tenancy.service';
+import { Utils } from '../infras/libs/utils';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 
 @Injectable()
 export class CallgentHubService {
@@ -45,7 +46,7 @@ export class CallgentHubService {
   async findAllInHub(params: {
     select?: Prisma.CallgentSelect;
     where?: Prisma.CallgentWhereInput;
-    orderBy?: Prisma.CallgentOrderByWithRelationInput;
+    orderBy?: Prisma.CallgentOrderByWithRelationInput[];
     page?: number;
     perPage?: number;
   }) {
@@ -97,11 +98,14 @@ export class CallgentHubService {
         id: true,
         name: true,
         summary: true,
+        instruction: true,
         entries: {
           select: {
             id: true,
             name: true,
             type: true,
+            summary: true,
+            instruction: true,
             adaptorKey: true,
             priority: true,
             host: true,
@@ -179,6 +183,7 @@ export class CallgentHubService {
               summary: true,
               description: true,
               securities: true,
+              adaptorKey: true,
               params: true,
               responses: true,
               rawJson: true,
@@ -190,28 +195,28 @@ export class CallgentHubService {
 
       this.tenancyService.setTenantId(toTenant);
       await Promise.all(
-        ens.map(async (epOld) => {
-          const securities: any[] = dupSecurities(epOld.securities);
+        ens.map(async (enOld) => {
+          const securities: any[] = dupSecurities(enOld.securities);
 
-          const ep = await this.entriesService.create({
-            ...epOld,
+          const en = await this.entriesService.create({
+            ...enOld,
             callgentId,
             securities,
             createdBy,
           });
 
-          return Promise.all(
-            endpointMap[epOld.id].map((fun) => {
-              const securities: any[] = dupSecurities(fun.securities);
-              return this.endpointsService.create({
-                ...fun,
-                securities,
-                callgentId,
-                entryId: ep.id,
-                createdBy,
-              });
-            }),
-          );
+          const eps = endpointMap[enOld.id].map((fun) => {
+            const securities: any[] = dupSecurities(fun.securities);
+            return {
+              ...fun,
+              id: Utils.uuid(),
+              securities,
+              callgentId,
+              entryId: en.id,
+              createdBy,
+            };
+          });
+          return eps.length && this.endpointsService.createMany(eps, en as any, createdBy);
         }),
       );
       return callgent;

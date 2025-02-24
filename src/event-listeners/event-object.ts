@@ -1,5 +1,6 @@
 import { EventCallbackType } from '@prisma/client';
-import { Utils } from '../infra/libs/utils';
+import path from 'path';
+import { Utils } from '../infras/libs/utils';
 
 export class EventObject {
   constructor(
@@ -7,16 +8,93 @@ export class EventObject {
     public readonly srcId: string,
     public readonly eventType: string,
     public readonly dataType: string,
-    /** target id to relate several events */
-    public targetId: string,
+    taskId: string,
+    public readonly title: string,
+    public readonly paidBy: string,
+    public readonly calledBy?: string,
     /** url template for response callback, `callgent:epName[@callgent]` to invoke callgent */
     public callback?: string,
     public readonly callbackType: EventCallbackType = 'EVENT',
   ) {
     this.id = Utils.uuid();
+
+    this.taskId = this._getTaskId(taskId);
+
+    Object.defineProperty(this, 'context', {
+      value: {},
+      enumerable: false,
+    });
+    Object.defineProperty(this, 'stopPropagation', {
+      value: false,
+      writable: true,
+      enumerable: false,
+    });
   }
   public readonly id: string;
-  public readonly context: { [key: string]: any } = {};
-  public stopPropagation = false;
-  public preventDefault = false;
+  /** task id to relate several events, format: `{yymmdd}-{nanoid}` */
+  public readonly taskId: string;
+  public declare readonly context: { [key: string]: any };
+  /** if true, the event will not be propagated to other listeners */
+  public declare stopPropagation: boolean;
+
+  /** event status/msg:  <0: error, 0: done, 1: processing, 2: pending, others: http status */
+  public statusCode?: number;
+  public message?: string;
+
+  /**
+   * @returns taskId{task id}: `{yyMMdd}-{nanoid}`
+   */
+  protected _getTaskId(taskId: string) {
+    let sp = taskId?.split('-');
+    if (
+      !(taskId?.length == this.id.length + 7) ||
+      sp[0].length !== 6 ||
+      parseInt(sp[0]) + '' !== sp[0]
+    ) {
+      sp = [this._getUTCDateString(), this.id];
+      taskId = sp.join('-');
+    }
+    return taskId;
+  }
+
+  /** get task working dir */
+  public getTaskCwd(base: string) {
+    const [ts, ...ids] = this.taskId.split('-');
+    const id = ids.join('-');
+    return path.join(
+      base,
+      ts.substring(0, 4), // yyMM
+      ts.substring(4), // dd
+      id.at(-1), // id[-1:]
+      id, // id
+    );
+  }
+
+  protected _getUTCDateString() {
+    const now = new Date();
+
+    // 获取UTC年份的后两位
+    const year = now.getUTCFullYear() % 100;
+
+    // 获取UTC月份（0-11），需要加1
+    const month = now.getUTCMonth() + 1;
+
+    // 获取UTC日期
+    const day = now.getUTCDate();
+
+    // 格式化为YYMMDD字符串
+    const yearStr = String(year).padStart(2, '0');
+    const monthStr = String(month).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+
+    return `${yearStr}${monthStr}${dayStr}`;
+  }
+}
+
+/** response from service endpoint */
+export class ServiceResponse {
+  data?: any;
+  headers?: { [key: string]: any };
+  status: number;
+  statusText?: string;
 }

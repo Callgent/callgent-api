@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { CallgentRealmsService } from '../callgent-realms/callgent-realms.service';
@@ -15,9 +16,11 @@ import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { Utils } from '../infra/libs/utils';
-import { selectHelper } from '../infra/repo/select.helper';
+import { Optional, Utils } from '../infras/libs/utils';
+import { selectHelper } from '../infras/repo/select.helper';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
+import { Endpoint } from './entities/endpoint.entity';
+import { EndpointsChangedEvent } from './events/endpoints-changed.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -26,9 +29,10 @@ export class EndpointsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
-    private readonly endpointsService: EntriesService,
+    private readonly entriesService: EntriesService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     pk: false,
@@ -36,7 +40,7 @@ export class EndpointsService {
     rawJson: false,
     params: false,
     responses: false,
-    callgentId: false,
+    // callgentId: false,
     createdBy: false,
     deletedAt: false,
   };
@@ -44,7 +48,7 @@ export class EndpointsService {
   async loadEndpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const { epName, callgentId } = reqEvent.data;
+    const { epName, callgentId } = reqEvent.context;
 
     // TODO if too many endpoints, use summary first
     const { data: eps } = await this.findMany({
@@ -59,7 +63,7 @@ export class EndpointsService {
     });
     if (!eps.length)
       throw new NotFoundException(
-        `No service endpoints found on callgent#${callgentId}${
+        `No service endpoints found for callgent#${callgentId}${
           epName ? ' name=' + epName : ''
         }`,
       );
@@ -98,10 +102,28 @@ export class EndpointsService {
   // }
 
   @Transactional()
-  async create(data: Prisma.EndpointUncheckedCreateInput) {
+  async create(data: Prisma.EndpointUncheckedCreateInput, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const id = Utils.uuid();
-    return prisma.endpoint.create({ data: { ...data, id } });
+    const ep = await prisma.endpoint.create({ data: { ...data, id } });
+    await this._pubEvent({ opBy, entry: { id: ep.entryId }, news: [ep] });
+    return ep;
+  }
+
+  protected async _pubEvent(data: {
+    opBy: string;
+    entry: {
+      id: string;
+      summary?: string;
+      instruction?: string;
+    };
+    news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
+    olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
+  }) {
+    return this.eventEmitter.emitAsync(
+      EndpointsChangedEvent.eventName,
+      new EndpointsChangedEvent(data),
+    );
   }
 
   @Transactional()
@@ -130,49 +152,48 @@ export class EndpointsService {
     }
 
     // validation
-    const actMap = apis.map<Prisma.EndpointUncheckedCreateInput>(
-      (f) => {
-        const ret = {
-          ...f,
-          id: Utils.uuid(),
-          name: Utils.formalApiName(f.method, f.path),
-          entryId: entry.id,
-          callgentId: entry.callgentId,
-          createdBy: createdBy,
-        };
-        if (securities?.length || ret.securities?.length) {
-          const securitiesMerged = [
-            ...(securities || []),
-            ...(ret.securities || []),
-          ].map((security) => {
-            const result: RealmSecurityVO = {};
-            Object.entries(security).forEach(([name, scopes]) => {
-              const realm = realmMap[name];
-              if (!Number.isFinite(realm?.pk))
-                throw new BadRequestException(
-                  'Unknown security scheme name: ' + name,
-                );
-              const item = this.callgentRealmsService.constructSecurity(
-                realm,
-                entry,
-                scopes,
+    const actMap = apis.map<
+      Omit<Prisma.EndpointUncheckedCreateInput, 'isAsync'>
+    >((f) => {
+      const ret = {
+        ...f,
+        id: Utils.uuid(),
+        name: Utils.formalApiName(f.method, f.path),
+        entryId: entry.id,
+        adaptorKey: entry.adaptorKey,
+        callgentId: entry.callgentId,
+        createdBy: createdBy,
+        servers: f.servers as any,
+      };
+      if (securities?.length || ret.securities?.length) {
+        const securitiesMerged = [
+          ...(securities || []),
+          ...(ret.securities || []),
+        ].map((security) => {
+          const result: RealmSecurityVO = {};
+          Object.entries(security).forEach(([name, scopes]) => {
+            const realm = realmMap[name];
+            if (!Number.isFinite(realm?.pk))
+              throw new BadRequestException(
+                'Unknown security scheme name: ' + name,
               );
+            const item = this.callgentRealmsService.constructSecurity(
+              realm,
+              entry,
+              scopes,
+            );
 
-              result['' + item.realmPk] = item;
-            });
-            return result;
+            result['' + item.realmPk] = item;
           });
-          ret.securities = securitiesMerged as any;
-        }
-        return ret;
-      },
-    );
+          return result;
+        });
+        ret.securities = securitiesMerged as any;
+      }
+      return ret;
+    });
 
     // create api endpoints
-    const prisma = this.txHost.tx as PrismaClient;
-    const { count: actionsCount } = await prisma.endpoint.createMany({
-      data: actMap,
-    });
+    const actionsCount = this.createMany(actMap, entry, createdBy);
 
     // 根据adaptor，auth type，判定可选的auth servers
     // FIXME save securitySchemes on entry
@@ -186,6 +207,25 @@ export class EndpointsService {
   }
 
   @Transactional()
+  async createMany(
+    endpoints: Optional<Prisma.EndpointUncheckedCreateInput, 'isAsync'>[],
+    entry: EntryDto,
+    opBy: string,
+  ) {
+    const adaptor = this.entriesService.getAdaptor(
+      entry.adaptorKey,
+      EntryType.SERVER,
+    );
+    endpoints.forEach((e) => (e.isAsync = adaptor.isAsync(e as any)));
+    const data: Prisma.EndpointUncheckedCreateInput[] =
+      endpoints as Prisma.EndpointUncheckedCreateInput[];
+    const prisma = this.txHost.tx as PrismaClient;
+    const { count } = await prisma.endpoint.createMany({ data });
+    await this._pubEvent({ opBy, entry: entry as any, news: data as any[] });
+    return count;
+  }
+
+  @Transactional()
   async importBatch(
     entry: EntryDto,
     apiTxt: { text: string; format?: 'json' | 'yaml' | 'text' },
@@ -193,10 +233,10 @@ export class EndpointsService {
   ) {
     if (entry?.type != EntryType.SERVER)
       throw new BadRequestException(
-        'Function entries can only be imported into Server Entry. ',
+        'Function endpoints can only be imported into Server Entry. ',
       );
 
-    const apiSpec = await this.endpointsService.parseApis(entry, apiTxt);
+    const apiSpec = await this.entriesService.parseApis(entry, apiTxt);
     return this.createBatch(entry, apiSpec, createdBy);
   }
 
@@ -239,7 +279,7 @@ export class EndpointsService {
   findAll({
     select,
     where,
-    orderBy,
+    orderBy = { pk: 'asc' },
   }: {
     select?: Prisma.EndpointSelect;
     where?: Prisma.EndpointWhereInput;
@@ -254,25 +294,35 @@ export class EndpointsService {
   }
 
   @Transactional()
-  delete(id: string) {
+  async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
+    const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.delete({ select, where: { id } }),
     );
+    await this._pubEvent({ opBy, entry: { id: ret.entryId }, olds: [ret] });
+    return ret;
   }
 
   @Transactional()
-  update(dto: UpdateEndpointDto) {
+  async update(dto: UpdateEndpointDto, opBy: string) {
     if (!dto.id) return;
     dto.name = Utils.formalApiName(dto.method, dto.path);
     const prisma = this.txHost.tx as PrismaClient;
-    return selectHelper(this.defSelect, (select) =>
+    const old = await this.findOne(dto.id, this.defSelect);
+    const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.update({
         select,
         where: { id: dto.id },
         data: dto as any,
       }),
     );
+    await this._pubEvent({
+      opBy,
+      entry: { id: ret.entryId },
+      news: [ret],
+      olds: [old],
+    });
+    return ret;
   }
 
   findOne(id: string, select?: Prisma.EndpointSelect) {

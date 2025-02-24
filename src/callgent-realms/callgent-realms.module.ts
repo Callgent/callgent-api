@@ -13,7 +13,7 @@ import { HttpAuthProcessor } from './processors/http-auth.processor';
     { provide: 'apiKey-authProcessor', useClass: ApiKeyAuthProcessor },
     { provide: 'http-authProcessor', useClass: HttpAuthProcessor },
   ],
-  exports: ['CallgentRealmsService'],
   controllers: [CallgentRealmsController],
+  exports: ['CallgentRealmsService'],
 })
 export class CallgentRealmsModule {}

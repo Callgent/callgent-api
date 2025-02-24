@@ -11,11 +11,13 @@ import {
 import { ModuleRef } from '@nestjs/core';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { EndpointDto } from '../endpoints/dto/endpoint.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
+import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { selectHelper } from '../infra/repo/select.helper';
+import { selectHelper } from '../infras/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
 import {
@@ -47,10 +49,9 @@ export class CallgentRealmsService implements OnModuleInit {
   private endpointsService: EndpointsService;
   onModuleInit() {
     // a little hack: circular relation
-    this.endpointsService = this.moduleRef.get(
-      'EndpointsService',
-      { strict: false },
-    );
+    this.endpointsService = this.moduleRef.get('EndpointsService', {
+      strict: false,
+    });
   }
 
   //// auth config start ////
@@ -162,7 +163,7 @@ export class CallgentRealmsService implements OnModuleInit {
   //// auth check start, auth config end ////
 
   /** same as sep auth, except token cannot be attached to request event */
-  async checkCepAuth(
+  async checkCenAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
     const cep = await this.entriesService.findOne(reqEvent.srcId);
@@ -175,27 +176,27 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   /**
-   * check auth on the chosen endpoint.
+   * check auth on the chosen endpoints.
    * automatically starts auth process to retrieve token.
    * may callback to cep for user credentials.
    */
   async checkSepAuth(
+    endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // endpoints: Endpoint[], @see AgentsService.map2Endpoints
-    const { securities, entryId: sepId } =
-      reqEvent.context.endpoints?.length && reqEvent.context.endpoints[0];
+    const result = await this.checkSecurities(
+      reqEvent,
+      (endpoint as Endpoint).securities,
+      true,
+    );
+    if (result) return result; // FIXME: resume after post auth action
 
-    const sep = sepId && (await this.entriesService.findOne(reqEvent.srcId));
-    if (!sep)
-      throw new NotFoundException(
-        'Server entry not found, id: ' + reqEvent.srcId,
-      );
-    return this.checkSecurities(reqEvent, securities, true);
+    const sen = await this.entriesService.findOne(endpoint.entryId);
+    return this.checkSecurities(reqEvent, sen.securities as any, true);
   }
 
   /**
-   * @returns false if check fail
+   * @throws UnauthorizedException if check fail, else ok
    */
   async checkSecurities(
     reqEvent: ClientRequestEvent,
@@ -209,6 +210,7 @@ export class CallgentRealmsService implements OnModuleInit {
       const result = await this._checkSecurity(reqEvent);
       if (result) return result; // check ok
     }
+    // delete reqEvent.context.security;
 
     // check auth failed
     throw new UnauthorizedException(
@@ -246,7 +248,10 @@ export class CallgentRealmsService implements OnModuleInit {
     if (!realm?.enabled) return false;
 
     // read existing from token store
-    const userToken = await this.findUserToken(realm, reqEvent.data.callerId);
+    const userToken = await this.findUserToken(
+      realm,
+      reqEvent.context.callerId,
+    );
     if (userToken) {
       // invoke validation url. TODO security as arg
       const result = await processor.validateToken(

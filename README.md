@@ -20,6 +20,9 @@
 <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" height="20px">
 </p>
 
+*Please, help our community project. Star on GitHub!*
+**Exciting News (November, 2024):** Discover what is new in Callgent [here](https://docs.callgent.com/blog)!
+
 Callgent API is an open-source SaaS project built using NestJS, Prisma, PostgreSQL, and Swagger. It is licensed under the Apache-2.0 License.
 
 ## Table of Contents
@@ -32,6 +35,7 @@ Callgent API is an open-source SaaS project built using NestJS, Prisma, PostgreS
   - [Installation](#installation)
   - [Configuration](#configuration)
   - [Running the Application](#running-the-application)
+    - [Running from docker-compose](#running-from-docker-compose)
   - [API Documentation](#api-documentation)
   - [Testing](#testing)
   - [Contributing](#contributing)
@@ -54,7 +58,7 @@ Callgent API is a powerful, scalable, and extensible platform designed to help d
 
 Before you start using Callgent API, ensure you have the following tools installed:
 
-- Node.js (>= 14.0.0)
+- Node.js (>= 18.0.0)
 - npm (>= 6.0.0)
 - PostgreSQL (>= 10.0.0)
 - Docker (optional, for local development)
@@ -63,41 +67,60 @@ Before you start using Callgent API, ensure you have the following tools install
 
 1. Clone the repository:
 
-   ```
+   ```shell
    git clone https://github.com/Callgent/callgent-api.git
-   ```
-
-2. Change to the project directory:
-
-   ```
    cd callgent-api
    ```
 
-3. Install the dependencies:
+2. Install the dependencies:
 
-   ```
-   npm install
+   ```shell
+   pnpm install
    ```
 
 ## Configuration
 
-Create a `.env` file in the project root directory based on the `.env.example` file provided. Update the configuration values according to your environment.
+Create a `.env` file in the project root directory based on the `.env.dev` file provided. Update the configuration values according to your environment.
 
 ## Running the Application
 
 1. Run the Prisma migration to set up the database schema:
 
-   ```
-   npx prisma migrate dev --name init
+   ```shell
+   npx prisma migrate deploy
    ```
 
 2. Start the application:
 
-   ```
+   ```shell
    npm run start:dev
    ```
 
 The application will be available at `http://localhost:3000`.
+
+### Running from docker-compose
+
+1. Run the following command from project root, to start the containers:
+
+   ```shell
+   docker-compose up -d
+   ```
+
+2. Initialize the database:
+
+   ```shell
+   cp .env.dev .env
+   echo 'DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public&timezone=UTC' >> .env
+   npx prisma db seed
+   ```
+
+3. Initialize the test data (optional):
+
+   ```shell
+   pnpm run prisma:seed-test
+   ```
+
+The application will be available at `http://localhost:3003`.
 
 ## API Documentation
 
