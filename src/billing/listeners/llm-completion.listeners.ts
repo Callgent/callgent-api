@@ -12,12 +12,9 @@ export class LlmCompletionListener {
     private readonly transactionsService: TransactionsService,
   ) {}
 
+  // sync handle, throws error if insufficient balance
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(LlmCompletionEvent.eventName, {
-    async: true,
-    promisify: true,
-    suppressErrors: false,
-  })
+  @OnEvent(LlmCompletionEvent.eventName, { suppressErrors: false })
   async handleLlmCompletion(event: LlmCompletionEvent) {
     const { res, paidBy } = event;
     if (!res) return this.transactionsService.check(paidBy);

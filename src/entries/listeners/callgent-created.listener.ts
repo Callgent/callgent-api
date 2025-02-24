@@ -14,7 +14,7 @@ export class CallgentCreatedListener {
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional()
-  @OnEvent(CallgentCreatedEvent.eventName)
+  @OnEvent(CallgentCreatedEvent.eventName, { suppressErrors: false })
   async handleEvent(event: CallgentCreatedEvent) {
     this.logger.debug('%j: Handling event,', event);
 

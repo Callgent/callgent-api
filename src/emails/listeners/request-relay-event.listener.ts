@@ -11,7 +11,7 @@ export class RequestRelayListener {
   constructor(private readonly eventListenersService: EventListenersService) {}
 
   @Transactional(Propagation.RequiresNew)
-  @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request, { async: true }) // always async
+  @OnEvent(EmailRelayEvent.eventPrefix + EmailRelayKey.request, { async: true }) // no wait event handled
   async handleEvent(event: EmailRelayEvent) {
     this.logger.debug('%j: Handling event,', event);
 

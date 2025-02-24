@@ -10,7 +10,7 @@ export class AuthLoginedListener {
 
   private readonly logger = new Logger(AuthLoginedListener.name);
 
-  @OnEvent(AuthLoginedEvent.eventName) // , { async: true }): this causes `await this.eventEmitter.emitAsync()` still async
+  @OnEvent(AuthLoginedEvent.eventName)
   async handleEvent(event: AuthLoginedEvent) {
     event.user?.tenantPk &&
       this.tenancyService.setTenantId(event.user.tenantPk);

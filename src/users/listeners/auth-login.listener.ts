@@ -1,3 +1,4 @@
+import { Transactional } from '@nestjs-cls/transactional';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import axios from 'axios';
@@ -12,7 +13,9 @@ export class AuthLoginListener {
   private readonly logger = new Logger(AuthLoginListener.name);
   constructor(private readonly usersService: UsersService) {}
 
-  @OnEvent(AuthLoginEvent.eventName)
+  // sync return user payload
+  @Transactional()
+  @OnEvent(AuthLoginEvent.eventName, { suppressErrors: false })
   async handleEvent(event: AuthLoginEvent) {
     this.logger.debug('%j: Handling event,', {
       ...event,
