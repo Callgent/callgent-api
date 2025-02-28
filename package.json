@@ -76,7 +76,7 @@
     "nestjs-cls": "^4.4.1",
     "nestjs-oauth2": "^0.0.7",
     "nestjs-pino": "^4.1.0",
-    "nestjs-prisma": "^0.23.0",
+    "nestjs-prisma": "^0.24.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "phin": "^3.7.1",
