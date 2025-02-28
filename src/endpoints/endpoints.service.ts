@@ -38,8 +38,8 @@ export class EndpointsService {
     pk: false,
     tenantPk: false,
     rawJson: false,
-    params: false,
-    responses: false,
+    // params: false,
+    // responses: false,
     // callgentId: false,
     createdBy: false,
     deletedAt: false,
@@ -312,7 +312,7 @@ export class EndpointsService {
     const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.update({
         select,
-        where: { id: dto.id },
+        where: { id: dto.id, createdBy: opBy },
         data: dto as any,
       }),
     );

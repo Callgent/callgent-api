@@ -34,9 +34,9 @@ export const mainPrismaServiceOptions = (
       // TODO, upgrade to extension: https://github.com/olivierwilkinson/prisma-extension-soft-delete
       createSoftDeleteMiddleware({
         models: {
-          Tenant: deleteHandle,
-          User: deleteHandle,
-          UserIdentity: deleteHandle,
+          Tenant: true,
+          User: true,
+          UserIdentity: true,
           // need to exclude soft deleted records in a compound findUnique operation
           // https://github.com/olivierwilkinson/prisma-soft-delete-middleware?tab=readme-ov-file#excluding-soft-deleted-records-in-a-findunique-operation
           Callgent: { ...deleteHandle, allowCompoundUniqueIndexWhere: true },
