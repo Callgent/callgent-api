@@ -27,11 +27,11 @@ export class AuthLoginListener {
     if (event.authType == 'password') {
       // validate username/password
       user = await this.usersService.login(event.username, event.credentials);
-    } else if (event.authType == 'oauth') {
-      // retrieve user info from oauth provider
+    } else if (event.authType == 'oauth2') {
+      // retrieve user info from oauth2 provider
       const userIdentity = await this.retrieveUserInfoFromOauth(event);
 
-      // oauth tenant type always 1
+      // oauth2 tenant type always 1
       // const tenantType = event.request?.query?.tenantType || 1;
       user = (await this.usersService.registerUserFromIdentity(userIdentity))
         .user;
@@ -51,9 +51,9 @@ export class AuthLoginListener {
 
   async retrieveUserInfoFromOauth(
     event: AuthLoginEvent,
-  ): Promise<CreateUserIdentityDto> {
+  ): Promise<CreateUserIdentityDto & { authType: 'oauth2' }> {
     const tokenObject = event.credentials;
-    if (!tokenObject) throw new BadRequestException('Invalid oauth token');
+    if (!tokenObject) throw new BadRequestException('Invalid oauth2 token');
 
     let u;
     switch (event.provider) {
@@ -68,6 +68,7 @@ export class AuthLoginListener {
           })
         ).data;
         u = u && {
+          authType: 'oauth2',
           provider: 'github',
           uid: u.id?.toString(),
           email: u.email,
@@ -94,6 +95,7 @@ export class AuthLoginListener {
           })
         ).data;
         u = u && {
+          authType: 'oauth2',
           provider: 'google',
           uid: u.id?.toString(),
           email: u.email,

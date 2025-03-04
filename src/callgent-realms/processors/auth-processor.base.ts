@@ -5,6 +5,7 @@ import {
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EntryDto } from '../../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
+import { Optional } from '../../infras/libs/utils';
 import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
@@ -12,7 +13,7 @@ import { CallgentRealm } from '../entities/callgent-realm.entity';
 export abstract class AuthProcessor {
   /** fill in necessary realm properties */
   constructRealm(
-    scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
+    scheme: Optional<RealmSchemeVO, 'provider'>,
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
     entry?: EntryDto,
     servers?: ServerObject[],

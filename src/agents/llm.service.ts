@@ -393,7 +393,12 @@ export class LLMService {
         },
         body: JSON.stringify(req),
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (res.ok) return res.json();
+          const err = new Error(`LLM API error: ${res.statusText}`);
+          (err as any).status = res.status;
+          reject(err);
+        })
         .then((data: LLMResponse) => {
           data.usage ||
             (data.usage = {

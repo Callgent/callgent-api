@@ -50,6 +50,7 @@ function initTestData(
 
   const ui: Prisma.UserIdentityUncheckedCreateInput = {
     tenantPk: 1,
+    authType: 'password',
     provider: 'local',
     uid: 'test@callgent.com',
     // Password123
@@ -114,7 +115,8 @@ function initTestData(
             await prisma.userIdentity
               .upsert({
                 where: {
-                  provider_uid_deletedAt: {
+                  authType_provider_uid_deletedAt: {
+                    authType: ui.authType,
                     provider: ui.provider,
                     uid: ui.uid,
                     deletedAt: 0,

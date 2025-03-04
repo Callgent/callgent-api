@@ -8,7 +8,7 @@ export class AuthLoginEvent {
    * authType: bypass, no check, auth from request: UserDto
    */
   constructor(
-    public readonly authType: 'password' | 'oauth' | 'bypass',
+    public readonly authType: 'password' | 'oauth2' | 'bypass',
     public readonly provider: string,
     public readonly credentials: any,
     public readonly username?: string,

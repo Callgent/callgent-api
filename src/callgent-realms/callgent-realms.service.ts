@@ -17,6 +17,7 @@ import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
+import { Optional } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
@@ -44,6 +45,7 @@ export class CallgentRealmsService implements OnModuleInit {
     tenantPk: false,
     createdAt: false,
     updatedAt: false,
+    deletedAt: false,
   };
 
   private endpointsService: EndpointsService;
@@ -83,7 +85,7 @@ export class CallgentRealmsService implements OnModuleInit {
   @Transactional()
   async upsertRealm(
     entry: EntryDto,
-    scheme: Omit<RealmSchemeVO, 'provider'> & { provider?: string },
+    scheme: Optional<RealmSchemeVO, 'provider'>,
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
     servers: ServerObject[],
   ) {
@@ -263,8 +265,8 @@ export class CallgentRealmsService implements OnModuleInit {
 
     // read existing from identity store
     const userIdentity = await this._findUserIdentity(
-      reqEvent.context.callerId,
       reqEvent.context.req,
+      reqEvent.context.callerId,
       realm,
       processor,
     );
@@ -365,8 +367,12 @@ export class CallgentRealmsService implements OnModuleInit {
   }> {
     const { provider, uid, credentials } = processor.getIdentity(req, realm);
     const identity =
-      (await this.usersService.$findFirstUserIdentity(userId, uid, provider)) ||
-      {};
+      (await this.usersService.$findFirstUserIdentity(
+        userId,
+        uid,
+        provider,
+        realm.authType,
+      )) || {};
     return { provider, uid, credentials, ...identity };
   }
 

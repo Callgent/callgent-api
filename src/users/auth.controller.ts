@@ -51,10 +51,12 @@ export class AuthController extends LocalAuthController {
   })
   @Post('register')
   async register(@Body() dto: CreateUserIdentityDto) {
-    dto.provider = 'local';
-    dto.uid = dto.email;
-    const ui = await this.userService.registerUserFromIdentity(dto);
-    const user = ui.user;
+    const { user } = await this.userService.registerUserFromIdentity({
+      ...dto,
+      uid: dto.email,
+      provider: 'local',
+      authType: 'password',
+    });
     const token = this.jwtService.sign({
       tenantPk: user.tenantPk,
       id: user.pk,

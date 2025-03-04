@@ -13,7 +13,7 @@ import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
 
 @Injectable()
-export class ApiKeyAuthProcessor extends AuthProcessor {
+export class JwtAuthProcessor extends AuthProcessor {
   protected implyProvider(
     scheme: SecuritySchemeObject,
     entry?: EntryDto,
@@ -109,7 +109,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
   ): Promise<true> {
-    // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"local"}
+    // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"api.callgent.com"}
     return this._readWriteToken(
       reqEvent.context.req,
       realm.scheme as any,

@@ -3,7 +3,7 @@ import {
   SecuritySchemeType,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
-export type AuthType = SecuritySchemeType | 'password'; // | '';
+export type AuthType = SecuritySchemeType | 'password' | 'jwt'; // | '';
 const authTypes: AuthType[] = [
   'apiKey',
   'http',
@@ -17,7 +17,7 @@ export function isAuthType(t: string): t is AuthType {
   return authTypes.includes(t as AuthType);
 }
 /**
- * @see SecuritySchemeObject
+ * @see SecuritySchemeObject https://swagger.io/specification/#security-scheme-object
  */
 export class RealmSchemeVO {
   /** whether issuing tokens per user */

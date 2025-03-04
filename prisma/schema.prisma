@@ -98,6 +98,10 @@ model UserIdentity {
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
+  authType       String  @db.VarChar(16)
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
   provider       String  @db.VarChar(30)
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -133,7 +137,7 @@ model UserIdentity {
   /// @DtoEntityHidden
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
-  @@unique([provider, uid, deletedAt])
+  @@unique([authType, provider, uid, deletedAt])
   @@index([userPk])
   @@index([userId])
   @@index([tenantPk])
@@ -375,15 +379,15 @@ model CallgentRealm {
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   callgentId String @db.VarChar(30)
-  
+
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  realmKey   String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
+  realmKey String @db.VarChar(256) /// @description unique[callgentId, realmKey], to identify same realm in callgent.
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | ..etc.
+  authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | 'jwt' ..etc.
   /// @description provider defined realm name, or '' for default realm
   /// @IsOptional()
   realm    String? @default("") @db.VarChar(30)

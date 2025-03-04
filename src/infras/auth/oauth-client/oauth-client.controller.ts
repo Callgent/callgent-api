@@ -20,7 +20,7 @@ import { AuthLoginEvent } from '../events/auth-login.event';
 import { AuthLoginedEvent } from '../events/auth-logined.event';
 import { JwtAuthService } from '../jwt/jwt-auth.service';
 
-/** oauth for root user */
+/** oauth2 for root user */
 @CacheTTL(-1)
 @ApiTags('Authentication')
 @Controller('auth')
@@ -37,7 +37,7 @@ export class OAuthClientController {
 
   @ApiParam({
     name: 'provider',
-    description: 'oauth authentication from the given provider',
+    description: 'oauth2 authentication from the given provider',
     examples: { github: { value: 'github' }, google: { value: 'google' } },
   })
   @ApiParam({
@@ -88,11 +88,11 @@ export class OAuthClientController {
     });
     const [user] = await this.eventEmitter.emitAsync(
       AuthLoginEvent.eventName,
-      new AuthLoginEvent('oauth', provider, accessToken),
+      new AuthLoginEvent('oauth2', provider, accessToken),
     );
     if (!user) {
       throw new BadRequestException(
-        `Invalid oauth token for provider: ${provider}`,
+        `Invalid oauth2 token for provider: ${provider}`,
       );
     }
     await this.eventEmitter.emitAsync(

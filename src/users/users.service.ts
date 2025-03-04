@@ -90,12 +90,17 @@ export class UsersService {
     }
   }
 
-  async $findFirstUserIdentity(userId: string, uid: string, provider: string) {
+  async $findFirstUserIdentity(
+    userId: string,
+    uid: string,
+    provider: string,
+    authType: string,
+  ) {
     const prisma = this.txHost.tx as PrismaClient;
     await this.tenancyService.bypassTenancy(prisma);
     try {
       return await prisma.userIdentity.findFirst({
-        where: { userId, provider, uid },
+        where: { authType, provider, uid, userId },
       });
     } finally {
       await this.tenancyService.bypassTenancy(prisma, false);
@@ -111,7 +116,9 @@ export class UsersService {
    */
   @Transactional()
   async registerUserFromIdentity(
-    ui: CreateUserIdentityDto & { email_verified?: boolean },
+    ui: CreateUserIdentityDto & { email_verified?: boolean } & {
+      authType: string;
+    },
   ) {
     const [mailName, emailHost] = ui.email?.split('@') || [];
     ui.name || (ui.name = mailName) || (ui.name = `${ui.provider}@${ui.uid}`);
@@ -329,6 +336,7 @@ export class UsersService {
         ui = await this.registerUserFromIdentity({
           uid: email,
           email,
+          authType: 'password',
           provider: 'local',
           credentials: pwd,
           email_verified: true,
