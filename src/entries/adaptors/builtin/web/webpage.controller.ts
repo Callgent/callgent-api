@@ -72,7 +72,6 @@ export class WebpageController {
     const { entry, callgent } = await this._load(callgentId, entryId);
     const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
     const calledBy = req.user?.sub;
-    const paidBy = calledBy || callgent.createdBy;
 
     const e = new ClientRequestEvent(
       entry.id,
@@ -80,7 +79,6 @@ export class WebpageController {
       requirement,
       taskId,
       title,
-      paidBy,
       calledBy,
       {
         callgentId,
@@ -151,7 +149,6 @@ export class WebpageController {
     const { entry, callgent } = await this._load(callgentId, entryId);
     const title = 'Invoke: ' + pageName;
     const calledBy = req.user?.sub;
-    const paidBy = calledBy || callgent.createdBy;
 
     const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
@@ -160,7 +157,6 @@ export class WebpageController {
         req,
         null,
         title,
-        paidBy,
         calledBy,
         {
           callgentId,

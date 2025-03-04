@@ -65,8 +65,17 @@ export class EntityIdExistsRule implements ValidatorConstraintInterface {
     const [entityName, fieldName = 'id'] = args.constraints;
     try {
       const prisma = this.txHost.tx as PrismaClient;
+      const prismaEntity = prisma[entityName] as any;
 
-      const entity = await (prisma[entityName] as any).findUnique({
+      if (Array.isArray(value)) {
+        const entities = await prismaEntity.findMany({
+          where: { [fieldName]: { in: value } },
+          select: { [fieldName]: true },
+        });
+        return entities.length === value.length;
+      }
+
+      const entity = await prismaEntity.findUnique({
         where: { [fieldName]: value },
       });
 

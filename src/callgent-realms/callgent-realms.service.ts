@@ -106,6 +106,7 @@ export class CallgentRealmsService implements OnModuleInit {
           authType,
           realmKey,
           scheme: scheme as any,
+          pricing: realm.pricing as any,
         },
       });
 
@@ -116,6 +117,7 @@ export class CallgentRealmsService implements OnModuleInit {
         realmKey,
         authType,
         scheme: scheme as any,
+        pricing: realm.pricing as any,
       },
     });
   }
@@ -162,17 +164,22 @@ export class CallgentRealmsService implements OnModuleInit {
 
   //// auth check start, auth config end ////
 
-  /** same as sep auth, except token cannot be attached to request event */
+  /**
+   * same as sep auth, except:
+   * - token cannot be attached to request event
+   * - uid is required as paidBy
+   */
   async checkCenAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const cep = await this.entriesService.findOne(reqEvent.srcId);
-    if (!cep)
+    const cen = await this.entriesService.findOne(reqEvent.srcId);
+    if (!cen)
       throw new NotFoundException(
         'Client entry not found, id: ' + reqEvent.srcId,
       );
 
-    return this.checkSecurities(reqEvent, cep.securities as any);
+    reqEvent.paidBy = cen.createdBy; // by default, creator paid
+    return this.checkSecurities(reqEvent, cen.securities as any, true);
   }
 
   /**
@@ -187,34 +194,35 @@ export class CallgentRealmsService implements OnModuleInit {
     const result = await this.checkSecurities(
       reqEvent,
       (endpoint as Endpoint).securities,
-      true,
     );
     if (result) return result; // FIXME: resume after post auth action
 
     const sen = await this.entriesService.findOne(endpoint.entryId);
-    return this.checkSecurities(reqEvent, sen.securities as any, true);
+    return this.checkSecurities(reqEvent, sen.securities as any);
   }
 
   /**
+   * @param [cen=false] if true[Client entry]: reqEvent.paidBy user must be identified
    * @throws UnauthorizedException if check fail, else ok
    */
   async checkSecurities(
     reqEvent: ClientRequestEvent,
     securities: RealmSecurityVO[],
-    sep = false,
+    cen = false,
   ) {
     if (!securities?.length) return; // no auth, check ok
 
+    // returns on first check ok
     for (const security of securities) {
       reqEvent.context.security = security;
-      const result = await this._checkSecurity(reqEvent);
+      const result = await this._checkSecurity(reqEvent, cen);
       if (result) return result; // check ok
     }
     // delete reqEvent.context.security;
 
     // check auth failed
     throw new UnauthorizedException(
-      `Check ${sep ? 'SEP' : 'CEP'} authentications failed.`,
+      `Check ${cen ? 'CEN' : 'SEP'} authentications failed.`,
     );
   }
 
@@ -225,6 +233,7 @@ export class CallgentRealmsService implements OnModuleInit {
   @Transactional()
   protected async _checkSecurity(
     reqEvent: ClientRequestEvent,
+    cen = false,
   ): Promise<false | { data: ClientRequestEvent; resumeFunName?: string }> {
     const security: RealmSecurityVO = reqEvent.context.security;
     const items = Object.values(security);
@@ -235,33 +244,47 @@ export class CallgentRealmsService implements OnModuleInit {
     //   if (!result) return result; // any check fail
     // }
 
-    return this._checkSecurityItem(items[0], reqEvent);
+    // FIXME and-relations for items list
+    return this._checkSecurityItem(items[0], reqEvent, cen);
   }
 
   protected async _checkSecurityItem(
     item: RealmSecurityItem,
     reqEvent: ClientRequestEvent,
+    cen = false,
   ) {
-    reqEvent.context.securityItem = item;
+    reqEvent.context.securityItem = {
+      ...item,
+      attach: cen ? false : item.attach,
+    };
     const { realm, processor } = await this._loadRealm(item, true);
     // return false if disabled
     if (!realm?.enabled) return false;
 
-    // read existing from token store
-    const userToken = await this.findUserToken(
-      realm,
+    // read existing from identity store
+    const userIdentity = await this._findUserIdentity(
       reqEvent.context.callerId,
+      reqEvent.context.req,
+      realm,
+      processor,
     );
-    if (userToken) {
-      // invoke validation url. TODO security as arg
-      const result = await processor.validateToken(
-        userToken.credentials,
-        reqEvent,
-        realm,
-      );
-      if (result) return result; // valid/attach or async
-      // else invalid, continue to refresh token process
+    // client auth requires userId as paidBy
+    if (cen) {
+      // throw new UnauthorizedException(
+      //   'User identity not found for payment, please bind the token to a user first.',
+      // );
+      if (!userIdentity.userId) return false;
+      reqEvent.paidBy = userIdentity.userId;
     }
+
+    // invoke validation url. TODO security as arg
+    const result = await processor.validateToken(
+      userIdentity.credentials,
+      reqEvent,
+      realm,
+    );
+    if (result) return result; // valid/attach or async
+    // else invalid, continue to refresh token process
 
     // if not valid, start auth process
     const ret = await processor.authProcess(realm, item, reqEvent);
@@ -329,9 +352,22 @@ export class CallgentRealmsService implements OnModuleInit {
     return false;
   }
 
-  findUserToken(realm: CallgentRealm, userId: string) {
-    if (userId && realm.scheme?.perUser)
-      return this.usersService.$findFirstUserIdentity(userId, '' + realm.pk);
+  protected async _findUserIdentity(
+    req: any,
+    userId: string,
+    realm: CallgentRealm,
+    processor: AuthProcessor,
+  ): Promise<{
+    provider: string;
+    uid: string;
+    credentials: string;
+    userId?: string;
+  }> {
+    const { provider, uid, credentials } = processor.getIdentity(req, realm);
+    const identity =
+      (await this.usersService.$findFirstUserIdentity(userId, uid, provider)) ||
+      {};
+    return { provider, uid, credentials, ...identity };
   }
 
   /**
@@ -367,22 +403,32 @@ export class CallgentRealmsService implements OnModuleInit {
       (select) =>
         prisma.callgentRealm.findUnique({
           select,
-          where: { callgentId_realmKey: { callgentId, realmKey } },
+          where: {
+            callgentId_realmKey_deletedAt: {
+              callgentId,
+              realmKey,
+              deletedAt: 0n,
+            },
+          },
         }),
       this.defSelect,
     ) as unknown as Promise<CallgentRealm>;
   }
 
   @Transactional()
-  findAll({
-    select,
-    where,
-    orderBy = { pk: 'desc' },
-  }: {
-    select?: Prisma.CallgentRealmSelect;
-    where?: Prisma.CallgentRealmWhereInput;
-    orderBy?: Prisma.CallgentRealmOrderByWithRelationInput;
-  }) {
+  findAll(
+    callgentId: string,
+    {
+      select,
+      where = {},
+      orderBy = { pk: 'desc' },
+    }: {
+      select?: Prisma.CallgentRealmSelect;
+      where?: Prisma.CallgentRealmWhereInput;
+      orderBy?: Prisma.CallgentRealmOrderByWithRelationInput;
+    } = {},
+  ) {
+    where = where ? { callgentId } : { ...where, callgentId };
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
@@ -420,8 +466,18 @@ export class CallgentRealmsService implements OnModuleInit {
       (select) =>
         prisma.callgentRealm.update({
           select,
-          where: { callgentId_realmKey: { callgentId, realmKey } },
-          data: { ...dto, scheme: dto.scheme as any },
+          where: {
+            callgentId_realmKey_deletedAt: {
+              callgentId,
+              realmKey,
+              deletedAt: 0n,
+            },
+          },
+          data: {
+            ...dto,
+            scheme: dto.scheme as any,
+            pricing: dto.pricing as any,
+          },
         }),
       this.defSelect,
     );
@@ -431,7 +487,9 @@ export class CallgentRealmsService implements OnModuleInit {
   async delete(callgentId: string, realmKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const realm = await prisma.callgentRealm.delete({
-      where: { callgentId_realmKey: { callgentId, realmKey } },
+      where: {
+        callgentId_realmKey_deletedAt: { callgentId, realmKey, deletedAt: 0n },
+      },
     });
     if (!realm) return;
     const pk = realm.pk + '';

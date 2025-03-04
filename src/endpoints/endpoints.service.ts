@@ -297,9 +297,10 @@ export class EndpointsService {
   async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const ret = await selectHelper(this.defSelect, (select) =>
-      prisma.endpoint.delete({ select, where: { id } }),
+      prisma.endpoint.delete({ select, where: { id, createdBy: opBy } }),
     );
-    await this._pubEvent({ opBy, entry: { id: ret.entryId }, olds: [ret] });
+    if (ret)
+      await this._pubEvent({ opBy, entry: { id: ret.entryId }, olds: [ret] });
     return ret;
   }
 
@@ -316,12 +317,13 @@ export class EndpointsService {
         data: dto as any,
       }),
     );
-    await this._pubEvent({
-      opBy,
-      entry: { id: ret.entryId },
-      news: [ret],
-      olds: [old],
-    });
+    if (ret)
+      await this._pubEvent({
+        opBy,
+        entry: { id: ret.entryId },
+        news: [ret],
+        olds: [old],
+      });
     return ret;
   }
 

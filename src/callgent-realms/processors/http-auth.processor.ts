@@ -142,4 +142,11 @@ export class HttpAuthProcessor extends AuthProcessor {
   async postExchangeToken() {
     throw new Error('Not applicable.');
   }
+
+  getIdentity(
+    req: any,
+    realm: CallgentRealm,
+  ): { provider: string; uid: string; credentials: string } {
+    throw new Error('Method not implemented.');
+  }
 }

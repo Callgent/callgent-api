@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -109,24 +110,62 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): Promise<true> {
     // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"api.callgent.com"}
-    const scheme: APIKeySecurityScheme = realm.scheme as any;
-    const req = reqEvent.context.req;
+    return this._readWriteToken(
+      reqEvent.context.req,
+      realm.scheme as any,
+      false,
+      // user token first
+      token || (realm.secret as string),
+    );
+  }
 
-    const [name, value] = [scheme.name, realm.secret as string];
-    let in0 = scheme.in;
+  private _readWriteToken(
+    req: any,
+    scheme: APIKeySecurityScheme,
+    read?: true,
+  ): string;
+
+  private _readWriteToken(
+    req: any,
+    scheme: APIKeySecurityScheme,
+    read: false,
+    value: string,
+  ): true;
+
+  private _readWriteToken(
+    req: any,
+    scheme: APIKeySecurityScheme,
+    read: boolean,
+    value?: string,
+  ): true | string {
+    if (!read) {
+      if (!value) throw new ForbiddenException('Missing auth token');
+      value = encodeURIComponent(value);
+    }
+
+    let { name, in: in0 } = scheme;
     switch (in0) {
       case 'cookie':
         if (!req.headers) req.headers = {};
+        if (read) {
+          const cookies = req.headers.cookie?.split(';') || [];
+          const cookie = cookies.find((c) => c.trim().startsWith(name + '='));
+          if (!cookie) return '';
+          return cookie.split('=')[1];
+        }
         req.headers.cookie = `${req.headers.cookie || ''}${
           req.headers.cookie ? ';' : ''
-        }${name}=${encodeURIComponent(value)}`;
+        }${name}=${value}`;
         break;
       case 'header':
         in0 += 's';
       case 'query':
+        if (read) return req[in0]?.[name];
         if (!req[in0]) req[in0] = {};
-        req[in0][name] = realm.secret;
+        req[in0][name] = value;
         break;
+      default:
+        throw new Error('Invalid security scheme `in`: ' + in0);
     }
     return true;
   }
@@ -149,5 +188,13 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   async postExchangeToken() {
     throw new Error('Not applicable.');
+  }
+
+  getIdentity(
+    req: any,
+    realm: CallgentRealm,
+  ): { provider: string; uid: string; credentials: string } {
+    const token = this._readWriteToken(req, realm.scheme as any, true);
+    return { provider: realm.scheme.provider, uid: token, credentials: token };
   }
 }

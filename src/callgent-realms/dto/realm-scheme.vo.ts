@@ -23,7 +23,7 @@ export class RealmSchemeVO {
   /** whether issuing tokens per user */
   perUser?: boolean;
 
-  /** service provider url */
+  /** service provider hostname */
   provider: string;
   /** token validation url, empty means attaching to request to validate */
   validationUrl?: string;

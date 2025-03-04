@@ -141,8 +141,7 @@ export class CallgentHubService {
       const callgentId = callgent.id;
 
       this.tenancyService.setTenantId(fromTenant);
-      const realms = await this.callgentRealmsService.findAll({
-        where: { callgentId: from.id },
+      const realms = await this.callgentRealmsService.findAll(from.id, {
         orderBy: { pk: 'asc' },
         select: {
           pk: true,
@@ -216,7 +215,10 @@ export class CallgentHubService {
               createdBy,
             };
           });
-          return eps.length && this.endpointsService.createMany(eps, en as any, createdBy);
+          return (
+            eps.length &&
+            this.endpointsService.createMany(eps, en as any, createdBy)
+          );
         }),
       );
       return callgent;

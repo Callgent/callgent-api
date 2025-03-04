@@ -10,7 +10,6 @@ export class EventObject {
     public readonly dataType: string,
     taskId: string,
     public readonly title: string,
-    public readonly paidBy: string,
     public readonly calledBy?: string,
     /** url template for response callback, `callgent:epName[@callgent]` to invoke callgent */
     public callback?: string,
@@ -33,6 +32,8 @@ export class EventObject {
   public readonly id: string;
   /** task id to relate several events, format: `{yymmdd}-{nanoid}` */
   public readonly taskId: string;
+  public paidBy: string;
+
   public declare readonly context: { [key: string]: any };
   /** if true, the event will not be propagated to other listeners */
   public declare stopPropagation: boolean;

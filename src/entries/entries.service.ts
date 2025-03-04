@@ -45,7 +45,6 @@ export class EntriesService implements OnModuleInit {
   protected readonly defSelect: Prisma.EntrySelect = {
     pk: false,
     tenantPk: false,
-    createdBy: false,
     deletedAt: false,
   };
   private readonly serverAdaptors: {

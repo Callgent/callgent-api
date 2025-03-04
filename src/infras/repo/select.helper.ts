@@ -1,5 +1,5 @@
 /**
- * helper to support exclusion selection, when param `select`.values() are all false
+ * helper to support exclusion selection, when param `select`.values() are all false, e.g. select: { pk: false, deletedAt: false }
  *
  * @param select if select.values() all false, then do exclusion select: select *, then delete item[key];
  *  if any value null, then delete defaultSelect[key]

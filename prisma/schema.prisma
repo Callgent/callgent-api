@@ -57,7 +57,7 @@ model Tenant {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 }
 
 model User {
@@ -84,7 +84,7 @@ model User {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }
@@ -131,7 +131,7 @@ model UserIdentity {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@unique([provider, uid, deletedAt])
   @@index([userPk])
@@ -212,7 +212,7 @@ model Callgent {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   entries Entry[]
 
@@ -293,7 +293,7 @@ model Entry {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
   @@index([callgentId])
@@ -353,7 +353,7 @@ model Endpoint {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@unique([callgentId, name, deletedAt])
   @@index([tenantPk])
@@ -375,6 +375,7 @@ model CallgentRealm {
   /// @DtoPlainApiResponse
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
   callgentId String @db.VarChar(30)
+  
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -400,10 +401,18 @@ model CallgentRealm {
   /// @DtoPlainApiResponse
   enabled Boolean @default(true) /// @description whether the realm is enabled
 
+  /// @DtoCastType(RealmPricingVO, ../dto/realm-pricing.vo)
+  /// @description pricing for the realm invocation, paid by user, earn by callgent owner
+  pricing Json? @db.Json
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+  // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
-  @@unique([callgentId, realmKey])
+  @@unique([callgentId, realmKey, deletedAt])
   @@index(callgentId)
   @@index(tenantPk)
 }
@@ -508,7 +517,7 @@ model EventListener {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([tenantPk])
@@ -559,7 +568,7 @@ model EventStore {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([srcId])
   @@index([taskId])
@@ -649,7 +658,7 @@ model Transaction {
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  deletedAt BigInt      @default(0) /// @description logical deletion.
+  deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([tenantPk])
 }

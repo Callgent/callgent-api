@@ -90,13 +90,12 @@ export class UsersService {
     }
   }
 
-  /** for CallgentRealm, there is at most 1 identity per user per realm */
-  async $findFirstUserIdentity(userId: string, provider: string) {
+  async $findFirstUserIdentity(userId: string, uid: string, provider: string) {
     const prisma = this.txHost.tx as PrismaClient;
     await this.tenancyService.bypassTenancy(prisma);
     try {
-      return prisma.userIdentity.findFirst({
-        where: { userId, provider },
+      return await prisma.userIdentity.findFirst({
+        where: { userId, provider, uid },
       });
     } finally {
       await this.tenancyService.bypassTenancy(prisma, false);

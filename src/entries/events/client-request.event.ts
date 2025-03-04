@@ -19,7 +19,6 @@ export class ClientRequestEvent extends EventObject {
     req: object,
     taskId: string,
     title: string,
-    paidBy: string,
     calledBy: string,
     context: {
       callgentId: string;
@@ -39,7 +38,6 @@ export class ClientRequestEvent extends EventObject {
       dataType,
       taskId,
       title,
-      paidBy,
       calledBy,
       callback,
       'URL',

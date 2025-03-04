@@ -180,4 +180,13 @@ export abstract class AuthProcessor {
     reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
+
+  abstract getIdentity(
+    req: any,
+    realm: CallgentRealm,
+  ): {
+    provider: string;
+    uid: string;
+    credentials: string;
+  };
 }

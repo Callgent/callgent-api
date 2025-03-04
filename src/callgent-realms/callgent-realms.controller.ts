@@ -29,6 +29,7 @@ import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
 import { isAuthType } from './dto/realm-scheme.vo';
 import { RealmSecurityItemForm } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
+import { Prisma } from '@prisma/client';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
@@ -112,9 +113,7 @@ export class CallgentRealmsController {
   @Get(':callgentId')
   async findAll(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
-      .findAll({
-        where: { callgentId },
-      })
+      .findAll(callgentId)
       .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
     return { data };
   }
@@ -166,10 +165,7 @@ export class CallgentRealmsController {
     if (!isAuthType(dto.authType))
       throw new BadRequestException('Invalid authType');
     return {
-      data: await this.callgentRealmsService.create({
-        ...dto,
-        scheme: dto.scheme as any,
-      }),
+      data: await this.callgentRealmsService.create(dto as any),
     };
   }
 

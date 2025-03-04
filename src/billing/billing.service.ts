@@ -65,7 +65,7 @@ export class BillingService {
           id: txId,
           currency,
           metadata,
-          amount_total,
+          amount_total, // cents
         } = event.data.object;
         const userid = metadata.userid;
         // $1 = 1e11
