@@ -5,7 +5,7 @@ import {
 } from '@nestjs/swagger';
 
 export class RealmSecurityItem {
-  realmPk: number;
+  realmPk: string;
 
   /** scopes for the security operation */
   @ApiProperty({ isArray: true, required: false, type: 'string' })

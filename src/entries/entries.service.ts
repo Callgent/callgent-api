@@ -29,6 +29,7 @@ import { EntryDto } from './dto/entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
 import { ClientRequestEvent } from './events/client-request.event';
 import { EntriesChangedEvent } from './events/entries-changed.event';
+import { EntryCreatedEvent } from './events/entry-created.event';
 
 const paginate: PaginatorTypes.PaginateFunction = paginator({ perPage: 10 });
 
@@ -249,7 +250,7 @@ export class EntriesService implements OnModuleInit {
 
     adaptor.preCreate(data);
 
-    return selectHelper(
+    const entry = await selectHelper(
       select,
       (select) =>
         prisma.entry.create({
@@ -258,6 +259,13 @@ export class EntriesService implements OnModuleInit {
         }),
       this.defSelect,
     );
+
+    await this.eventEmitter.emitAsync(
+      EntryCreatedEvent.eventName,
+      new EntryCreatedEvent(entry as any),
+    );
+
+    return entry;
   }
 
   @Transactional()

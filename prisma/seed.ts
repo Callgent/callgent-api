@@ -844,7 +844,7 @@ function initModelPricing(
   >,
 ) {
   let pk = 1;
-  const llmModels: Prisma.ModelPricingCreateInput[] = [
+  const llmModels: Prisma.ModelPricingUncheckedCreateInput[] = [
     {
       pk: pk++,
       model: 'deepseek-chat',

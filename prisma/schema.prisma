@@ -90,7 +90,7 @@ model User {
 }
 
 model UserIdentity {
-  pk             Int     @id @default(autoincrement())
+  pk             BigInt  @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
@@ -165,7 +165,7 @@ model Tag {
 
 model Callgent {
   /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -204,7 +204,7 @@ model Callgent {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  forkedPk  Int? /// @description forked from
+  forkedPk  BigInt? /// @description forked from
   /// @CustomValidator(EntityIdExists, 'tag', 'pk', ../../infras/repo/validators/entity-exists.validator)
   mainTagId Int?
 
@@ -228,7 +228,7 @@ model Callgent {
 
 /// @DtoIgnoreModel
 model CallgentTag {
-  pk Int @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   tagId      Int
   callgentId String @db.VarChar(30)
@@ -249,7 +249,7 @@ enum EntryType {
 /// @description a callgent may have multiple entries, including client/server/event entries
 model Entry {
   /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -306,7 +306,7 @@ model Entry {
 /// @description endpoint in openAPI.json format
 model Endpoint {
   /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -369,11 +369,11 @@ model Endpoint {
 model CallgentRealm {
   /// @DtoReadOnly
   /// @DtoPlainApiResponse
-  pk       Int @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk Int @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -425,7 +425,7 @@ model CallgentRealm {
 /// @DtoIgnoreModel
 model AuthToken {
   /// @DtoEntityHidden
-  pk Int @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   token   String  @unique @db.VarChar(30)
   type    String  @db.VarChar(10) /// @description token type: JWT, API_KEY, ..
@@ -441,7 +441,7 @@ model AuthToken {
 /// @DtoIgnoreModel
 model LlmTemplate {
   /// @DtoEntityHidden
-  pk Int @id @default(autoincrement())
+  pk BigInt @id @default(autoincrement())
 
   name   String @db.VarChar(32)
   prompt String @db.VarChar(8191)
@@ -609,7 +609,7 @@ model Cached {
 
 /// @DtoIgnoreModel
 model ModelPricing {
-  pk BigInt @id @default(autoincrement())
+  pk Int @id @default(autoincrement())
 
   model    String  @db.VarChar(30)
   alias    String? @db.VarChar(50)

@@ -157,7 +157,7 @@ export class CallgentRealmsService implements OnModuleInit {
         if (!realm) throw new NotFoundException('Not found realm');
 
         const sec = this.constructSecurity(realm, entry, security.scopes);
-        return { ['' + sec.realmPk]: sec };
+        return { [sec.realmPk.toString()]: sec };
       }),
     );
 
@@ -330,7 +330,7 @@ export class CallgentRealmsService implements OnModuleInit {
    * @param noError if false, throw error if realm not enabled
    */
   protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this._findOne(security.realmPk, { pk: null });
+    const realm = await this._findOne(BigInt(security.realmPk), { pk: null });
     if (!realm?.enabled) {
       if (noError) return { realm };
       throw new UnauthorizedException(
@@ -384,7 +384,7 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   @Transactional()
-  protected _findOne(pk: number, select?: Prisma.CallgentRealmSelect) {
+  protected _findOne(pk: bigint, select?: Prisma.CallgentRealmSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,

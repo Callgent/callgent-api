@@ -154,7 +154,7 @@ export class CallgentHubService {
         },
       });
       this.tenancyService.setTenantId(toTenant);
-      const realmMap: { [pk: number]: CallgentRealm } = {};
+      const realmMap: { [pk: string]: CallgentRealm } = {};
       await Promise.all(
         realms.map(async (r) => {
           const realm = await this.callgentRealmsService.create(
@@ -164,7 +164,7 @@ export class CallgentHubService {
             },
             { pk: null },
           );
-          realmMap[r.pk] = realm;
+          realmMap[r.pk.toString()] = realm;
         }),
       );
 
@@ -195,7 +195,7 @@ export class CallgentHubService {
       this.tenancyService.setTenantId(toTenant);
       await Promise.all(
         ens.map(async (enOld) => {
-          const securities: any[] = dupSecurities(enOld.securities);
+          const securities: any[] = dupSecurities(enOld.securities as any[]);
 
           const en = await this.entriesService.create({
             ...enOld,
@@ -223,12 +223,15 @@ export class CallgentHubService {
       );
       return callgent;
 
-      function dupSecurities(securities: any[]): RealmSecurityVO[] {
+      function dupSecurities(securities: RealmSecurityVO[]): RealmSecurityVO[] {
         return securities?.map((security) => {
           const ret: RealmSecurityVO = {};
-          Object.values(security).forEach((item: any) => {
+          Object.values(security).forEach((item) => {
             const realm = realmMap[item.realmPk];
-            ret['' + realm.pk] = { ...item, realmPk: realm.pk };
+            ret[realm.pk.toString()] = {
+              ...item,
+              realmPk: realm.pk.toString(),
+            };
           });
           return ret;
         });

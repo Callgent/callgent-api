@@ -8,7 +8,6 @@ import { WebpageController } from './adaptors/builtin/web/webpage.controller';
 import { WebpageService } from './adaptors/builtin/web/webpage.service';
 import { EntriesController } from './entries.controller';
 import { EntriesService } from './entries.service';
-import { CallgentCreatedListener } from './listeners/callgent-created.listener';
 import { EntriesChangedSumCallgentListener } from './listeners/entries-changed.listener';
 
 @Module({
@@ -28,7 +27,6 @@ import { EntriesChangedSumCallgentListener } from './listeners/entries-changed.l
       provide: 'Email-EntryAdaptor',
       useClass: EmailAdaptor,
     },
-    CallgentCreatedListener,
     EntriesChangedSumCallgentListener,
   ],
   controllers: [EntriesController, RestApiController, WebpageController],

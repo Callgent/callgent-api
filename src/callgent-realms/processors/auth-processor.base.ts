@@ -45,7 +45,7 @@ export abstract class AuthProcessor {
         // ignore
       }
     }
-    return { realmPk: realm.pk, attach, scopes };
+    return { realmPk: realm.pk.toString(), attach, scopes };
   }
 
   /**

@@ -362,7 +362,7 @@ export class UsersService {
   }
 
   @Transactional()
-  async updateLocalPassword(pwd: string, pk?: number) {
+  async updateLocalPassword(pwd: string, pk?: bigint) {
     // TODO check pwd complexity
     if (pwd && (typeof pwd !== 'string' || pwd?.length < 8))
       throw new BadRequestException('Password should be at least 8 characters');

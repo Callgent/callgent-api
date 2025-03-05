@@ -32,7 +32,7 @@ export class CallgentsService {
 
   @Transactional()
   async create(
-    dto: CreateCallgentDto & { forkedPk?: number },
+    dto: CreateCallgentDto & { forkedPk?: bigint },
     createdBy: string,
     select?: Prisma.CallgentSelect,
   ) {

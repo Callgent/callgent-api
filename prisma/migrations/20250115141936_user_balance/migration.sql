@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "TransactionHistory" ALTER COLUMN "price" DROP DEFAULT,
-ALTER COLUMN "price" SET DATA TYPE JSON;

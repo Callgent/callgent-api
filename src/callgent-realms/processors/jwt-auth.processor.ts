@@ -51,7 +51,7 @@ export class JwtAuthProcessor extends AuthProcessor {
 
   /** @returns ApiKey:in:name:provider:realm */
   protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `apiKey:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
+    return `jwt:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
       realm || ''
     }`;
   }

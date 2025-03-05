@@ -183,7 +183,7 @@ export class EndpointsService {
               scopes,
             );
 
-            result['' + item.realmPk] = item;
+            result[item.realmPk.toString()] = item;
           });
           return result;
         });

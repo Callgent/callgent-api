@@ -1,7 +1,9 @@
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { EntryType } from '@prisma/client';
 import { CallgentCreatedEvent } from '../../callgents/events/callgent-created.event';
+import { EntriesService } from '../../entries/entries.service';
 import { CallgentRealmsService } from '../callgent-realms.service';
 
 @Injectable()
@@ -10,11 +12,16 @@ export class CallgentCreatedListener {
   constructor(
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
+    @Inject('EntriesService')
+    private readonly entriesService: EntriesService,
   ) {}
 
   /** create a callgent with default api client entry, and Email client/server entry */
   @Transactional()
-  @OnEvent(CallgentCreatedEvent.eventName, { suppressErrors: false })
+  @OnEvent(CallgentCreatedEvent.eventName, {
+    suppressErrors: false,
+    prependListener: true,
+  })
   async handleEvent(event: CallgentCreatedEvent) {
     this.logger.debug('%j: Handling event,', event);
 
@@ -22,21 +29,8 @@ export class CallgentCreatedListener {
     if (callgent.forkedPk) return; // forked callgent
 
     // add local realm securities
-    const results = await Promise.all(
+    await Promise.all(
       [
-        // callgent jwt
-        {
-          callgentId: callgent.id,
-          authType: 'jwt',
-          scheme: {
-            provider: 'local',
-            type: 'jwt',
-            name: 'x-callgent-authorization',
-            in: 'header',
-            description: 'Callgent `local` JWT authentication',
-          },
-          enabled: true,
-        },
         // callgent api-key
         {
           callgentId: callgent.id,
@@ -50,9 +44,62 @@ export class CallgentCreatedListener {
           },
           enabled: true,
         },
-      ].map(async (e) => this.callgentRealmsService.create(e)),
+        // callgent jwt
+        {
+          callgentId: callgent.id,
+          authType: 'jwt',
+          scheme: {
+            provider: 'local',
+            type: 'jwt',
+            name: 'x-callgent-authorization',
+            in: 'header',
+            description: 'Callgent `local` User authentication',
+          },
+          enabled: true,
+        },
+      ].map(async (e) =>
+        this.callgentRealmsService.create(e, {
+          realmKey: true,
+          authType: true,
+        }),
+      ),
     );
+    // init entries after securities is ready
+    return this._initEntries(event);
+  }
 
+  private async _initEntries(event: CallgentCreatedEvent) {
+    this.logger.debug('%j: Handling event,', event);
+
+    const { callgent } = event;
+    if (callgent.forkedPk) return; // forked callgent
+
+    // add default entries
+    const results = await Promise.all(
+      [
+        // API client entry
+        {
+          callgentId: callgent.id,
+          type: 'CLIENT' as EntryType,
+          adaptorKey: 'restAPI',
+          createdBy: callgent.createdBy,
+        },
+        // Email client entry
+        {
+          callgentId: callgent.id,
+          type: 'CLIENT' as EntryType,
+          adaptorKey: 'Email',
+          createdBy: callgent.createdBy,
+        },
+        // TODO API event entry
+      ].map(async (e) =>
+        this.entriesService.create(e).then((entry) => {
+          // no await init, it may be slow, init must restart a new tx
+          this.entriesService.init(entry.id, []);
+          return entry;
+        }),
+      ),
+    );
     return results;
   }
 }

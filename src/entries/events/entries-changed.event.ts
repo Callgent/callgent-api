@@ -13,8 +13,8 @@ export class EntriesChangedEvent {
         summary?: string;
         instruction?: string;
       };
-      news?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: number })[];
-      olds?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: number })[];
+      news?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: bigint })[];
+      olds?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: bigint })[];
     },
   ) {}
 }
