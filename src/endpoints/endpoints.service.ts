@@ -55,8 +55,8 @@ export class EndpointsService {
       select: {
         createdAt: false,
         updatedAt: false,
-        params: null,
-        responses: null,
+        params: true,
+        responses: true,
       },
       where: { callgentId: callgentId, name: epName },
       perPage: Number.MAX_SAFE_INTEGER,
@@ -143,7 +143,7 @@ export class EndpointsService {
           const realm = await this.callgentRealmsService.upsertRealm(
             entry,
             scheme,
-            {},
+            { authType: scheme.type },
             servers,
           );
           realmMap[name] = realm as any;
@@ -173,7 +173,7 @@ export class EndpointsService {
           const result: RealmSecurityVO = {};
           Object.entries(security).forEach(([name, scopes]) => {
             const realm = realmMap[name];
-            if (!Number.isFinite(realm?.pk))
+            if (typeof realm?.pk !== 'bigint')
               throw new BadRequestException(
                 'Unknown security scheme name: ' + name,
               );

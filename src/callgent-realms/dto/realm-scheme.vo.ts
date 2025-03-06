@@ -1,5 +1,6 @@
 import {
   OAuthFlowsObject,
+  SecuritySchemeObject,
   SecuritySchemeType,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
@@ -17,24 +18,26 @@ export function isAuthType(t: string): t is AuthType {
   return authTypes.includes(t as AuthType);
 }
 /**
+ * realm.scheme
  * @see SecuritySchemeObject https://swagger.io/specification/#security-scheme-object
  */
 export class RealmSchemeVO {
   /** whether issuing tokens per user */
   perUser?: boolean;
-
-  /** service provider hostname */
-  provider: string;
-  /** token validation url, empty means attaching to request to validate */
-  validationUrl?: string;
-
-  type: AuthType;
   description?: string;
+
+  /** token validation url, must not empty */
+  validationUrl: string;
+
+  // apiKey/jwt
   name?: string;
   in?: string;
+  // http
   scheme?: string;
   bearerFormat?: string;
+  // oauth2
   flows?: OAuthFlowsObject;
+  // openIdConnect
   openIdConnectUrl?: string;
 }
 

@@ -60,19 +60,20 @@ export class CallgentRealmsService implements OnModuleInit {
 
   @Transactional()
   async create(
-    realm: Omit<Prisma.CallgentRealmUncheckedCreateInput, 'realmKey'> & {
-      realmKey?: string;
-    },
+    realm: Omit<
+      Prisma.CallgentRealmUncheckedCreateInput,
+      'realmKey' | 'provider'
+    >,
     select?: Prisma.CallgentRealmSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     const processor = this._getAuthProcessor(realm.authType);
-    realm = processor.constructRealm(realm.scheme as any, realm as any) as any;
+    const data = processor.constructRealm(realm.scheme as any, realm as any);
     return selectHelper(
       select,
       (select) =>
         prisma.callgentRealm.create({
-          data: { ...(realm as any), pk: undefined },
+          data: { ...(data as any), pk: undefined },
           select,
         }),
       this.defSelect,
@@ -80,25 +81,29 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   /**
-   * try to map to existing realm. FIXME: update securities when realm changed, see this.delete
+   * try to map to existing realm.
+   * @param scheme if validationUrl is not provided, it will be set to implied provider
    */
   @Transactional()
   async upsertRealm(
     entry: EntryDto,
-    scheme: Optional<RealmSchemeVO, 'provider'>,
-    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+    scheme: Optional<RealmSchemeVO, 'validationUrl'>,
+    realm: Partial<CallgentRealm> & { authType: string },
     servers: ServerObject[],
   ) {
-    const authType = scheme.type;
+    const authType = realm.authType;
     const processor = this._getAuthProcessor(authType);
     realm = processor.constructRealm(scheme, realm, entry, servers);
     const realmKey = realm.realmKey;
     const callgentId = entry.callgentId;
     const prisma = this.txHost.tx as PrismaClient;
 
+    const where = realm.pk
+      ? { OR: [{ callgentId, realmKey }, { pk: realm.pk }] }
+      : { callgentId, realmKey };
     const existing = await prisma.callgentRealm.findFirst({
       select: { pk: true },
-      where: { OR: [{ callgentId, realmKey }, { pk: realm.pk }] },
+      where,
     });
     if (existing)
       return prisma.callgentRealm.update({
@@ -118,6 +123,7 @@ export class CallgentRealmsService implements OnModuleInit {
         callgentId,
         realmKey,
         authType,
+        provider: realm.provider,
         scheme: scheme as any,
         pricing: realm.pricing as any,
       },
@@ -152,7 +158,8 @@ export class CallgentRealmsService implements OnModuleInit {
     const secs = await Promise.all(
       securities.map(async (security) => {
         const realm = await this.findOne(entry.callgentId, security.realmKey, {
-          pk: null,
+          pk: true,
+          tenantPk: false,
         });
         if (!realm) throw new NotFoundException('Not found realm');
 
@@ -266,7 +273,7 @@ export class CallgentRealmsService implements OnModuleInit {
     // read existing from identity store
     const userIdentity = await this._findUserIdentity(
       reqEvent.context.req,
-      reqEvent.context.callerId,
+      reqEvent.calledBy,
       realm,
       processor,
     );
@@ -330,7 +337,10 @@ export class CallgentRealmsService implements OnModuleInit {
    * @param noError if false, throw error if realm not enabled
    */
   protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this._findOne(BigInt(security.realmPk), { pk: null });
+    const realm = await this._findOne(BigInt(security.realmPk), {
+      pk: true,
+      tenantPk: false,
+    });
     if (!realm?.enabled) {
       if (noError) return { realm };
       throw new UnauthorizedException(
@@ -463,7 +473,6 @@ export class CallgentRealmsService implements OnModuleInit {
     dto = { ...old, ...dto }; // merge
     if (!dto.scheme) throw new BadRequestException('realm.scheme is required');
 
-    dto.authType = dto.scheme.type;
     const processor = this._getAuthProcessor(dto.authType);
     dto = processor.constructRealm(dto.scheme, dto as any);
 
@@ -492,13 +501,23 @@ export class CallgentRealmsService implements OnModuleInit {
   @Transactional()
   async delete(callgentId: string, realmKey: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    const realm = await prisma.callgentRealm.delete({
-      where: {
-        callgentId_realmKey_deletedAt: { callgentId, realmKey, deletedAt: 0n },
-      },
-    });
+    const realm = await selectHelper(
+      { pk: true, tenantPk: false },
+      (select) =>
+        prisma.callgentRealm.delete({
+          where: {
+            callgentId_realmKey_deletedAt: {
+              callgentId,
+              realmKey,
+              deletedAt: 0n,
+            },
+          },
+          select,
+        }),
+      this.defSelect,
+    );
     if (!realm) return;
-    const pk = realm.pk + '';
+    const pk = realm.pk.toString();
 
     // clear securities
     await Promise.all([
@@ -527,7 +546,6 @@ export class CallgentRealmsService implements OnModuleInit {
     ]);
 
     delete realm.pk;
-    delete realm.tenantPk;
     realm.secret = !!realm.secret;
     return realm;
   }

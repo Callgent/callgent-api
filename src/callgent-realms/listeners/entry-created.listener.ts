@@ -28,10 +28,10 @@ export class EntryCreatedListener {
 
     const securities = (await this.callgentRealmsService.findAll(
       entry.callgentId,
-      { select: { realmKey: true, authType: true, scheme: true } },
+      { select: { realmKey: true, authType: true, provider: true } },
     )) as any as CallgentRealm[];
     const defaultSecurity = securities.find(
-      (s) => s.authType === 'jwt' && s.scheme.provider === 'local',
+      (s) => s.authType === 'apiKey' && s.provider === 'local',
     );
     if (!defaultSecurity) return;
     const defaultRealm = { realmKey: defaultSecurity.realmKey };

@@ -7,13 +7,11 @@ import { CallgentCreatedListener } from './listeners/callgent-created.listener';
 import { EntryCreatedListener } from './listeners/entry-created.listener';
 import { ApiKeyAuthProcessor } from './processors/api-key-auth.processor';
 import { HttpAuthProcessor } from './processors/http-auth.processor';
-import { JwtAuthProcessor } from './processors/jwt-auth.processor';
 
 @Module({
   imports: [EntriesModule, UsersModule],
   providers: [
     { provide: 'CallgentRealmsService', useClass: CallgentRealmsService },
-    { provide: 'jwt-authProcessor', useClass: JwtAuthProcessor },
     { provide: 'apiKey-authProcessor', useClass: ApiKeyAuthProcessor },
     { provide: 'http-authProcessor', useClass: HttpAuthProcessor },
     CallgentCreatedListener,

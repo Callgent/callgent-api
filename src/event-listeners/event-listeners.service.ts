@@ -52,11 +52,11 @@ export class EventListenersService {
     return timeout > 0
       ? Promise.race([
           result,
-          Utils.sleep(timeout).then(() => ({
-            ...data,
-            statusCode: 1,
-            message: `Sync invocation timeout(${timeout}ms), will respond via callback`,
-          })),
+          Utils.sleep(timeout).then(() => {
+            data.statusCode = 1;
+            data.message = `Sync invocation timeout(${timeout}ms), will respond via callback`;
+            return data;
+          }),
         ])
       : result;
   }

@@ -36,33 +36,14 @@ export class CallgentCreatedListener {
           callgentId: callgent.id,
           authType: 'apiKey',
           scheme: {
-            provider: 'local',
-            type: 'apiKey',
-            name: 'x-callgent-api-key',
             in: 'header',
-            description: 'Callgent `local` apiKey authentication',
-          },
-          enabled: true,
-        },
-        // callgent jwt
-        {
-          callgentId: callgent.id,
-          authType: 'jwt',
-          scheme: {
-            provider: 'local',
-            type: 'jwt',
+            validationUrl: 'http://local',
             name: 'x-callgent-authorization',
-            in: 'header',
-            description: 'Callgent `local` User authentication',
+            description: 'Callgent Authentication',
           },
           enabled: true,
         },
-      ].map(async (e) =>
-        this.callgentRealmsService.create(e, {
-          realmKey: true,
-          authType: true,
-        }),
-      ),
+      ].map(async (e) => this.callgentRealmsService.create(e, { pk: true })),
     );
     // init entries after securities is ready
     return this._initEntries(event);

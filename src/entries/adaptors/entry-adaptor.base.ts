@@ -243,9 +243,7 @@ export class ApiSpec {
     responses: Prisma.JsonObject;
     rawJson: Prisma.JsonObject;
   }[];
-  securitySchemes?: {
-    [name: string]: SecuritySchemeObject & { provider?: string };
-  };
+  securitySchemes?: { [name: string]: SecuritySchemeObject };
   servers?: ServerObject[];
   /** array with or-relation, SecurityRequirementObject with and-relation */
   securities?: SecurityRequirementObject[];

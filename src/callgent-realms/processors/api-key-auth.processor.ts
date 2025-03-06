@@ -1,11 +1,8 @@
 import {
-  BadRequestException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
-import { EntryDto } from '../../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
@@ -14,54 +11,19 @@ import { AuthProcessor } from './auth-processor.base';
 
 @Injectable()
 export class ApiKeyAuthProcessor extends AuthProcessor {
-  protected implyProvider(
-    scheme: SecuritySchemeObject,
-    entry?: EntryDto,
-    servers?: { url: string }[],
-  ) {
-    let url: string = (scheme as any).provider;
-    if (url) {
-      if (!url.toLowerCase().startsWith('http')) url = 'http://' + url;
-    } else {
-      if (entry && entry.type != 'CLIENT') {
-        url = entry.host; // whatever adaptor it is, host need to be a url
-      } else if (servers?.length > 0) {
-        const server = servers.find((server) => {
-          try {
-            new URL(server.url);
-            return true;
-          } catch (e) {}
-        });
-        url = server?.url;
-      }
-    }
-    if (!url)
-      throw new BadRequestException(
-        'Cannot imply security provider, please specify it manually',
-      );
-
-    try {
-      return new URL(url).hostname;
-    } catch (e) {
-      throw new BadRequestException(
-        'Invalid security provider, must be url: ' + url,
-      );
-    }
+  /** @returns ApiKey:provider:in:name:realm */
+  protected _getRealmKeys(realm: Partial<CallgentRealm>) {
+    return [
+      realm.authType,
+      realm.provider,
+      realm.scheme.in,
+      realm.scheme?.name,
+      realm.realm,
+    ].filter((s) => s);
   }
 
-  /** @returns ApiKey:in:name:provider:realm */
-  protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `apiKey:${scheme.in || ''}:${scheme.name || ''}:${scheme.provider}:${
-      realm || ''
-    }`;
-  }
-
-  protected checkEnabled(
-    scheme: RealmSchemeVO,
-    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
-  ) {
-    if (!realm.secret || !scheme.provider || !scheme.name || !scheme.in)
-      return false;
+  protected checkEnabled(scheme: RealmSchemeVO, realm: Partial<CallgentRealm>) {
+    if (!realm.secret || !scheme.name || !scheme.in) return false;
     return this.validateSecretFormat(realm);
   }
 
@@ -195,6 +157,6 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): { provider: string; uid: string; credentials: string } {
     const token = this._readWriteToken(req, realm.scheme as any, true);
-    return { provider: realm.scheme.provider, uid: token, credentials: token };
+    return { provider: realm.provider, uid: token, credentials: token };
   }
 }

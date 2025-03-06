@@ -4,6 +4,16 @@ import {
   ApiResponseProperty,
 } from '@nestjs/swagger';
 
+export class RealmSecurityItemForm {
+  @ApiProperty({ required: true, type: 'string' })
+  realmKey: string;
+
+  /** scopes for the security operation */
+  @ApiProperty({ isArray: true, required: false, type: 'string' })
+  scopes?: string[];
+}
+
+/** item bound on entry/ep */
 export class RealmSecurityItem {
   realmPk: string;
 
@@ -14,15 +24,6 @@ export class RealmSecurityItem {
   /** whether to attach token to request, or validate token separately */
   @ApiResponseProperty({ type: 'boolean' })
   attach?: boolean;
-}
-
-export class RealmSecurityItemForm {
-  @ApiProperty({ required: true, type: 'string' })
-  realmKey: string;
-
-  /** scopes for the security operation */
-  @ApiProperty({ isArray: true, required: false, type: 'string' })
-  scopes?: string[];
 }
 
 /**

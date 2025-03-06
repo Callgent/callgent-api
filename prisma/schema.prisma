@@ -388,7 +388,11 @@ model CallgentRealm {
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   authType String  @db.VarChar(16) /// @description auth type, 'apiKey' | 'http' | 'oauth2' | 'openIdConnect' | 'password' | 'jwt' ..etc.
-  /// @description provider defined realm name, or '' for default realm
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  provider String  @db.VarChar(30) /// @description provider domain name implied from scheme urls
+  /// @description provider defined realm name, or '' for default realm. not used now
   /// @IsOptional()
   realm    String? @default("") @db.VarChar(30)
   /// @DtoUpdateOptional

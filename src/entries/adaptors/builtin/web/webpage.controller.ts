@@ -79,13 +79,12 @@ export class WebpageController {
       requirement,
       taskId,
       title,
-      calledBy,
       {
         callgentId,
         callgentName: callgent.name,
-        callerId: req.user?.sub,
         progressive,
       },
+      calledBy,
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
@@ -157,13 +156,12 @@ export class WebpageController {
         req,
         null,
         title,
-        calledBy,
         {
           callgentId,
           callgentName: callgent.name,
-          callerId: req.user?.sub,
           progressive,
         },
+        calledBy,
         callback,
       ),
       parseInt(timeout) || 0, //  sync timeout

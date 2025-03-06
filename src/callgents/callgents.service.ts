@@ -187,7 +187,7 @@ export class CallgentsService {
     const tenantPk = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
-      { ...select, deletedAt: null },
+      { pk: false, ...select, deletedAt: true },
       (select) =>
         prisma.callgent.findUnique({
           select,

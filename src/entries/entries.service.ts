@@ -283,10 +283,8 @@ export class EntriesService implements OnModuleInit {
     const prisma = this.txHost.tx as PrismaClient;
 
     const [ret] = await Promise.all([
-      selectHelper(
-        this.defSelect,
-        (select) => prisma.entry.delete({ select, where: { id } }),
-        this.defSelect,
+      selectHelper(this.defSelect, (select) =>
+        prisma.entry.delete({ select, where: { id } }),
       ),
       // directly delete endpoints, needn't EndpointsChangedEvent
       prisma.endpoint.deleteMany({

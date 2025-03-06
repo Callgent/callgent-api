@@ -33,6 +33,7 @@ export class EntriesChangedSumCallgentListener {
         callgent.id,
         {
           id: true,
+          pk: false,
           name: true,
           summary: true,
           instruction: true,
@@ -43,7 +44,7 @@ export class EntriesChangedSumCallgentListener {
     if (result.totally) {
       // totally re-summarize
       const news = await this.entriesService.findAll({
-        select: { pk: null },
+        select: { pk: true },
         where: { callgentId: callgent.id, type: 'SERVER' },
       });
       if (!news.length) return;

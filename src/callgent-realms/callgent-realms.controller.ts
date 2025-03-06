@@ -69,7 +69,7 @@ export class CallgentRealmsController {
     },
   })
   @Get(':callgentId/:realmKey')
-  async findOne(
+  async findOneRealm(
     @Param('callgentId') callgentId: string,
     @Param('realmKey') realmKey: string,
   ) {
@@ -77,6 +77,57 @@ export class CallgentRealmsController {
     const data = await this.callgentRealmsService
       .findOne(callgentId, realmKey)
       .then((r) => r && { ...r, secret: r.secret ? true : false });
+    return { data };
+  }
+
+  @ApiCreatedResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
+      ],
+    },
+  })
+  @Post()
+  async createRealm(@Body() dto: CreateCallgentRealmDto) {
+    if (!isAuthType(dto.authType))
+      throw new BadRequestException('Invalid authType');
+    return {
+      data: await this.callgentRealmsService.create(dto as any),
+    };
+  }
+
+  @ApiOkResponse({
+    schema: {
+      anyOf: [
+        { $ref: getSchemaPath(RestApiResponse) },
+        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
+        {
+          properties: {
+            data: {
+              properties: {
+                secret: {
+                  type: 'boolean',
+                  description: 'secret is masked, true means set',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  })
+  @Put(':callgentId/:realmKey')
+  async updateRealm(
+    @Param('callgentId') callgentId: string,
+    @Param('realmKey') realmKey: string,
+    @Body() dto: UpdateCallgentRealmDto,
+  ) {
+    // TODO realmKey may be in body
+    const data = await this.callgentRealmsService
+      .update(callgentId, realmKey, dto, { pk: false })
+      .then((r) => r && { ...r, secret: r.secret ? true : false });
+
     return { data };
   }
 
@@ -111,62 +162,11 @@ export class CallgentRealmsController {
     },
   })
   @Get(':callgentId')
-  async findAll(@Param('callgentId') callgentId: string) {
+  async findAllRealms(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
       .findAll(callgentId)
       .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
     return { data };
-  }
-
-  @ApiOkResponse({
-    schema: {
-      anyOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
-        {
-          properties: {
-            data: {
-              properties: {
-                secret: {
-                  type: 'boolean',
-                  description: 'secret is masked, true means set',
-                },
-              },
-            },
-          },
-        },
-      ],
-    },
-  })
-  @Put(':callgentId/:realmKey')
-  async update(
-    @Param('callgentId') callgentId: string,
-    @Param('realmKey') realmKey: string,
-    @Body() dto: UpdateCallgentRealmDto,
-  ) {
-    // TODO realmKey may be in body
-    const data = await this.callgentRealmsService
-      .update(callgentId, realmKey, dto, { pk: false })
-      .then((r) => r && { ...r, secret: r.secret ? true : false });
-
-    return { data };
-  }
-
-  @ApiCreatedResponse({
-    schema: {
-      anyOf: [
-        { $ref: getSchemaPath(RestApiResponse) },
-        { properties: { data: { $ref: getSchemaPath(CallgentRealmDto) } } },
-      ],
-    },
-  })
-  @Post()
-  async create(@Body() dto: CreateCallgentRealmDto) {
-    if (!isAuthType(dto.authType))
-      throw new BadRequestException('Invalid authType');
-    return {
-      data: await this.callgentRealmsService.create(dto as any),
-    };
   }
 
   @ApiOkResponse({
@@ -182,7 +182,7 @@ export class CallgentRealmsController {
     },
   })
   @Delete(':callgentId/:realmKey')
-  async remove(
+  async removeRealm(
     @Param('callgentId') callgentId: string,
     @Param('realmKey') realmKey: string,
   ) {
@@ -196,7 +196,7 @@ export class CallgentRealmsController {
   @ApiParam({ name: 'type', type: 'string', enum: ['entry', 'function'] })
   @ApiBody({ isArray: true, type: RealmSecurityItemForm })
   @Post('securities/:type/:id')
-  async updateSecurities(
+  async bindEntryOrEndpointSecurities(
     @Param('type') type: 'entry' | 'function',
     @Param('id') id: string,
     @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO

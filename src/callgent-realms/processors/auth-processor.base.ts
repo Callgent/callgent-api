@@ -1,46 +1,50 @@
-import { UnauthorizedException } from '@nestjs/common';
-import {
-  SecuritySchemeObject,
-  ServerObject,
-} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EntryDto } from '../../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { Optional } from '../../infras/libs/utils';
-import { AuthType, RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 
 export abstract class AuthProcessor {
-  /** fill in necessary realm properties */
+  /**
+   * fill in necessary realm properties
+   * @param entry
+   */
   constructRealm(
-    scheme: Optional<RealmSchemeVO, 'provider'>,
-    realm: Partial<Omit<CallgentRealm, 'scheme'>>,
+    _scheme: Optional<RealmSchemeVO, 'validationUrl'>,
+    realm: Partial<CallgentRealm>,
     entry?: EntryDto,
     servers?: ServerObject[],
-  ) {
-    // imply provider
-    scheme.provider = this.implyProvider(scheme, entry, servers);
-    realm.realmKey = this.getRealmKey(scheme as any, realm.realm);
-    realm.perUser = this.isPerUser(scheme as any, realm);
-    realm.enabled = this.checkEnabled(scheme as any, realm);
+  ): CallgentRealm {
+    // imply provider, always not be empty
+    realm.provider = this.implyProvider(_scheme, entry, servers);
+    if (!_scheme.validationUrl) {
+      if (entry?.type === 'CLIENT')
+        throw new BadRequestException('scheme.validationUrl is required');
+      _scheme.validationUrl = realm.provider;
+    }
+    const scheme = _scheme as RealmSchemeVO;
+    realm.perUser = this.isPerUser(scheme, realm);
+    realm.enabled = this.checkEnabled(scheme, realm);
 
-    return realm;
+    realm.realmKey = this.getRealmKey({ ...realm, scheme });
+    return realm as CallgentRealm;
   }
 
-  /** construct a security guard on entry */
+  /** construct a security guard on entry/ep */
   constructSecurity(
     entry: EntryDto,
     realm: CallgentRealm,
     scopes?: string[],
   ): RealmSecurityItem {
     let attach: boolean;
-    if (entry.type != 'CLIENT') {
+    if (entry.type !== 'CLIENT') {
       try {
-        const provider = this.implyProvider(
-          { ...realm.scheme, provider: undefined } as any,
-          entry,
-        );
-        if (provider == realm.scheme.provider) attach = true;
+        // imply from entry only, if same with realm provider, then attach
+        const provider = this.implyProvider({ validationUrl: null }, entry);
+        attach = provider === realm.provider;
       } catch (e) {
         // ignore
       }
@@ -49,18 +53,45 @@ export abstract class AuthProcessor {
   }
 
   /**
-   * imply auth service provider
-   * @returns provider domain, must not be empty
+   * imply auth service provider from scheme/entry/server sequentially
+   * @returns provider hostname, must not be empty
    * @throws Error if fail to imply
    */
-  protected abstract implyProvider(
-    scheme: Omit<SecuritySchemeObject, 'type'> & { type: AuthType },
+  protected implyProvider(
+    scheme: Optional<RealmSchemeVO, 'validationUrl'>,
     entry?: EntryDto,
     servers?: { url: string }[],
-  ): string;
+  ) {
+    let url: string =
+      scheme.validationUrl ||
+      (entry && entry.type != 'CLIENT' && entry.host) ||
+      servers?.find((server) => {
+        try {
+          server.url && new URL(server.url);
+          return true;
+        } catch (e) {}
+      })?.url;
+    if (!url) throw new BadRequestException('Cannot imply security provider.');
+
+    try {
+      return new URL(url).hostname;
+    } catch (e) {
+      try {
+        return new URL('http://' + url).hostname;
+      } catch (e) {
+        throw new BadRequestException(
+          'Cannot imply security provider from ' + url,
+        );
+      }
+    }
+  }
 
   /** @returns realm key to identify the same realms */
-  protected abstract getRealmKey(scheme: RealmSchemeVO, realm?: string): string;
+  protected getRealmKey(realm: Partial<CallgentRealm>): string {
+    const keys = this._getRealmKeys(realm);
+    return keys.join(':');
+  }
+  protected abstract _getRealmKeys(realm: Partial<CallgentRealm>): string[];
 
   protected abstract checkEnabled(
     scheme: RealmSchemeVO,
@@ -98,7 +129,7 @@ export abstract class AuthProcessor {
 
     if (security?.attach)
       result = await this._attachToken(token, reqEvent, realm);
-    else if (realm.scheme.validationUrl)
+    else if (realm.scheme.validationUrl || realm.provider === 'local')
       result = await this._validateTokenByUrl(token, realm);
     else
       throw new UnauthorizedException(
@@ -123,7 +154,7 @@ export abstract class AuthProcessor {
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 
   /**
-   * validate token from realm.scheme.validationUrl
+   * validate token from realm.scheme.validationUrl, or realm.scheme.provider === 'local'
    * @returns boolean if valid/invalid, void if async
    */
   protected abstract _validateTokenByUrl(

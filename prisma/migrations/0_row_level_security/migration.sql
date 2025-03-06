@@ -135,6 +135,7 @@ CREATE TABLE "CallgentRealm" (
     "callgentId" VARCHAR(30) NOT NULL,
     "realmKey" VARCHAR(256) NOT NULL,
     "authType" VARCHAR(16) NOT NULL,
+    "provider" VARCHAR(30) NOT NULL,
     "realm" VARCHAR(30) DEFAULT '',
     "scheme" JSON NOT NULL,
     "secret" JSON,

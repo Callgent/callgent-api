@@ -19,17 +19,16 @@ export class ClientRequestEvent extends EventObject {
     req: object,
     taskId: string,
     title: string,
-    calledBy: string,
     context: {
       callgentId: string;
       callgentName: string;
-      /** empty means anonymous */
-      callerId?: string;
       /** requested endpoint name */
       epName?: string /** url template for progressive requesting, `callgent:epName[@callgent]` to invoke callgent */;
       /** empty to create new task */
       progressive?: string;
     },
+    /** empty means anonymous */
+    calledBy?: string,
     callback?: string,
   ) {
     super(
@@ -59,7 +58,6 @@ export class ClientRequestEvent extends EventObject {
     resp?: ServiceResponse;
     callgentId: string;
     callgentName: string;
-    callerId?: string;
     epName?: string;
     progressive?: string;
     invocations: {

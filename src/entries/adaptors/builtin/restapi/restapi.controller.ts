@@ -106,7 +106,7 @@ export class RestApiController {
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);
     const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
-    const calledBy = req.user?.sub;
+    const calledBy: string = req.user?.sub;
 
     const e = new ClientRequestEvent(
       entry.id,
@@ -114,13 +114,12 @@ export class RestApiController {
       requirement,
       taskId,
       title,
-      calledBy,
       {
         callgentId,
         callgentName: callgent.name,
-        callerId: req.user?.sub,
         progressive,
       },
+      calledBy,
       // callback, // 是否需要异步返回结果
     );
     e.context.callgent = callgent;
@@ -224,9 +223,8 @@ export class RestApiController {
     // find callgent cep, then set tenantPk
     const { entry, callgent } = await this._load(callgentId, entryId);
     // TODO owner defaults to caller callgent
-    const callerId = req.user?.sub; // || req.ip || req.socket.remoteAddress;
+    const calledBy = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     const title = 'Invoke: ' + epName;
-    const calledBy = req.user?.sub;
 
     const data = await this.eventListenersService.emit(
       new ClientRequestEvent(
@@ -235,14 +233,13 @@ export class RestApiController {
         req,
         null,
         title,
-        calledBy,
         {
           callgentId,
           callgentName: callgent.name,
-          callerId,
           // progressive, FIXME progressive not supported for invoking?
           epName,
         },
+        calledBy,
         callback,
       ),
       parseInt(timeout) || 0, //  sync timeout
@@ -310,6 +307,7 @@ export class RestApiController {
     this.tenancyService.setTenantId(entry.tenantPk);
 
     const callgent = await this.callgentsService.findOne(callgentId, {
+      pk: false,
       id: true,
       name: true,
       summary: true,

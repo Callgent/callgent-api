@@ -1,8 +1,8 @@
 /**
- * helper to support exclusion selection, when param `select`.values() are all false, e.g. select: { pk: false, deletedAt: false }
+ * helper to support exclusion selection, when param `mergedSelect`.values() are all booleans and contains false,
+ * e.g. mergedSelect: { pk: false, deletedAt: false, name: true }: means, select all columns except pk, deletedAt
  *
- * @param select if select.values() all false, then do exclusion select: select *, then delete item[key];
- *  if any value null, then delete defaultSelect[key]
+ * @param select if select.values() no false, then do inclusion select, ignore defaultSelect
  * @param resultKey prop name of the result list from :query: return
  * @param defaultSelect merged: { ...defaultSelect, ...select }
  */
@@ -36,18 +36,22 @@ function doExclusionSelect(select: string[], result: any) {
   result.forEach((item: any) => {
     select.forEach((key) => delete item[key]);
   });
-  if (notArray) result = result[0];
+  if (notArray) [result] = result;
   return result;
 }
-function mergeSelects<S extends object>(defaultSelect: S, select: S): S {
-  if (!select) return defaultSelect;
 
-  select = { ...select };
-  Object.entries(defaultSelect).forEach(([key, value]) => {
-    if (!(key in select)) select[key] = value;
-    else if (null === select[key] || undefined === select[key])
-      delete select[key];
-  });
+/**
+ * @param select if no false, inclusion select, else exclusion select
+ */
+function mergeSelects<S extends object>(defaultSelect: S, select?: S): S {
+  if (!select) return defaultSelect;
+  if (Object.values(select).every((value) => !!value)) return select;
+
+  select = { ...defaultSelect, ...select };
+  // if all values are boolean, and has any false, then do exclusion select: delete true keys
+  const vals = Object.values(select);
+  if (vals.includes(false) && vals.every((value) => typeof value === 'boolean'))
+    for (const key in select) select[key] && delete select[key];
 
   return select;
 }

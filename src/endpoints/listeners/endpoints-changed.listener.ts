@@ -64,7 +64,7 @@ export class EndpointsChangedSumEntryListener {
           summary: result.summary,
           instruction: result.instruction,
         },
-        { pk: null },
+        { pk: true },
       )
       .catch((err) => {
         this.logger.error('Failed to update entry: %j', err);

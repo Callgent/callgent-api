@@ -3,7 +3,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SecuritySchemeObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EntryDto } from '../../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
@@ -13,46 +12,21 @@ import { AuthProcessor } from './auth-processor.base';
 
 @Injectable()
 export class HttpAuthProcessor extends AuthProcessor {
-  protected implyProvider(
-    scheme: SecuritySchemeObject,
-    entry?: EntryDto,
-    servers?: { url: string }[],
-  ) {
-    let url: string = (scheme as any).provider;
-    if (url) {
-      if (!url.toLowerCase().startsWith('http')) url = 'http://' + url;
-    } else {
-      if (entry && entry.type != 'CLIENT') {
-        url = entry.host; // whatever adaptor it is, host need to be a url
-      } else if (servers?.length > 0) {
-        url = servers[0].url;
-      }
-    }
-    if (!url)
-      throw new BadRequestException(
-        'Cannot imply security provider, please specify it manually',
-      );
-
-    try {
-      return new URL(url).hostname;
-    } catch (e) {
-      throw new BadRequestException(
-        'Invalid security provider, must be url: ' + url,
-      );
-    }
-  }
-
-  /** @returns http:scheme:provider:realm */
-  protected getRealmKey(scheme: RealmSchemeVO, realm?: string) {
-    return `http:${scheme.scheme || ''}:${scheme.provider}:${realm || ''}`;
+  /** @returns http:provider:scheme:realm */
+  protected _getRealmKeys(realm: Partial<CallgentRealm>) {
+    return [
+      realm.authType,
+      realm.provider,
+      realm.scheme?.scheme,
+      realm.realm,
+    ].filter((s) => s);
   }
 
   protected checkEnabled(
     scheme: RealmSchemeVO,
     realm: Partial<Omit<CallgentRealm, 'scheme'>>,
   ) {
-    if (!realm.secret || !scheme.provider || !scheme.name || !scheme.in)
-      return false;
+    if (!realm.secret || !scheme.name || !scheme.in) return false;
     return this.validateSecretFormat(realm);
   }
 

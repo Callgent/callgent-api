@@ -162,7 +162,7 @@ export class CallgentHubService {
               ...r,
               callgentId,
             },
-            { pk: null },
+            { pk: true },
           );
           realmMap[r.pk.toString()] = realm;
         }),
