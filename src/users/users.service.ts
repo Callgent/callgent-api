@@ -91,7 +91,6 @@ export class UsersService {
   }
 
   async $findFirstUserIdentity(
-    userId: string,
     uid: string,
     provider: string,
     authType: string,
@@ -99,8 +98,15 @@ export class UsersService {
     const prisma = this.txHost.tx as PrismaClient;
     await this.tenancyService.bypassTenancy(prisma);
     try {
-      return await prisma.userIdentity.findFirst({
-        where: { authType, provider, uid, userId },
+      return await prisma.userIdentity.findUnique({
+        where: {
+          authType_provider_uid_deletedAt: {
+            authType,
+            uid,
+            provider,
+            deletedAt: 0,
+          },
+        },
       });
     } finally {
       await this.tenancyService.bypassTenancy(prisma, false);

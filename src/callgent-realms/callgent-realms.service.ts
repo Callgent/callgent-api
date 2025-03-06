@@ -267,13 +267,17 @@ export class CallgentRealmsService implements OnModuleInit {
       attach: cen ? false : item.attach,
     };
     const { realm, processor } = await this._loadRealm(item, true);
-    // return false if disabled
-    if (!realm?.enabled) return false;
+    const { calledBy } = reqEvent;
+
+    // local.jwt returns caller, prevents using others jwt
+    if (realm.authType === 'jwt' && realm.provider === 'local') {
+      reqEvent.paidBy = calledBy;
+      return !!calledBy && { data: reqEvent };
+    }
 
     // read existing from identity store
     const userIdentity = await this._findUserIdentity(
       reqEvent.context.req,
-      reqEvent.calledBy,
       realm,
       processor,
     );
@@ -286,17 +290,13 @@ export class CallgentRealmsService implements OnModuleInit {
       reqEvent.paidBy = userIdentity.userId;
     }
 
-    // invoke validation url. TODO security as arg
-    const result = await processor.validateToken(
-      userIdentity.credentials,
+    // if not valid, start auth process
+    const ret = await processor.authProcess(
       reqEvent,
       realm,
+      item,
+      userIdentity,
     );
-    if (result) return result; // valid/attach or async
-    // else invalid, continue to refresh token process
-
-    // if not valid, start auth process
-    const ret = await processor.authProcess(realm, item, reqEvent);
     if (ret) return ret; // async
 
     // self provider same as third
@@ -341,12 +341,12 @@ export class CallgentRealmsService implements OnModuleInit {
       pk: true,
       tenantPk: false,
     });
-    if (!realm?.enabled) {
-      if (noError) return { realm };
-      throw new UnauthorizedException(
-        'Invalid security realm ' + security.realmPk,
-      );
-    }
+    // if (!realm?.enabled) {
+    //   if (noError) return { realm };
+    //   throw new UnauthorizedException(
+    //     'Invalid security realm ' + security.realmPk,
+    //   );
+    // }
     const processor = this._getAuthProcessor(realm.authType);
     return { realm, processor };
   }
@@ -366,7 +366,6 @@ export class CallgentRealmsService implements OnModuleInit {
 
   protected async _findUserIdentity(
     req: any,
-    userId: string,
     realm: CallgentRealm,
     processor: AuthProcessor,
   ): Promise<{
@@ -378,7 +377,6 @@ export class CallgentRealmsService implements OnModuleInit {
     const { provider, uid, credentials } = processor.getIdentity(req, realm);
     const identity =
       (await this.usersService.$findFirstUserIdentity(
-        userId,
         uid,
         provider,
         realm.authType,

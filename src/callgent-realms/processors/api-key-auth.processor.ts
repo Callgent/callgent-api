@@ -8,9 +8,13 @@ import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
+import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
 
 @Injectable()
 export class ApiKeyAuthProcessor extends AuthProcessor {
+  constructor(private readonly jwtAuthService: JwtAuthService) {
+    super();
+  }
   /** @returns ApiKey:provider:in:name:realm */
   protected _getRealmKeys(realm: Partial<CallgentRealm>) {
     return [
@@ -39,15 +43,21 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
 
   /** api-key is the token, needn't exchange process */
   async authProcess(
+    reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
     item: RealmSecurityItem,
-    reqEvent: ClientRequestEvent,
+    userIdentity: {
+      provider: string;
+      uid: string;
+      credentials: string;
+      userId?: string;
+    },
   ): Promise<void | {
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
     const result = await this.validateToken(
-      realm.secret as string,
+      userIdentity.credentials,
       reqEvent,
       realm,
     );
@@ -58,12 +68,19 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     );
   }
 
-  /** attach to validationUrl */
+  /** call validationUrl for validation */
   async _validateTokenByUrl(
     token: string,
     realm: CallgentRealm,
   ): Promise<boolean | void> {
-    // get validationUrl with token
+    if (realm.provider === 'local') {
+      try {
+        const jwt = this.jwtAuthService.verify(token);
+        return !!jwt;
+      } catch (e) {
+        return false;
+      }
+    }
   }
 
   async _attachToken(
@@ -157,6 +174,9 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): { provider: string; uid: string; credentials: string } {
     const token = this._readWriteToken(req, realm.scheme as any, true);
+    if (realm.provider === 'local') {
+      // find in authToken table, pk as uid
+    }
     return { provider: realm.provider, uid: token, credentials: token };
   }
 }

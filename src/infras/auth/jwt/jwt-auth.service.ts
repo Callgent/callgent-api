@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Utils } from '../../libs/utils';
@@ -40,15 +44,28 @@ export class JwtAuthService {
   }
 
   /**
-   * @returns decoded object
+   * @returns decoded payload
    * @throws UnauthorizedException
    */
   verify(token: string): JwtPayload {
     // TODO emit event to invalidate revoked token
     try {
-      return this.jwtService.verify(token, { complete: true })?.payload;
+      return this.jwtService.verify(token);
     } catch (error) {
       throw new UnauthorizedException(error.message);
+    }
+  }
+
+  /**
+   * just decode, no verification
+   * @returns decoded payload
+   * @throws BadRequestException
+   */
+  decode(token: string): JwtPayload {
+    try {
+      return this.jwtService.decode(token);
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
   }
 }

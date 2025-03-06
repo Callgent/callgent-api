@@ -31,15 +31,15 @@ export class CallgentCreatedListener {
     // add local realm securities
     await Promise.all(
       [
-        // callgent api-key
+        // callgent jwt
         {
           callgentId: callgent.id,
-          authType: 'apiKey',
+          authType: 'jwt',
           scheme: {
             in: 'header',
             validationUrl: 'http://local',
             name: 'x-callgent-authorization',
-            description: 'Callgent Authentication',
+            description: 'Callgent User Authentication',
           },
           enabled: true,
         },

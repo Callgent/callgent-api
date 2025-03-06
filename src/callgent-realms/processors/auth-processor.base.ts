@@ -129,7 +129,7 @@ export abstract class AuthProcessor {
 
     if (security?.attach)
       result = await this._attachToken(token, reqEvent, realm);
-    else if (realm.scheme.validationUrl || realm.provider === 'local')
+    else if (realm.scheme.validationUrl)
       result = await this._validateTokenByUrl(token, realm);
     else
       throw new UnauthorizedException(
@@ -154,7 +154,7 @@ export abstract class AuthProcessor {
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }>;
 
   /**
-   * validate token from realm.scheme.validationUrl, or realm.scheme.provider === 'local'
+   * validate token from realm.scheme.validationUrl
    * @returns boolean if valid/invalid, void if async
    */
   protected abstract _validateTokenByUrl(
@@ -186,9 +186,15 @@ export abstract class AuthProcessor {
    * @returns void or { data } if done; {data: reqEvent, resumeFunName?: 'postAcquireSecret' | 'postExchangeToken'} if async, CallgentRealmsService will call resumeFunName which delegate to current processor
    */
   abstract authProcess(
+    reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
     item: RealmSecurityItem,
-    reqEvent: ClientRequestEvent,
+    userIdentity: {
+      provider: string;
+      uid: string;
+      credentials: string;
+      userId?: string;
+    },
   ): Promise<void | {
     data: ClientRequestEvent;
     resumeFunName?:
