@@ -173,7 +173,7 @@ export class EndpointsService {
           const result: RealmSecurityVO = {};
           Object.entries(security).forEach(([name, scopes]) => {
             const realm = realmMap[name];
-            if (typeof realm?.pk !== 'bigint')
+            if (!realm?.id)
               throw new BadRequestException(
                 'Unknown security scheme name: ' + name,
               );
@@ -183,7 +183,7 @@ export class EndpointsService {
               scopes,
             );
 
-            result[item.realmPk.toString()] = item;
+            result[item.realmId] = item;
           });
           return result;
         });

@@ -4,11 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
+import { RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
-import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
 
 @Injectable()
 export class JwtAuthProcessor extends AuthProcessor {
@@ -81,6 +81,8 @@ export class JwtAuthProcessor extends AuthProcessor {
         return false;
       }
     }
+    const req = {};
+    this._readWriteToken(req, realm.scheme, token.toString());
     // FIXME: call validationUrl
     return false;
   }
@@ -91,34 +93,21 @@ export class JwtAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): Promise<true> {
     // {"type":"jwt","in":"header","name":"x-callgent-authorization","provider":"local"}
-    return this._readWriteToken(
+    this._readWriteToken(
       reqEvent.context.req,
-      realm.scheme as any,
-      false,
+      realm.scheme,
       // user token first
-      token || (realm.secret as string),
+      (token || realm.secret?.toString()) ?? '',
     );
+    return true;
   }
 
   private _readWriteToken(
     req: any,
-    scheme: APIKeySecurityScheme,
-    read?: true,
-  ): string;
-
-  private _readWriteToken(
-    req: any,
-    scheme: APIKeySecurityScheme,
-    read: false,
-    value: string,
-  ): true;
-
-  private _readWriteToken(
-    req: any,
-    scheme: APIKeySecurityScheme,
-    read: boolean,
+    scheme: RealmSchemeVO,
     value?: string,
-  ): true | string {
+  ): string {
+    const read = typeof value !== 'string';
     if (!read) {
       if (!value) throw new ForbiddenException('Missing auth token');
       value = encodeURIComponent(value);
@@ -148,7 +137,7 @@ export class JwtAuthProcessor extends AuthProcessor {
       default:
         throw new Error('Invalid security scheme `in`: ' + in0);
     }
-    return true;
+    return value;
   }
 
   /** check response from validationUrl */
@@ -175,7 +164,7 @@ export class JwtAuthProcessor extends AuthProcessor {
     req: any,
     realm: CallgentRealm,
   ): { provider: string; uid: string; credentials: string } {
-    const token = this._readWriteToken(req, realm.scheme as any, true);
+    const token = this._readWriteToken(req, realm.scheme);
     const jwt = this.jwtAuthService.decode(token);
     return { provider: realm.provider, uid: jwt.sub, credentials: token };
   }

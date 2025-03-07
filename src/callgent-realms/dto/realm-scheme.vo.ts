@@ -7,10 +7,10 @@ import {
 export type AuthType = SecuritySchemeType | 'password' | 'jwt'; // | '';
 const authTypes: AuthType[] = [
   'apiKey',
-  'http',
+  'jwt',
   'oauth2',
+  'http',
   'openIdConnect',
-  'apiKey',
   'password',
 ];
 

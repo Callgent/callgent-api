@@ -29,7 +29,6 @@ import { CreateCallgentRealmDto } from './dto/create-callgent-realm.dto';
 import { isAuthType } from './dto/realm-scheme.vo';
 import { RealmSecurityItemForm } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
-import { Prisma } from '@prisma/client';
 
 @ApiTags('CallgentRealms')
 @ApiSecurity('defaultBearerAuth')
@@ -68,15 +67,10 @@ export class CallgentRealmsController {
       ],
     },
   })
-  @Get(':callgentId/:realmKey')
-  async findOneRealm(
-    @Param('callgentId') callgentId: string,
-    @Param('realmKey') realmKey: string,
-  ) {
-    // TODO realmKey may be in body
-    const data = await this.callgentRealmsService
-      .findOne(callgentId, realmKey)
-      .then((r) => r && { ...r, secret: r.secret ? true : false });
+  @Get('/:id')
+  async findOneRealm(@Param('id') id: string) {
+    const data = await this.callgentRealmsService.findOne(id);
+    data.secret = !!data.secret;
     return { data };
   }
 
@@ -117,15 +111,13 @@ export class CallgentRealmsController {
       ],
     },
   })
-  @Put(':callgentId/:realmKey')
+  @Put(':id')
   async updateRealm(
-    @Param('callgentId') callgentId: string,
-    @Param('realmKey') realmKey: string,
+    @Param('id') id: string,
     @Body() dto: UpdateCallgentRealmDto,
   ) {
-    // TODO realmKey may be in body
     const data = await this.callgentRealmsService
-      .update(callgentId, realmKey, dto, { pk: false })
+      .update(id, dto)
       .then((r) => r && { ...r, secret: r.secret ? true : false });
 
     return { data };
@@ -161,7 +153,7 @@ export class CallgentRealmsController {
       ],
     },
   })
-  @Get(':callgentId')
+  @Get('/callgent/:callgentId')
   async findAllRealms(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
       .findAll(callgentId)
@@ -181,13 +173,10 @@ export class CallgentRealmsController {
       ],
     },
   })
-  @Delete(':callgentId/:realmKey')
-  async removeRealm(
-    @Param('callgentId') callgentId: string,
-    @Param('realmKey') realmKey: string,
-  ) {
+  @Delete(':id')
+  async removeRealm(@Param('id') id: string) {
     return {
-      data: await this.callgentRealmsService.delete(callgentId, realmKey),
+      data: await this.callgentRealmsService.delete(id),
     };
   }
 

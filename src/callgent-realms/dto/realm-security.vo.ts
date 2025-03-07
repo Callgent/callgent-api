@@ -6,7 +6,7 @@ import {
 
 export class RealmSecurityItemForm {
   @ApiProperty({ required: true, type: 'string' })
-  realmKey: string;
+  realmId: string;
 
   /** scopes for the security operation */
   @ApiProperty({ isArray: true, required: false, type: 'string' })
@@ -15,7 +15,7 @@ export class RealmSecurityItemForm {
 
 /** item bound on entry/ep */
 export class RealmSecurityItem {
-  realmPk: string;
+  realmId: string;
 
   /** scopes for the security operation */
   @ApiProperty({ isArray: true, required: false, type: 'string' })
@@ -32,5 +32,5 @@ export class RealmSecurityItem {
  */
 @ApiExtraModels(RealmSecurityItem)
 export class RealmSecurityVO {
-  [realmPk: string]: RealmSecurityItem;
+  [realmId: string]: RealmSecurityItem;
 }

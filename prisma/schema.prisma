@@ -290,7 +290,6 @@ model Entry {
   callgent   Callgent @relation(fields: [callgentId], references: [id])
 
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   createdBy String   @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -368,8 +367,12 @@ model Endpoint {
 /// @description security realms for callgent
 model CallgentRealm {
   /// @DtoReadOnly
-  /// @DtoPlainApiResponse
+  /// @DtoEntityHidden
   pk       BigInt @id @default(autoincrement())
+  /// @DtoCreateApiResponse
+  /// @DtoUpdateApiResponse
+  /// @DtoPlainApiResponse
+  id       String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql

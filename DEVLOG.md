@@ -141,8 +141,8 @@ all validation is based on bearer token, with payload:
 
   ```js
   {
-    sub: user.pk.toString(),
-    iss: user.tenantPk.toString(),
+    sub: user.id,
+    iss: user.tenantId,
     aud: user.id,
   }
   ```

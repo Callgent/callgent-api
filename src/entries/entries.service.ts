@@ -27,6 +27,7 @@ import {
 import { IS_CALLGENT_ENDPOINT_ADAPTOR } from './adaptors/entry-adaptor.decorator';
 import { EntryDto } from './dto/entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
+import { Entry } from './entities/entry.entity';
 import { ClientRequestEvent } from './events/client-request.event';
 import { EntriesChangedEvent } from './events/entries-changed.event';
 import { EntryCreatedEvent } from './events/entry-created.event';
@@ -114,13 +115,13 @@ export class EntriesService implements OnModuleInit {
     return ret;
   }
 
-  findOne(id: string, select?: Prisma.EntrySelect) {
+  async findOne(id: string, select?: Prisma.EntrySelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) => prisma.entry.findUnique({ select, where: { id } }),
       this.defSelect,
-    );
+    ).then((e) => e as unknown as Entry);
   }
 
   findFirstByType(

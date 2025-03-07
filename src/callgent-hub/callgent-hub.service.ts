@@ -143,18 +143,10 @@ export class CallgentHubService {
       this.tenancyService.setTenantId(fromTenant);
       const realms = await this.callgentRealmsService.findAll(from.id, {
         orderBy: { pk: 'asc' },
-        select: {
-          pk: true,
-          realmKey: true,
-          authType: true,
-          realm: true,
-          scheme: true,
-          secret: false, // don't fork secret
-          perUser: true,
-        },
+        select: { secret: false },
       });
       this.tenancyService.setTenantId(toTenant);
-      const realmMap: { [pk: string]: CallgentRealm } = {};
+      const realmMap: { [id: string]: CallgentRealm } = {};
       await Promise.all(
         realms.map(async (r) => {
           const realm = await this.callgentRealmsService.create(
@@ -162,9 +154,9 @@ export class CallgentHubService {
               ...r,
               callgentId,
             },
-            { pk: true },
+            { id: true },
           );
-          realmMap[r.pk.toString()] = realm;
+          realmMap[r.id] = realm;
         }),
       );
 
@@ -227,10 +219,10 @@ export class CallgentHubService {
         return securities?.map((security) => {
           const ret: RealmSecurityVO = {};
           Object.values(security).forEach((item) => {
-            const realm = realmMap[item.realmPk];
-            ret[realm.pk.toString()] = {
+            const realm = realmMap[item.realmId];
+            ret[realm.id] = {
               ...item,
-              realmPk: realm.pk.toString(),
+              realmId: realm.id,
             };
           });
           return ret;

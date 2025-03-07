@@ -49,7 +49,7 @@ export abstract class AuthProcessor {
         // ignore
       }
     }
-    return { realmPk: realm.pk.toString(), attach, scopes };
+    return { realmId: realm.id, attach, scopes };
   }
 
   /**

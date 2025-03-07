@@ -89,34 +89,21 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): Promise<true> {
     // {"type":"apiKey","in":"header","name":"x-callgent-authorization","provider":"local"}
-    return this._readWriteToken(
+    this._readWriteToken(
       reqEvent.context.req,
-      realm.scheme as any,
-      false,
+      realm.scheme,
       // user token first
-      token || (realm.secret as string),
+      (token || realm.secret?.toString()) ?? '',
     );
+    return true;
   }
 
   private _readWriteToken(
     req: any,
-    scheme: APIKeySecurityScheme,
-    read?: true,
-  ): string;
-
-  private _readWriteToken(
-    req: any,
-    scheme: APIKeySecurityScheme,
-    read: false,
-    value: string,
-  ): true;
-
-  private _readWriteToken(
-    req: any,
-    scheme: APIKeySecurityScheme,
-    read: boolean,
+    scheme: RealmSchemeVO,
     value?: string,
-  ): true | string {
+  ): string {
+    const read = typeof value !== 'string';
     if (!read) {
       if (!value) throw new ForbiddenException('Missing auth token');
       value = encodeURIComponent(value);
@@ -146,7 +133,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
       default:
         throw new Error('Invalid security scheme `in`: ' + in0);
     }
-    return true;
+    return value;
   }
 
   /** check response from validationUrl */
@@ -173,7 +160,7 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
     req: any,
     realm: CallgentRealm,
   ): { provider: string; uid: string; credentials: string } {
-    const token = this._readWriteToken(req, realm.scheme as any, true);
+    const token = this._readWriteToken(req, realm.scheme);
     if (realm.provider === 'local') {
       // find in authToken table, pk as uid
     }

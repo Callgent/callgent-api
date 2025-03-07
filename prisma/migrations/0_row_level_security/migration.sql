@@ -132,6 +132,7 @@ CREATE TABLE "CallgentRealm" (
     "tenantPk" INTEGER NOT NULL DEFAULT (
         current_setting('tenancy.tenantPk')::int
     ),
+    "id" VARCHAR(30) NOT NULL,
     "callgentId" VARCHAR(30) NOT NULL,
     "realmKey" VARCHAR(256) NOT NULL,
     "authType" VARCHAR(16) NOT NULL,

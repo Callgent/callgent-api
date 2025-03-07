@@ -17,7 +17,7 @@ import { Endpoint } from '../endpoints/entities/endpoint.entity';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
-import { Optional } from '../infras/libs/utils';
+import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { UsersService } from '../users/users.service';
 import { RealmSchemeVO } from './dto/realm-scheme.vo';
@@ -62,13 +62,14 @@ export class CallgentRealmsService implements OnModuleInit {
   async create(
     realm: Omit<
       Prisma.CallgentRealmUncheckedCreateInput,
-      'realmKey' | 'provider'
+      'id' | 'realmKey' | 'provider'
     >,
     select?: Prisma.CallgentRealmSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
     const processor = this._getAuthProcessor(realm.authType);
     const data = processor.constructRealm(realm.scheme as any, realm as any);
+    data.id = Utils.uuid();
     return selectHelper(
       select,
       (select) =>
@@ -98,8 +99,8 @@ export class CallgentRealmsService implements OnModuleInit {
     const callgentId = entry.callgentId;
     const prisma = this.txHost.tx as PrismaClient;
 
-    const where = realm.pk
-      ? { OR: [{ callgentId, realmKey }, { pk: realm.pk }] }
+    const where = realm.id
+      ? { OR: [{ callgentId, realmKey }, { id: realm.id }] }
       : { callgentId, realmKey };
     const existing = await prisma.callgentRealm.findFirst({
       select: { pk: true },
@@ -120,6 +121,7 @@ export class CallgentRealmsService implements OnModuleInit {
     return prisma.callgentRealm.create({
       data: {
         ...realm,
+        id: Utils.uuid(),
         callgentId,
         realmKey,
         authType,
@@ -142,7 +144,7 @@ export class CallgentRealmsService implements OnModuleInit {
     id: string,
     securities: RealmSecurityItemForm[],
   ) {
-    let entry, targetService: EntriesService | EndpointsService;
+    let entry: EntryDto, targetService: EntriesService | EndpointsService;
     if (type == 'entry') {
       targetService = this.entriesService;
       entry = await this.entriesService.findOne(id);
@@ -157,14 +159,11 @@ export class CallgentRealmsService implements OnModuleInit {
 
     const secs = await Promise.all(
       securities.map(async (security) => {
-        const realm = await this.findOne(entry.callgentId, security.realmKey, {
-          pk: true,
-          tenantPk: false,
-        });
+        const realm = await this.findOne(security.realmId);
         if (!realm) throw new NotFoundException('Not found realm');
 
         const sec = this.constructSecurity(realm, entry, security.scopes);
-        return { [sec.realmPk.toString()]: sec };
+        return { [sec.realmId]: sec };
       }),
     );
 
@@ -337,10 +336,7 @@ export class CallgentRealmsService implements OnModuleInit {
    * @param noError if false, throw error if realm not enabled
    */
   protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this._findOne(BigInt(security.realmPk), {
-      pk: true,
-      tenantPk: false,
-    });
+    const realm = await this._findOne(security.realmId);
     // if (!realm?.enabled) {
     //   if (noError) return { realm };
     //   throw new UnauthorizedException(
@@ -392,38 +388,28 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   @Transactional()
-  protected _findOne(pk: bigint, select?: Prisma.CallgentRealmSelect) {
+  protected _findOne(id: string, select?: Prisma.CallgentRealmSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
         prisma.callgentRealm.findUnique({
           select,
-          where: { pk },
+          where: { id },
         }),
       this.defSelect,
     ) as unknown as Promise<CallgentRealm>;
   }
 
   @Transactional()
-  findOne(
-    callgentId: string,
-    realmKey: string,
-    select?: Prisma.CallgentRealmSelect,
-  ) {
+  findOne(id: string, select?: Prisma.CallgentRealmSelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
         prisma.callgentRealm.findUnique({
           select,
-          where: {
-            callgentId_realmKey_deletedAt: {
-              callgentId,
-              realmKey,
-              deletedAt: 0n,
-            },
-          },
+          where: { id },
         }),
       this.defSelect,
     ) as unknown as Promise<CallgentRealm>;
@@ -461,13 +447,12 @@ export class CallgentRealmsService implements OnModuleInit {
    */
   @Transactional()
   async update(
-    callgentId: string,
-    realmKey: string,
+    id: string,
     dto: UpdateCallgentRealmDto,
     select?: Prisma.CallgentRealmSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const old = await this.findOne(callgentId, realmKey);
+    const old = await this.findOne(id);
     dto = { ...old, ...dto }; // merge
     if (!dto.scheme) throw new BadRequestException('realm.scheme is required');
 
@@ -479,13 +464,7 @@ export class CallgentRealmsService implements OnModuleInit {
       (select) =>
         prisma.callgentRealm.update({
           select,
-          where: {
-            callgentId_realmKey_deletedAt: {
-              callgentId,
-              realmKey,
-              deletedAt: 0n,
-            },
-          },
+          where: { id },
           data: {
             ...dto,
             scheme: dto.scheme as any,
@@ -497,54 +476,41 @@ export class CallgentRealmsService implements OnModuleInit {
   }
 
   @Transactional()
-  async delete(callgentId: string, realmKey: string) {
+  async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    const realm = await selectHelper(
-      { pk: true, tenantPk: false },
-      (select) =>
-        prisma.callgentRealm.delete({
-          where: {
-            callgentId_realmKey_deletedAt: {
-              callgentId,
-              realmKey,
-              deletedAt: 0n,
-            },
-          },
-          select,
-        }),
-      this.defSelect,
-    );
+    const realm = await prisma.callgentRealm.delete({
+      where: { id },
+      select: { callgentId: true },
+    });
     if (!realm) return;
-    const pk = realm.pk.toString();
+    const callgentId = realm.callgentId;
 
     // clear securities
     await Promise.all([
       prisma.$executeRaw`UPDATE "Entry"
     SET "securities" = (
-        SELECT array_agg(sec::jsonb - ${pk})
-          FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')
+        SELECT array_agg(sec::jsonb - ${id})
+          FILTER (WHERE (sec::jsonb - ${id})::text != '{}')
         FROM unnest("securities") AS sec
     )
     WHERE "callgentId"=${callgentId} and EXISTS (
         SELECT 1
         FROM unnest("securities") AS elem
-        WHERE elem::jsonb ? ${pk}
+        WHERE elem::jsonb ? ${id}
     )`,
       prisma.$executeRaw`UPDATE "Endpoint"
     SET "securities" = (
-        SELECT array_agg(sec::jsonb - ${pk})
-          FILTER (WHERE (sec::jsonb - ${pk})::text != '{}')
+        SELECT array_agg(sec::jsonb - ${id})
+          FILTER (WHERE (sec::jsonb - ${id})::text != '{}')
         FROM unnest("securities") AS sec
     )
     WHERE "callgentId"=${callgentId} and EXISTS (
         SELECT 1
         FROM unnest("securities") AS elem
-        WHERE elem::jsonb ? ${pk}
+        WHERE elem::jsonb ? ${id}
     )`,
     ]);
 
-    delete realm.pk;
-    realm.secret = !!realm.secret;
     return realm;
   }
 }
