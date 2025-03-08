@@ -8,7 +8,10 @@ import {
 } from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
-/** update response cache: resolved or not */
+/** 
+ * update response cache: resolved or not.
+ * end or break chain
+ */
 @Injectable()
 export class SepCacheProcessor extends SepProcessor {
   getName = (): string => 'InvokeCache';

@@ -2,11 +2,12 @@ import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Transaction } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import Stripe from 'stripe';
 import { Utils } from '../infras/libs/utils';
 import { TransactionsService } from '../transactions/transactions.service';
+import { CreateTransactionDto } from '../transactions/dtos/create-transaction.dto';
 
 @Injectable()
 export class BillingService {
@@ -21,6 +22,38 @@ export class BillingService {
     this.stripe = new Stripe(this.configService.get('STRIPE_KEY'), {
       apiVersion: this.configService.get('STRIPE_API_VERSION'),
     });
+  }
+
+  /** if tx is active, do refunding */
+  rollback(txId: string) {
+    return this.transactionsService.rollback(txId);
+  }
+
+  /**
+   * commit the pending transaction
+   * @param calc a function to calculate the amount[$1 = 1e11] to commit, returns 0 if no commit
+   */
+  async commit(txId: string, calc?: (tx: Transaction) => Promise<Decimal>) {
+    const tx = await this.transactionsService.findByTx(txId);
+    if (!tx) return false;
+    if (tx.status !== 0) {
+      this.logger.error(
+        `Failed to commit, transaction ${txId} is already ${tx.status}`,
+      );
+      return false;
+    }
+
+    const amount = calc && (await calc(tx));
+    if (amount?.toNumber() === 0) return false;
+    return this.transactionsService.commit(txId, amount).then(({ tx }) => !!tx);
+  }
+
+  /**
+   * check balance and add the tx
+   */
+  async addTx(tx: CreateTransactionDto) {
+    // check balance
+    return this.transactionsService.create(tx);
   }
 
   /** Create a Stripe payment session */
@@ -101,6 +134,7 @@ export class BillingService {
       txId,
       userId,
       amount,
+      status: 1,
       currency,
       refData,
       type: 'RECHARGE',
@@ -152,6 +186,7 @@ export class BillingService {
       txId,
       userId,
       amount,
+      status: 1,
       refData,
       type: 'EXPENSE',
       currency: pricing.currency,

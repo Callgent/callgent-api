@@ -31,7 +31,7 @@ export class EntryCreatedListener {
       { select: { id: true, authType: true, provider: true } },
     )) as any as CallgentRealm[];
     const defaultSecurity = securities.find(
-      (s) => s.authType === 'apiKey' && s.provider === 'local',
+      (s) => s.authType === 'jwt' && s.provider === 'local',
     );
     if (!defaultSecurity) return;
     const defaultRealm = { realmId: defaultSecurity.id };

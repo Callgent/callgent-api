@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { AuthTokensService } from '../auth-tokens/auth-tokens.service';
 import { EmailsService } from '../emails/emails.service';
 import { AuthLoginEvent } from '../infras/auth/events/auth-login.event';
@@ -399,13 +400,29 @@ export class UsersService {
 
     const prisma = this.txHost.tx as PrismaClient;
     await this.tenancyService.bypassTenancy(prisma);
-    const t = await prisma.user
-      .findUnique({
-        where: { id: userId },
-        select: { tenant: true },
-      })
-      .then((u) => u?.tenant);
-    await this.tenancyService.bypassTenancy(prisma, false);
-    return t;
+    try {
+      return await prisma.user
+        .findUnique({
+          where: { id: userId },
+          select: { tenant: true },
+        })
+        .then((u) => u?.tenant);
+    } finally {
+      await this.tenancyService.bypassTenancy(prisma, false);
+    }
+  }
+
+  async $balance(tenantPk: number, amount: Decimal) {
+    const prisma = this.txHost.tx as PrismaClient;
+    await this.tenancyService.bypassTenancy(prisma);
+    try {
+      return await prisma.tenant.update({
+        select: { balance: true },
+        where: { pk: tenantPk },
+        data: { balance: { increment: amount } },
+      });
+    } finally {
+      await this.tenancyService.bypassTenancy(prisma, false);
+    }
   }
 }

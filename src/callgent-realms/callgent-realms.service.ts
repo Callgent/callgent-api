@@ -4,11 +4,13 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { EndpointDto } from '../endpoints/dto/endpoint.dto';
@@ -28,17 +30,20 @@ import {
 } from './dto/realm-security.vo';
 import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { CallgentRealm } from './entities/callgent-realm.entity';
+import { PostAuthEvent } from './events/post-auth.event';
 import { AuthProcessor } from './processors/auth-processor.base';
 
 /** each callgent may have several security realms */
 @Injectable()
 export class CallgentRealmsService implements OnModuleInit {
+  private readonly logger = new Logger(CallgentRealmsService.name);
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
     private readonly usersService: UsersService,
     private readonly moduleRef: ModuleRef,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
     pk: false,
@@ -177,9 +182,10 @@ export class CallgentRealmsService implements OnModuleInit {
    * - token cannot be attached to request event
    * - uid is required as paidBy
    */
+  @Transactional()
   async checkCenAuth(
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
     const cen = await this.entriesService.findOne(reqEvent.srcId);
     if (!cen)
       throw new NotFoundException(
@@ -198,12 +204,14 @@ export class CallgentRealmsService implements OnModuleInit {
   async checkSepAuth(
     endpoint: EndpointDto,
     reqEvent: ClientRequestEvent,
-  ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const result = await this.checkSecurities(
-      reqEvent,
-      (endpoint as Endpoint).securities,
-    );
-    if (result) return result; // FIXME: resume after post auth action
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
+    try {
+      const sepSecs = (endpoint as Endpoint).securities;
+      if (sepSecs?.length) return this.checkSecurities(reqEvent, sepSecs);
+    } catch (e) {
+      if (!(e.status < 500)) this.logger.error(e);
+      else this.logger.log(e.message);
+    }
 
     const sen = await this.entriesService.findOne(endpoint.entryId);
     return this.checkSecurities(reqEvent, sen.securities as any);
@@ -211,7 +219,7 @@ export class CallgentRealmsService implements OnModuleInit {
 
   /**
    * @param [cen=false] if true[Client entry]: reqEvent.paidBy user must be identified
-   * @throws UnauthorizedException if check fail, else ok
+   * @throws UnauthorizedException if check fail, else ok/async
    */
   async checkSecurities(
     reqEvent: ClientRequestEvent,
@@ -219,38 +227,39 @@ export class CallgentRealmsService implements OnModuleInit {
     cen = false,
   ) {
     if (!securities?.length) return; // no auth, check ok
+    // if sep, try attach first
+    if (!cen)
+      securities = securities.sort((a, b) =>
+        a.attach ? (b.attach ? 0 : -1) : 1,
+      );
 
     // returns on first check ok
     for (const security of securities) {
       reqEvent.context.security = security;
-      const result = await this._checkSecurity(reqEvent, cen);
-      if (result) return result; // check ok
+      try {
+        return await this._checkSecurity(reqEvent, cen); // check ok/async
+      } catch (e) {
+        if (!(e.status < 500)) this.logger.error(e);
+        else this.logger.log(e.message);
+      }
     }
-    // delete reqEvent.context.security;
 
     // check auth failed
     throw new UnauthorizedException(
-      `Check ${cen ? 'CEN' : 'SEP'} authentications failed.`,
+      `Check ${cen ? 'Client' : 'Service'} authentications failed.`,
     );
   }
 
   /**
-   *
-   * @returns false if check fail, else { data, resumeFunName? }
+   * @throws if check fail
    */
   @Transactional()
   protected async _checkSecurity(
     reqEvent: ClientRequestEvent,
     cen = false,
-  ): Promise<false | { data: ClientRequestEvent; resumeFunName?: string }> {
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
     const security: RealmSecurityVO = reqEvent.context.security;
     const items = Object.values(security);
-
-    // FIXME persist-async for items list, by adding index into req.ctx
-    // for (const item of items) {
-    //   const result = await this._checkAuth(item, reqEvent);
-    //   if (!result) return result; // any check fail
-    // }
 
     // FIXME and-relations for items list
     return this._checkSecurityItem(items[0], reqEvent, cen);
@@ -265,49 +274,46 @@ export class CallgentRealmsService implements OnModuleInit {
       ...item,
       attach: cen ? false : item.attach,
     };
-    const { realm, processor } = await this._loadRealm(item, true);
+    const { realm, processor } = await this._loadRealm(reqEvent);
     const { calledBy } = reqEvent;
 
-    // local.jwt returns caller, prevents using others jwt
-    if (realm.authType === 'jwt' && realm.provider === 'local') {
-      reqEvent.paidBy = calledBy;
-      return !!calledBy && { data: reqEvent };
-    }
+    const localJwtAuth = realm.authType === 'jwt' && realm.provider === 'local';
+    if (localJwtAuth && !calledBy)
+      throw new UnauthorizedException('Auth failed. Payer not found.');
 
-    // read existing from identity store
-    const userIdentity = await this._findUserIdentity(
-      reqEvent.context.req,
-      realm,
-      processor,
-    );
+    const userIdentity = localJwtAuth
+      ? // local.jwt just ref caller, prevents using others jwt
+        { userId: calledBy, provider: 'local', credentials: '', uid: '' }
+      : // read existing from identity store
+        await this._findUserIdentity(reqEvent.context.req, realm, processor);
+
     // client auth requires userId as paidBy
     if (cen) {
-      // throw new UnauthorizedException(
-      //   'User identity not found for payment, please bind the token to a user first.',
-      // );
-      if (!userIdentity.userId) return false;
+      if (!userIdentity.userId)
+        throw new UnauthorizedException('Client auth failed. Payer not found.');
       reqEvent.paidBy = userIdentity.userId;
     }
 
-    // if not valid, start auth process
-    const ret = await processor.authProcess(
-      reqEvent,
-      realm,
-      item,
-      userIdentity,
-    );
-    if (ret) return ret; // async
+    // if localJwtAuth, need not check
+    if (!localJwtAuth) {
+      const ret = await processor.authProcess(
+        reqEvent,
+        realm,
+        item,
+        userIdentity,
+      );
+      if (ret?.resumeFunName) return ret; // async, not done
+    }
+    // auth check ok
 
-    // self provider same as third
-    return this.postAuthProcess(reqEvent);
+    return this.postAuthProcess(reqEvent, realm);
   }
 
   /** delegate to auth processor  */
   async postAcquireSecret(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const item: RealmSecurityItem = reqEvent.context.securityItem;
-    const { realm, processor } = await this._loadRealm(item);
+    const { realm, processor } = await this._loadRealm(reqEvent);
     return processor.postAcquireSecret(reqEvent, realm);
   }
 
@@ -315,8 +321,7 @@ export class CallgentRealmsService implements OnModuleInit {
   async postExchangeToken(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const item: RealmSecurityItem = reqEvent.context.securityItem;
-    const { realm, processor } = await this._loadRealm(item);
+    const { realm, processor } = await this._loadRealm(reqEvent);
     return processor.postExchangeToken(reqEvent, realm);
   }
 
@@ -327,37 +332,37 @@ export class CallgentRealmsService implements OnModuleInit {
   async postValidateToken(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {
-    const item: RealmSecurityItem = reqEvent.context.securityItem;
-    const { realm, processor } = await this._loadRealm(item);
+    const { realm, processor } = await this._loadRealm(reqEvent);
     return processor.postValidateToken(reqEvent, realm);
   }
 
   /**
-   * @param noError if false, throw error if realm not enabled
-   */
-  protected async _loadRealm(security: RealmSecurityItem, noError = false) {
-    const realm = await this._findOne(security.realmId);
-    // if (!realm?.enabled) {
-    //   if (noError) return { realm };
-    //   throw new UnauthorizedException(
-    //     'Invalid security realm ' + security.realmPk,
-    //   );
-    // }
-    const processor = this._getAuthProcessor(realm.authType);
-    return { realm, processor };
-  }
-
-  /**
-   * after auth process
-   * @returns false if check fail(no error, go on to next check), else { data, resumeFunName? }
+   * called after auth ok/or attached to req
    */
   async postAuthProcess(
     reqEvent: ClientRequestEvent,
-  ): Promise<false | { data: ClientRequestEvent; resumeFunName?: string }> {
-    // store new token/or bind to existing, better auto login the user
-    // attach to req if needed
+    realm?: CallgentRealm,
+  ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
+    realm || ({ realm } = await this._loadRealm(reqEvent));
+    delete reqEvent.context.securityItem;
+    // TODO store new token/or bind to existing, better auto login the user
 
-    return false;
+    // emit event for pricing
+    await this.eventEmitter.emitAsync(
+      PostAuthEvent.eventName,
+      new PostAuthEvent(realm, reqEvent),
+    );
+
+    return;
+  }
+
+  private async _loadRealm(reqEvent: ClientRequestEvent) {
+    const security: RealmSecurityItem = reqEvent.context.securityItem;
+    const realm = security?.realmId && (await this._findOne(security.realmId));
+    if (!realm)
+      throw new UnauthorizedException('No context.securityItem found');
+    const processor = this._getAuthProcessor(realm.authType);
+    return { realm, processor };
   }
 
   protected async _findUserIdentity(

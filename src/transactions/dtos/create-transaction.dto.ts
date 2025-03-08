@@ -32,6 +32,15 @@ export class CreateTransactionDto {
   type: 'RECHARGE' | 'GIFT' | 'REFUND' | 'EXPENSE';
 
   @ApiProperty({
+    description: 'status 0: PENDING, 1: SUCCESS, -1: FAILED',
+    type: 'integer',
+    format: 'int32',
+    required: false,
+    default: 0,
+  })
+  status = 0;
+
+  @ApiProperty({
     description: 'amount: 1billion = $0.01',
     type: 'number',
     format: 'double',

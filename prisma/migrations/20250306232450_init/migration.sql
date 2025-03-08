@@ -133,7 +133,7 @@ CREATE TABLE "ModelPricing" (
     "alias" VARCHAR(50),
     "provider" VARCHAR(50) NOT NULL DEFAULT '',
     "price" JSON NOT NULL,
-    "currency" VARCHAR(6) NOT NULL,
+    "currency" VARCHAR(6) NOT NULL DEFAULT 'USD',
     "method" VARCHAR(300) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -148,10 +148,11 @@ CREATE TABLE "Transaction" (
     "txId" VARCHAR(150) NOT NULL,
     "refData" JSON,
     "type" VARCHAR(20) NOT NULL,
+    "status" INTEGER NOT NULL DEFAULT 0,
     "amount" DECIMAL(30,0) NOT NULL,
-    "currency" VARCHAR(6) NOT NULL,
+    "currency" VARCHAR(6) NOT NULL DEFAULT 'USD',
     "userId" VARCHAR(30) NOT NULL,
-    "tenantPk" INTEGER NOT NULL,
+    "tenantPk_" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" BIGINT NOT NULL DEFAULT 0,
@@ -208,7 +209,7 @@ CREATE UNIQUE INDEX "Transaction_id_key" ON "Transaction"("id");
 CREATE UNIQUE INDEX "Transaction_txId_key" ON "Transaction"("txId");
 
 -- CreateIndex
-CREATE INDEX "Transaction_tenantPk_idx" ON "Transaction"("tenantPk");
+CREATE INDEX "Transaction_tenantPk__idx" ON "Transaction"("tenantPk_");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Callgent_id_key" ON "Callgent"("id");

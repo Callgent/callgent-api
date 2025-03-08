@@ -9,5 +9,6 @@ import { LlmCompletionListener } from './listeners/llm-completion.listeners';
   controllers: [BillingController],
   imports: [TransactionsModule, UsersModule],
   providers: [BillingService, LlmCompletionListener],
+  exports: [BillingService],
 })
 export class BillingModule {}

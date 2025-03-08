@@ -6,9 +6,11 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotImplementedException,
 } from '@nestjs/common';
 import { paginator, PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
 import { UsersService } from '../users/users.service';
@@ -26,9 +28,50 @@ export class TransactionsService {
   protected readonly defSelect: Prisma.TransactionSelect = {
     pk: false,
     refData: false,
-    tenantPk: false,
+    tenantPk_: false,
     deletedAt: false,
   };
+
+  @Transactional()
+  findByTx(txId: string) {
+    const prisma = this.txHost.tx as PrismaClient;
+    return prisma.transaction.findUnique({ where: { txId } });
+  }
+
+  /**
+   * commit and balance
+   *
+   * $.tx is empty if transaction is not committed
+   * @returns  - { tx?, balance? }
+   */
+  @Transactional()
+  async commit(txId: string, amount?: Decimal) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const tx = await prisma.transaction.update({
+      where: { txId, status: 0 },
+      data: { status: 1, amount },
+    });
+    if (!tx) return {};
+    this._checkAmount(tx);
+
+    const tenant = await this._getTenant(tx.userId);
+    const { balance } = await this.usersService.$balance(tenant.pk, tx.amount);
+    return { tx, balance };
+  }
+
+  @Transactional()
+  async rollback(txId: string) {
+    const tx = await this.findByTx(txId);
+    if (!tx) return;
+    if (tx.status > 0)
+      throw new NotImplementedException('if tx is active, do refunding');
+
+    return this.txHost.tx.transaction.update({
+      where: { txId },
+      data: { status: -1 },
+      select: this.defSelect,
+    });
+  }
 
   /** check tenant balance */
   async check(userId: string) {
@@ -49,27 +92,32 @@ export class TransactionsService {
 
     // FIXME: currency exchange
     const amount = dto.amount;
-    if (
-      (amount.gt(0) && (dto.type === 'EXPENSE' || dto.type === 'REFUND')) ||
-      (amount.lt(0) && (dto.type === 'RECHARGE' || dto.type === 'GIFT'))
-    )
-      throw new BadRequestException('Invalid amount and type');
+    this._checkAmount(dto);
 
     const prisma = this.txHost.tx as PrismaClient;
+    const tenantPk_ = tenant.pk;
     const [tx, balance] = await Promise.all([
       selectHelper(this.defSelect, (select) =>
         prisma.transaction.create({
           select,
-          data: { ...dto, tenantPk: tenant.pk, id },
+          data: { ...dto, tenantPk_, id },
         }),
       ),
-      prisma.tenant.update({
-        select: { balance: true },
-        where: { pk: tenant.pk },
-        data: { balance: { increment: amount } },
-      }),
+      this.usersService.$balance(tenantPk_, amount),
     ]);
     return { tx, balance };
+  }
+
+  /**
+   * @throws BadRequestException if invalid
+   */
+  private _checkAmount(tx: { amount: Decimal; type: string }) {
+    const { amount, type } = tx;
+    if (
+      (amount.gt(0) && (type === 'EXPENSE' || type === 'REFUND')) ||
+      (amount.lt(0) && (type === 'RECHARGE' || type === 'GIFT'))
+    )
+      throw new BadRequestException('Invalid amount and type');
   }
 
   @Transactional()

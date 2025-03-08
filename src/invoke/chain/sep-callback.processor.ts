@@ -8,9 +8,9 @@ import {
 } from '../../entries/events/client-request.event';
 import { SepProcessor } from './sep.processor';
 
-/** resolve async response callback */
+/** update cache on callback */
 @Injectable()
-export class SepCallbackProcessor extends SepProcessor {
+export class SepCallbackCacheProcessor extends SepProcessor {
   getName = (): string => 'InvokeCallback';
   constructor(private readonly cachedService: CachedService) {
     super();

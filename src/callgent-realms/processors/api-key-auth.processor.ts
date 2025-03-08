@@ -1,14 +1,10 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
-import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
+import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
+import { RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
 import { CallgentRealm } from '../entities/callgent-realm.entity';
 import { AuthProcessor } from './auth-processor.base';
-import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
 
 @Injectable()
 export class ApiKeyAuthProcessor extends AuthProcessor {
@@ -52,20 +48,11 @@ export class ApiKeyAuthProcessor extends AuthProcessor {
       credentials: string;
       userId?: string;
     },
-  ): Promise<void | {
+  ): Promise<{
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
-    const result = await this.validateToken(
-      userIdentity.credentials,
-      reqEvent,
-      realm,
-    );
-    if (result) return result;
-
-    throw new UnauthorizedException(
-      'Invalid api-key token, callgentId=' + realm.callgentId,
-    );
+    return this.validateToken(userIdentity.credentials, reqEvent, realm);
   }
 
   /** call validationUrl for validation */

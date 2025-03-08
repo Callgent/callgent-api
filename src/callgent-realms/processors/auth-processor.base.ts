@@ -111,37 +111,36 @@ export abstract class AuthProcessor {
   /**
    * validate auth token.
    * this may be persistent-async
-   * @returns void if invalid; { data: event; resumeFunName?: 'postValidateToken' } if valid/or async
-   * @throws Error if not allowed to attach and validationUrl empty
+   * @returns {{ data: event; resumeFunName?: 'postValidateToken' }} if valid/or async
+   * @throws Error if not valid
    */
   async validateToken(
     token: string,
     reqEvent: ClientRequestEvent,
     realm: CallgentRealm,
-  ): Promise<void | {
+  ): Promise<{
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
     const security: RealmSecurityItem = reqEvent.context.securityItem;
 
     // true valid/attached, false invalid, else async
-    let result: boolean | void;
+    let result: boolean | void = false;
 
     if (security?.attach)
       result = await this._attachToken(token, reqEvent, realm);
     else if (realm.scheme.validationUrl)
       result = await this._validateTokenByUrl(token, realm);
-    else
+
+    if (result === false)
       throw new UnauthorizedException(
         'Cannot validate auth token, validationUrl must not empty. callgentId=' +
           realm.callgentId,
       );
 
-    if (result) return { data: reqEvent }; // valid/attached token
-    // void, async
-    if (result !== false)
-      return { data: reqEvent, resumeFunName: 'postValidateToken' };
-    // else invalid, continue to refresh token process
+    return result
+      ? { data: reqEvent } // valid/attached token
+      : { data: reqEvent, resumeFunName: 'postValidateToken' }; // async
   }
 
   /**
@@ -183,7 +182,8 @@ export abstract class AuthProcessor {
    * 3. send secret to provider, to exchange token
    * 4. [redirect back to client to get provider token, then send token to caller]
    * 5. [attach token to req if needed]
-   * @returns void or { data } if done; {data: reqEvent, resumeFunName?: 'postAcquireSecret' | 'postExchangeToken'} if async, CallgentRealmsService will call resumeFunName which delegate to current processor
+   * @returns valid/async
+   * @throws Error if auth failed
    */
   abstract authProcess(
     reqEvent: ClientRequestEvent,
@@ -195,7 +195,7 @@ export abstract class AuthProcessor {
       credentials: string;
       userId?: string;
     },
-  ): Promise<void | {
+  ): Promise<{
     data: ClientRequestEvent;
     resumeFunName?:
       | 'postAcquireSecret'

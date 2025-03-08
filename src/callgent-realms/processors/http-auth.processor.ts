@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { EntryDto } from '../../entries/dto/entry.dto';
+import { Injectable } from '@nestjs/common';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { APIKeySecurityScheme, RealmSchemeVO } from '../dto/realm-scheme.vo';
 import { RealmSecurityItem } from '../dto/realm-security.vo';
@@ -51,20 +46,11 @@ export class HttpAuthProcessor extends AuthProcessor {
       credentials: string;
       userId?: string;
     },
-  ): Promise<void | {
+  ): Promise<{
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
-    const result = await this.validateToken(
-      userIdentity.credentials,
-      reqEvent,
-      realm,
-    );
-    if (result) return result;
-
-    throw new UnauthorizedException(
-      'Invalid api-key token, callgentId=' + realm.callgentId,
-    );
+    return this.validateToken(userIdentity.credentials, reqEvent, realm);
   }
 
   /** attach to validationUrl */

@@ -624,7 +624,7 @@ model ModelPricing {
 
   /// @description $1 = 1e11
   price    Json   @db.Json
-  currency String @db.VarChar(6)
+  currency String @default("USD") @db.VarChar(6)
 
   /// @description function to calculate amount: (usage, pricing)=>Decimal
   method    String   @db.VarChar(300)
@@ -654,15 +654,16 @@ model Transaction {
 
   /// @description transaction type: 1: RECHARGE, 2: GIFT, 3. REFUND, 4: EXPENSE
   type     String  @db.VarChar(20)
+  status   Int     @default(0) /// @description status 0: PENDING, 1: SUCCESS, -1: CANCELLED
   /// @description amount: $1 = 1e11
   amount   Decimal @db.Decimal(30, 0)
   /// @description currency: USD, CNY, ...
-  currency String  @db.VarChar(6)
+  currency String  @default("USD") @db.VarChar(6)
 
-  userId   String @db.VarChar(30)
+  userId    String @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  tenantPk Int
+  tenantPk_ Int /// @description no rls
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -671,5 +672,5 @@ model Transaction {
   /// @DtoEntityHidden
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
-  @@index([tenantPk])
+  @@index([tenantPk_])
 }

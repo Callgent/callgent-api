@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EntryType } from '@prisma/client';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
 import { PendingOrResponse } from '../../entries/adaptors/entry-adaptor.base';
@@ -7,13 +8,16 @@ import {
   ClientRequestEvent,
   InvokeStatus,
 } from '../../entries/events/client-request.event';
+import { PostResponseEvent } from '../events/post-response.event';
 import { SepProcessor } from './sep.processor';
 
+/** post process if not pending */
 @Injectable()
 export class SepPostprocessProcessor extends SepProcessor {
   getName = (): string => 'InvokePostprocess';
   constructor(
     @Inject('EntriesService') protected readonly entriesService: EntriesService,
+    protected readonly eventEmitter: EventEmitter2,
   ) {
     super();
   }
@@ -34,6 +38,13 @@ export class SepPostprocessProcessor extends SepProcessor {
       EntryType.SERVER,
     );
     const data = await adaptor.postprocess(rawResp, reqEvent, endpoint, ctx);
+
+    // sep pricing commit/rollback
+    await this.eventEmitter.emitAsync(
+      PostResponseEvent.eventName,
+      new PostResponseEvent(data, reqEvent),
+    );
+
     return { data };
   }
 }

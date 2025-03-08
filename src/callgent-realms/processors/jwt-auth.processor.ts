@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
 import { JwtAuthService } from '../../infras/auth/jwt/jwt-auth.service';
 import { RealmSchemeVO } from '../dto/realm-scheme.vo';
@@ -52,20 +48,11 @@ export class JwtAuthProcessor extends AuthProcessor {
       credentials: string;
       userId?: string;
     },
-  ): Promise<void | {
+  ): Promise<{
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
-    const result = await this.validateToken(
-      userIdentity.credentials,
-      reqEvent,
-      realm,
-    );
-    if (result) return result;
-
-    throw new UnauthorizedException(
-      'Invalid api-key token, callgentId=' + realm.callgentId,
-    );
+    return this.validateToken(userIdentity.credentials, reqEvent, realm);
   }
 
   /** call validationUrl for validation */
@@ -84,7 +71,7 @@ export class JwtAuthProcessor extends AuthProcessor {
     const req = {};
     this._readWriteToken(req, realm.scheme, token.toString());
     // FIXME: call validationUrl
-    return false;
+    return true;
   }
 
   async _attachToken(
@@ -165,6 +152,7 @@ export class JwtAuthProcessor extends AuthProcessor {
     realm: CallgentRealm,
   ): { provider: string; uid: string; credentials: string } {
     const token = this._readWriteToken(req, realm.scheme);
+    if (!token) throw new ForbiddenException('Missing auth jwt token');
     const jwt = this.jwtAuthService.decode(token);
     return { provider: realm.provider, uid: jwt.sub, credentials: token };
   }

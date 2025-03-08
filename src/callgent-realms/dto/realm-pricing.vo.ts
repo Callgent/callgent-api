@@ -21,4 +21,6 @@ export class RealmPricingVO {
   @IsString()
   @IsOptional()
   perResponse?: string;
+
+  currency = 'USD';
 }
