@@ -21,6 +21,10 @@ export class RealmSecurityItem {
   @ApiProperty({ isArray: true, required: false, type: 'string' })
   scopes?: string[];
 
+  /** user provided secret */
+  @ApiProperty({ required: false, type: 'string' })
+  secret?: string;
+
   /** whether to attach token to request, or validate token separately */
   @ApiResponseProperty({ type: 'boolean' })
   attach?: boolean;

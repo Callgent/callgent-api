@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CallgentsModule } from '../callgents/callgents.module';
+import { CallgentAdaptor } from './adaptors/builtin/callgent/callgent.adaptor';
 import { EmailAdaptor } from './adaptors/builtin/email/email.adaptor';
 import { RestAPIAdaptor } from './adaptors/builtin/restapi/restapi.adaptor';
 import { RestApiController } from './adaptors/builtin/restapi/restapi.controller';
@@ -26,6 +27,10 @@ import { EntriesChangedSumCallgentListener } from './listeners/entries-changed.l
     {
       provide: 'Email-EntryAdaptor',
       useClass: EmailAdaptor,
+    },
+    {
+      provide: 'Callgent-EntryAdaptor',
+      useClass: CallgentAdaptor,
     },
     EntriesChangedSumCallgentListener,
   ],

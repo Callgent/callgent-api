@@ -62,7 +62,6 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
 
   const { devDocVersion } = registerApi(
     app,
-    1,
     'Callgent APIs',
     'The <a href="https://callgent.com/" target="_blank">Callgent</a> APIs. Download <a href="api-json" target="_blank">Callgent-openAPI.json</a>, or <a href="api-yaml" target="_blank">Callgent-openAPI.yaml</a>',
     logger,
@@ -144,7 +143,7 @@ export async function bootstrapForTest(
  */
 function registerApi(
   app: NestFastifyApplication,
-  testUserId: number,
+  // testUserId: number,
   docTitle: string,
   docDesc: string,
   logger: ConsoleLogger,
@@ -184,8 +183,8 @@ function registerApi(
   const devDocVersion = configService.get<string>('DOCUMENTATION_VERSION');
   if (devDocVersion) {
     const devJwtToken = app.get(JwtAuthService).sign({
-      tenantPk: 1,
-      id: testUserId,
+      tenantPk: 2,
+      // id: testUserId,
       iss: 'test.only',
       sub: 'TEST_USER_ID',
       aud: 'test.client.id',

@@ -31,6 +31,8 @@ function initData(
   >,
 ) {
   return [
+    ...initAdminUser(prisma),
+    ...initGlobalCallgent(prisma),
     ...initEventListeners(prisma),
     ...initLlmTemplates(prisma),
     ...initTags(prisma),
@@ -756,6 +758,7 @@ NOTE
     })).then((llmTpl) => console.log({ name: llmTpl.name })),
   );
 }
+
 function initTags(
   prisma: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
@@ -837,6 +840,7 @@ function initTags(
     }),
   );
 }
+
 function initModelPricing(
   prisma: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
@@ -889,4 +893,106 @@ function initModelPricing(
       })
       .then((llmModelPricing) => console.log({ model: llmModelPricing.model })),
   );
+}
+
+const adminUserId = 'CALLGENT_ADMIN_ID';
+function initAdminUser(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
+  const tenant: Prisma.TenantUncheckedCreateInput = {
+    id: 'CALLGENT_TENANT_ID',
+    statusCode: 1,
+    balance: 0,
+    pk: 1,
+  };
+
+  const admin: Prisma.UserUncheckedCreateInput = {
+    id: adminUserId,
+    name: 'Callgent Admin',
+    tenantPk: 1,
+  };
+
+  return [
+    prisma.tenant
+      .upsert({
+        where: { id: tenant.id },
+        update: tenant,
+        create: tenant,
+      })
+      .then(async (tenant) => {
+        console.log({ tenant });
+        await prisma.user.upsert({
+          where: { id: admin.id },
+          update: admin,
+          create: admin,
+        });
+      })
+      .then(() => console.log({ admin })),
+  ];
+}
+
+function initGlobalCallgent(
+  prisma: Omit<
+    PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
+    '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+  >,
+) {
+  const callgentId = 'GLOBAL_CG_ID';
+  const realmId = 'GLOBAL_CG_SEN_REALM_ID';
+
+  const callgent: Prisma.CallgentUncheckedCreateInput = {
+    tenantPk: 1,
+    official: true,
+    id: callgentId,
+    name: 'Global Callgent',
+    createdBy: adminUserId,
+  };
+  const realm: Prisma.CallgentRealmUncheckedCreateInput = {
+    id: realmId,
+    tenantPk: 1,
+    callgentId,
+    authType: 'apiKey',
+    provider: 'openrouter.ai',
+    realmKey: 'apiKey:openrouter.ai:header:Authorization',
+    scheme: {
+      in: 'header',
+      name: 'Authorization',
+      description: 'OpenRouter',
+      validationUrl: 'https://openrouter.ai/',
+    },
+    secret: `Bearer ${process.env.LLM_API_KEY}`,
+    pricing: { perResponse: 'string' },
+  };
+  const sen: Prisma.EntryUncheckedCreateInput = {
+    tenantPk: 1,
+    id: 'GLOBAL_CG_SEN_ID',
+    name: 'Global Callgent LLM SEN',
+    callgentId,
+    type: 'SERVER',
+    host: 'openrouter.ai',
+    adaptorKey: 'restAPI',
+    createdBy: adminUserId,
+    securities: [{ [realmId]: { realmId } }],
+  };
+
+  return [
+    prisma.callgent.upsert({
+      where: { id: callgent.id },
+      update: callgent,
+      create: callgent,
+    }),
+    prisma.callgentRealm.upsert({
+      where: { id: realm.id },
+      update: realm,
+      create: realm,
+    }),
+    prisma.entry.upsert({
+      where: { id: sen.id },
+      update: sen,
+      create: sen,
+    }),
+  ];
 }

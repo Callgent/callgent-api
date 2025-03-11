@@ -227,11 +227,11 @@ export class CallgentRealmsService implements OnModuleInit {
     cen = false,
   ) {
     if (!securities?.length) return; // no auth, check ok
-    // if sep, try attach first
-    if (!cen)
-      securities = securities.sort((a, b) =>
-        a.attach ? (b.attach ? 0 : -1) : 1,
-      );
+    // if sep, try attach first, or local first?
+    // if (!cen)
+    //   securities = securities.sort((a, b) =>
+    //     a.attach ? (b.attach ? 0 : -1) : 1,
+    //   );
 
     // returns on first check ok
     for (const security of securities) {
@@ -347,7 +347,7 @@ export class CallgentRealmsService implements OnModuleInit {
     delete reqEvent.context.securityItem;
     // TODO store new token/or bind to existing, better auto login the user
 
-    // emit event for pricing
+    // emit event for pricing, FIXME: cen needn't pricing
     await this.eventEmitter.emitAsync(
       PostAuthEvent.eventName,
       new PostAuthEvent(realm, reqEvent),

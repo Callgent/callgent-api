@@ -50,7 +50,12 @@ export class HttpAuthProcessor extends AuthProcessor {
     data: ClientRequestEvent;
     resumeFunName?: 'postValidateToken';
   }> {
-    return this.validateToken(userIdentity.credentials, reqEvent, realm);
+    return this.validateToken(
+      // item configured token first
+      item.secret || userIdentity.credentials,
+      reqEvent,
+      realm,
+    );
   }
 
   /** attach to validationUrl */

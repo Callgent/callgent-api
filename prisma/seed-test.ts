@@ -35,7 +35,9 @@ function initTestData(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
+  const tenantPk = 2;
   const tenant: Prisma.TenantUncheckedCreateInput = {
+    pk: tenantPk,
     id: 'TEST_TENANT_ID',
     statusCode: 1,
     balance: 1e20,
@@ -45,20 +47,19 @@ function initTestData(
   const u: Prisma.UserUncheckedCreateInput = {
     id: userId,
     name: 'test-user',
-    tenantPk: 1,
+    tenantPk,
   };
 
-  const ui: Prisma.UserIdentityUncheckedCreateInput = {
-    tenantPk: 1,
+  const ui: Omit<Prisma.UserIdentityUncheckedCreateInput, 'userPk'> = {
+    tenantPk,
     authType: 'password',
     provider: 'local',
-    uid: 'test@callgent.com',
+    uid: 'test@test.callgent.com',
     // Password123
     credentials: '$2b$10$JyBm6mzLb10z4SOH8Y6ZtOUwgNT6QSOGku/fILq8.uolQTvrRI4n.',
     name: 'test-user',
-    email: 'test@callgent.com',
+    email: 'test@test.callgent.com',
     email_verified: true,
-    userPk: 1,
     userId,
   };
 
@@ -74,7 +75,7 @@ function initTestData(
   const callgentDto: Prisma.CallgentUncheckedCreateInput = {
     id: 'TEST_CALLGENT_ID',
     name: 'test-callgent',
-    tenantPk: 1,
+    tenantPk,
     createdBy: userId,
   };
 
@@ -91,7 +92,7 @@ function initTestData(
     type: 'CLIENT',
     adaptorKey: 'restAPI',
     host: '',
-    tenantPk: 1,
+    tenantPk,
     createdBy: userId,
   };
 
@@ -123,7 +124,7 @@ function initTestData(
                   },
                 },
                 update: ui,
-                create: ui,
+                create: { ...ui, userPk: user.pk },
               })
               .then((userIdentity) => console.log({ user, userIdentity }));
           });

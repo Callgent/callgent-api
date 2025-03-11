@@ -40,7 +40,7 @@ export class AuthLoginListener {
     } else throw new BadRequestException('Invalid auth type:' + event.authType);
 
     const payload: JwtPayload = {
-      // tenantPk: user.tenantPk,
+      tenantPk: user.tenantPk,
       // id: user.pk,
       sub: user.id,
       iss: event.provider,
