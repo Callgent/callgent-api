@@ -86,11 +86,12 @@ export class EntriesController {
     @Param('adaptorKey') adaptorKey: string,
     @Body() dto: CreateEntryDto,
   ) {
+    const { sub: createdBy } = req.user;
     return {
       data: await this.entriesService.create({
         ...dto,
         adaptorKey,
-        createdBy: req.user.sub,
+        createdBy,
       }),
     };
   }
@@ -105,9 +106,15 @@ export class EntriesController {
   })
   @UseGuards(JwtGuard)
   @Put(':id')
-  async updateEntry(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
+  async updateEntry(
+    @Param('id') id: string,
+    @Body() dto: UpdateEntryDto,
+    @Req() req,
+  ) {
+    const { sub: opBy } = req.user;
+    const data = await this.entriesService.update(id, dto, opBy);
     return {
-      data: await this.entriesService.update(id, dto),
+      data,
     };
   }
 
@@ -123,11 +130,11 @@ export class EntriesController {
   //   };
   // }
 
-  @Post(':id/init')
-  @UseGuards(JwtGuard)
-  initEntry(@Param('id') id: string, @Body() initParams: object) {
-    this.entriesService.init(id, initParams);
-  }
+  // @Post(':id/init')
+  // @UseGuards(JwtGuard)
+  // initEntry(@Param('id') id: string, @Body() initParams: object) {
+  //   this.entriesService.init(id, initParams);
+  // }
 
   // /** manual test entry */
   // @Post(':id/test')
@@ -171,7 +178,7 @@ export class EntriesController {
     type: String,
   })
   @ApiOkResponse({
-    description: 'List of server entries',
+    description: 'List of server entries for the current tenant',
     schema: {
       anyOf: [
         { $ref: getSchemaPath(RestApiResponse) },
@@ -188,7 +195,7 @@ export class EntriesController {
   })
   @UseGuards(JwtGuard)
   @Get('server')
-  listServerEntries(
+  listTenantServerEntries(
     @Query()
     {
       query,
@@ -205,11 +212,14 @@ export class EntriesController {
       perPage?: number;
       orderBy?: string;
     },
+    @Req() req,
   ) {
+    const { tenantPk } = req.user;
     page = page ? +page : undefined;
     perPage = perPage ? +perPage : undefined;
     const where: Prisma.EntryWhereInput = {
       type: 'SERVER',
+      tenantPk_: tenantPk,
       adaptorKey: adaptorKey || undefined,
       callgentId: callgentId || undefined,
     };
@@ -219,6 +229,11 @@ export class EntriesController {
       ['name', 'type', 'adaptorKey', 'host', 'pk', 'updatedAt'],
     );
     // FIXME: only list visible entries: mine/team/hub
-    return this.entriesService.findMany({ page, perPage, where, orderBy });
+    return this.entriesService.findMany({
+      page,
+      perPage,
+      where,
+      orderBy,
+    });
   }
 }

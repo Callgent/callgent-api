@@ -42,6 +42,7 @@ export class CallgentCreatedListener {
             description: 'Callgent User Authentication',
           },
           enabled: true,
+          tenantPk_: undefined,
         },
       ].map(async (e) => this.callgentRealmsService.create(e, { pk: true })),
     );

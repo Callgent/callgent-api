@@ -183,12 +183,12 @@ function registerApi(
   const devDocVersion = configService.get<string>('DOCUMENTATION_VERSION');
   if (devDocVersion) {
     const devJwtToken = app.get(JwtAuthService).sign({
-      tenantPk: 2,
+      tenantPk: 1,
       // id: testUserId,
       iss: 'test.only',
       sub: 'TEST_USER_ID',
       aud: 'test.client.id',
-      username: 'user@example.com',
+      username: 'user@test.callgent.com',
     });
     // console.debug('devJwtToken:', devJwtToken);
 

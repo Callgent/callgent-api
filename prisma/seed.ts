@@ -51,7 +51,6 @@ function initEventListeners(
     {
       id: 'CR-ADAPTOR-PREPROCESS',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -65,7 +64,6 @@ function initEventListeners(
     {
       id: 'CR-CEN-AUTH',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -78,7 +76,6 @@ function initEventListeners(
     {
       id: 'CR-LOAD-TARGET',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -91,7 +88,6 @@ function initEventListeners(
     {
       id: 'CR-LOAD-ENDPOINTS',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -104,7 +100,6 @@ function initEventListeners(
     {
       id: 'CR-GENERATE-WEBPAGE',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: 'Webpage',
       serviceType: 'SERVICE',
@@ -118,7 +113,6 @@ function initEventListeners(
     {
       id: 'CR-MAP-2-ENDPOINTS',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -132,7 +126,6 @@ function initEventListeners(
     {
       id: 'CR-SCRIPT-RUNNER',
       srcId: '*',
-      tenantPk: 0,
       eventType: 'CLIENT_REQUEST',
       dataType: '*',
       serviceType: 'SERVICE',
@@ -902,17 +895,18 @@ function initAdminUser(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
+  const tenantPk = 0;
   const tenant: Prisma.TenantUncheckedCreateInput = {
     id: 'CALLGENT_TENANT_ID',
     statusCode: 1,
     balance: 0,
-    pk: 1,
+    pk: tenantPk,
   };
 
   const admin: Prisma.UserUncheckedCreateInput = {
     id: adminUserId,
     name: 'Callgent Admin',
-    tenantPk: 1,
+    tenantPk,
   };
 
   return [
@@ -943,8 +937,9 @@ function initGlobalCallgent(
   const callgentId = 'GLOBAL_CG_ID';
   const realmId = 'GLOBAL_CG_SEN_REALM_ID';
 
+  const tenantPk_ = 0;
   const callgent: Prisma.CallgentUncheckedCreateInput = {
-    tenantPk: 1,
+    tenantPk_,
     official: true,
     id: callgentId,
     name: 'Global Callgent',
@@ -952,7 +947,7 @@ function initGlobalCallgent(
   };
   const realm: Prisma.CallgentRealmUncheckedCreateInput = {
     id: realmId,
-    tenantPk: 1,
+    tenantPk_,
     callgentId,
     authType: 'apiKey',
     provider: 'openrouter.ai',
@@ -967,8 +962,8 @@ function initGlobalCallgent(
     pricing: { perResponse: 'string' },
   };
   const sen: Prisma.EntryUncheckedCreateInput = {
-    tenantPk: 1,
     id: 'GLOBAL_CG_SEN_ID',
+    tenantPk_,
     name: 'Global Callgent LLM SEN',
     callgentId,
     type: 'SERVER',

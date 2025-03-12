@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -69,7 +70,10 @@ export class CallgentRealmsController {
   })
   @Get('/:id')
   async findOneRealm(@Param('id') id: string) {
-    const data = await this.callgentRealmsService.findOne(id);
+    const data = await this.callgentRealmsService.findOne(id, {
+      secret: true,
+      pk: false,
+    });
     data.secret = !!data.secret;
     return { data };
   }
@@ -117,8 +121,8 @@ export class CallgentRealmsController {
     @Body() dto: UpdateCallgentRealmDto,
   ) {
     const data = await this.callgentRealmsService
-      .update(id, dto)
-      .then((r) => r && { ...r, secret: r.secret ? true : false });
+      .update(id, dto, { secret: true, pk: false })
+      .then((r) => r && { ...r, secret: !!r.secret });
 
     return { data };
   }
@@ -156,8 +160,8 @@ export class CallgentRealmsController {
   @Get('/callgent/:callgentId')
   async findAllRealms(@Param('callgentId') callgentId: string) {
     const data = await this.callgentRealmsService
-      .findAll(callgentId)
-      .then((r) => r?.map((d) => ({ ...d, secret: d.secret ? true : false })));
+      .findAll(callgentId, { select: { secret: true, pk: false } })
+      .then((r) => r?.map((d) => ({ ...d, secret: !!d.secret })));
     return { data };
   }
 
@@ -189,12 +193,15 @@ export class CallgentRealmsController {
     @Param('type') type: 'entry' | 'function',
     @Param('id') id: string,
     @Body() securities: RealmSecurityItemForm[], // TODO: RealmSecurityVO
+    @Req() req,
   ) {
+    const { sub: opBy } = req.user;
     return {
       data: await this.callgentRealmsService.updateSecurities(
         type,
         id,
         securities,
+        opBy,
       ),
     };
   }

@@ -294,7 +294,7 @@ export class RestApiController {
   private async _load(callgentId: string, entryId: string) {
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
-    const entry = await this.entriesService.$findFirstByType(
+    const entry = await this.entriesService.findFirstByType(
       EntryType.CLIENT,
       callgentId,
       'restAPI',
@@ -304,7 +304,8 @@ export class RestApiController {
       throw new NotFoundException(
         '`restAPI` Client Entry not found for callgent: ' + callgentId,
       );
-    this.tenancyService.setTenantId(entry.tenantPk);
+    // runAs the entry's tenant
+    // this.tenancyService.setTenantId(entry.tenantPk);
 
     const callgent = await this.callgentsService.findOne(callgentId, {
       pk: false,

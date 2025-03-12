@@ -119,7 +119,7 @@ export class CallgentTreeController {
 
   private async _callgentTree(callgent: CallgentDto) {
     const entries = await this.entriesService.findAll({
-      select: { callgentId: false },
+      select: { callgentId: false, securities: true },
       where: { callgentId: callgent.id },
     });
 
@@ -156,8 +156,9 @@ export class CallgentTreeController {
 
     const realms =
       (await this.callgentRealmsService.findAll(callgent.id, {
-        select: { callgentId: false, secret: false },
+        select: { callgentId: false, secret: true },
       })) || [];
+    realms.forEach((r) => (r.secret = !!r.secret));
 
     const data = {
       id: callgent.id,

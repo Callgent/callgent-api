@@ -165,15 +165,15 @@ model Tag {
 
 model Callgent {
   /// @DtoEntityHidden
-  pk       BigInt @id @default(autoincrement())
+  pk        BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(30)
+  id        String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name        String  @db.VarChar(255)
   avatar      String? @db.VarChar(1023)
@@ -220,8 +220,8 @@ model Callgent {
 
   entries Entry[]
 
-  @@unique([tenantPk, name, deletedAt])
-  @@index([tenantPk])
+  @@unique([tenantPk_, name, deletedAt])
+  @@index([tenantPk_])
   @@index([forkedPk])
   @@index([mainTagId])
 }
@@ -249,15 +249,15 @@ enum EntryType {
 /// @description a callgent may have multiple entries, including client/server/event entries
 model Entry {
   /// @DtoEntityHidden
-  pk       BigInt @id @default(autoincrement())
+  pk        BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(30)
+  id        String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   name        String    @default("") @db.VarChar(2047)
   /// @description Summary to quickly understand in what scenarios to use this service.
@@ -298,22 +298,22 @@ model Entry {
   /// @DtoEntityHidden
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
-  @@index([tenantPk])
   @@index([callgentId])
+  @@index([tenantPk_])
 }
 
 /// @description endpoint in openAPI.json format
 model Endpoint {
   /// @DtoEntityHidden
-  pk       BigInt @id @default(autoincrement())
+  pk        BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(30)
+  id        String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -335,7 +335,7 @@ model Endpoint {
   callgentId String  @db.VarChar(30)
   /// @description An endpoint is bound to a server entry
   /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infras/repo/validators/entity-exists.validator)
-  entryId    String? @db.VarChar(30)
+  entryId    String  @db.VarChar(30)
   /// @description whether async endpoint, e.g. invoked by email adaptor
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -359,8 +359,8 @@ model Endpoint {
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@unique([callgentId, name, deletedAt])
-  @@index([tenantPk])
   @@index([callgentId])
+  @@index([tenantPk_])
   @@index([entryId])
 }
 
@@ -368,15 +368,15 @@ model Endpoint {
 model CallgentRealm {
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  pk       BigInt @id @default(autoincrement())
+  pk        BigInt @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(30)
+  id        String @unique @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -424,8 +424,8 @@ model CallgentRealm {
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@unique([callgentId, realmKey, deletedAt])
+  @@index([tenantPk_])
   @@index(callgentId)
-  @@index(tenantPk)
 }
 
 /// @description Platform auth tokens
@@ -498,15 +498,11 @@ enum ServiceType {
 
 model EventListener {
   /// @DtoEntityHidden
-  pk       Int    @id @default(autoincrement())
+  pk Int    @id @default(autoincrement())
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  id       String @unique @db.VarChar(30)
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  // add to migration.sql
-  tenantPk Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  id String @unique @db.VarChar(30)
 
   srcId String @db.VarChar(30) /// @description event source id
 
@@ -531,7 +527,6 @@ model EventListener {
   deletedAt BigInt   @default(0) /// @description logical deletion.
 
   @@index([srcId])
-  @@index([tenantPk])
 }
 
 enum EventCallbackType {
@@ -634,6 +629,7 @@ model ModelPricing {
   @@unique([model, provider])
 }
 
+/// @description read in tenant context, write in global context
 /// @DtoIgnoreModel
 model Transaction {
   /// @DtoEntityHidden
@@ -663,7 +659,7 @@ model Transaction {
   userId    String @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  tenantPk_ Int /// @description no rls
+  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)")) /// @description no rls
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

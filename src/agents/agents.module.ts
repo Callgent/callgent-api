@@ -7,7 +7,6 @@ import { ScriptAgentService } from './script-agent.service';
 @Module({
   providers: [
     { provide: 'AgentsService', useClass: AgentsService },
-    LLMService,
     { provide: 'ScriptAgentService', useClass: ScriptAgentService },
     LLMService,
   ],

@@ -23,7 +23,7 @@ export class RealmSecurityItem {
 
   /** user provided secret */
   @ApiProperty({ required: false, type: 'string' })
-  secret?: string;
+  secret?: string; // FIXME: mask on response
 
   /** whether to attach token to request, or validate token separately */
   @ApiResponseProperty({ type: 'boolean' })

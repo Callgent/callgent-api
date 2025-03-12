@@ -61,6 +61,7 @@ export class CallgentsController {
   })
   @Get('/:id')
   async findOne(@Param('id') id: string) {
+    // tenant irrelevant
     return { data: await this.callgentsService.findOne(id) };
   }
 
@@ -91,7 +92,7 @@ export class CallgentsController {
     },
   })
   @Get()
-  async list(
+  async listByTenant(
     @Query()
     {
       query,
@@ -131,7 +132,7 @@ export class CallgentsController {
         'updatedAt',
       ]);
 
-    const list = await this.callgentsService.findMany({
+    const list = await this.callgentsService.findManyByTenant({
       page,
       perPage,
       where,
@@ -150,9 +151,14 @@ export class CallgentsController {
     },
   })
   @Put('/:id')
-  async update(@Param('id') id: string, @Body() dto: UpdateCallgentDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCallgentDto,
+    @Req() req,
+  ) {
     dto.id = id;
-    return { data: await this.callgentsService.update(dto) };
+    const { sub: userId } = req.user;
+    return { data: await this.callgentsService.updateByCreator(dto, userId) };
   }
 
   @ApiOkResponse({
@@ -168,7 +174,10 @@ export class CallgentsController {
     },
   })
   @Delete('/:id')
-  async remove(@Param('id') id: string) {
-    return { data: await this.callgentsService.delete(id) };
+  async remove(@Param('id') id: string,
+  @Req() req,
+) {
+  const { sub: userId } = req.user;
+  return { data: await this.callgentsService.deleteByCreator(id, userId) };
   }
 }

@@ -37,8 +37,11 @@ export class EntryCreatedListener {
     const defaultRealm = { realmId: defaultSecurity.id };
 
     // add default realm to new entries
-    return this.callgentRealmsService.updateSecurities('entry', entry.id, [
-      defaultRealm,
-    ]);
+    return this.callgentRealmsService.updateSecurities(
+      'entry',
+      entry.id,
+      [defaultRealm],
+      entry.createdBy,
+    );
   }
 }

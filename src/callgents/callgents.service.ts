@@ -1,6 +1,6 @@
 import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Callgent, Prisma, PrismaClient } from '@prisma/client';
@@ -24,7 +24,7 @@ export class CallgentsService {
   ) {}
   protected readonly defSelect: Prisma.CallgentSelect = {
     pk: false,
-    tenantPk: false,
+    tenantPk_: false,
     forkedPk: false,
     createdBy: false,
     deletedAt: false,
@@ -38,6 +38,7 @@ export class CallgentsService {
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
     (data.id = Utils.uuid()), (data.createdBy = createdBy), delete data.pk;
+    // using db default: data.tenantPk_ = this.tenancyService.getTenantId();
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Callgent = await selectHelper(
@@ -63,7 +64,7 @@ export class CallgentsService {
   }
 
   @Transactional()
-  findMany({
+  findManyByTenant({
     select,
     where,
     orderBy = [{ pk: 'desc' }],
@@ -76,6 +77,8 @@ export class CallgentsService {
     page?: number;
     perPage?: number;
   }) {
+    const tenantPk_ = this.tenancyService.getTenantId();
+    where = where ? { ...where, tenantPk_ } : { tenantPk_ };
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
@@ -99,63 +102,37 @@ export class CallgentsService {
     );
   }
 
-  // async findAll(ids: string[], select?: Prisma.CallgentSelect) {
-  //   const prisma = this.txHost.tx as PrismaClient;
-
-  //   const callgents = await selectHelper(
-  //     select,
-  //     async (select) =>
-  //       await prisma.callgent.findMany({
-  //         where: { id: { in: ids } },
-  //         select,
-  //       }),
-  //     this.defSelect,
-  //   );
-
-  //   if (callgents.length != ids.length)
-  //     throw new NotFoundException(
-  //       `Callgent not found, id=${ids
-  //         .filter((x) => !callgents.find((y) => y.id == x))
-  //         .join(', ')}`,
-  //     );
-  //   return callgents;
-  // }
-
   @Transactional()
-  async delete(id: string) {
+  async deleteByCreator(callgentId: string, createdBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
+    const c = await selectHelper(this.defSelect, (select) =>
+      prisma.callgent.delete({ select, where: { id: callgentId, createdBy } }),
+    );
+    if (!c) return;
 
-    const [ret] = await Promise.all([
-      await selectHelper(this.defSelect, (select) =>
-        prisma.callgent.delete({ select, where: { id } }),
-      ),
+    await Promise.all([
       // directly delete entries, needn't EntriesChangedEvent
-      prisma.entry.deleteMany({
-        where: { callgentId: id },
-      }),
+      prisma.entry.deleteMany({ where: { callgentId } }),
       // directly delete endpoints, needn't EndpointsChangedEvent
-      prisma.endpoint.deleteMany({
-        where: { callgentId: id },
-      }),
+      prisma.endpoint.deleteMany({ where: { callgentId } }),
     ]);
 
-    if (ret)
-      this.eventEmitter.emitAsync(
-        CallgentDeletedEvent.eventName,
-        new CallgentDeletedEvent(ret),
-      );
+    this.eventEmitter.emitAsync(
+      CallgentDeletedEvent.eventName,
+      new CallgentDeletedEvent(c),
+    );
 
-    return ret;
+    return c;
   }
 
   @Transactional()
-  update(dto: UpdateCallgentDto) {
+  updateByCreator(dto: UpdateCallgentDto, createdBy: string) {
     if (!dto.id) return;
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(this.defSelect, (select) =>
       prisma.callgent.update({
         select,
-        where: { id: dto.id },
+        where: { id: dto.id, createdBy },
         data: dto,
       }),
     );
@@ -184,7 +161,7 @@ export class CallgentsService {
   }
 
   async getByName(name: string, select?: Prisma.CallgentSelect) {
-    const tenantPk = this.tenancyService.getTenantId();
+    const tenantPk_ = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       { pk: false, ...select, deletedAt: true },
@@ -192,7 +169,7 @@ export class CallgentsService {
         prisma.callgent.findUnique({
           select,
           where: {
-            tenantPk_name_deletedAt: { tenantPk, name, deletedAt: 0 },
+            tenantPk__name_deletedAt: { tenantPk_, name, deletedAt: 0 },
           },
         }),
       this.defSelect,
@@ -201,60 +178,5 @@ export class CallgentsService {
       delete c.deletedAt;
       return c;
     });
-  }
-
-  /**
-   * Cross tenancy execution when client entry is provided.
-   * [entry://]callgent.please('act', with_args)
-   * @param act API action name
-   * @param entry client entry to call API. unnecessary in internal calls
-   * @deprecated
-   */
-  @Transactional()
-  async please(
-    act: string,
-    args: any[],
-    entry: { callgentId: string; id?: string; adaptorKey?: string },
-  ) {
-    // invoke callgent action api, through entry
-    const prisma = this.txHost.tx as PrismaClient;
-    const withEntry = entry?.id || entry?.adaptorKey;
-
-    // load targets
-    if (withEntry) this.tenancyService.bypassTenancy(prisma);
-    const [callgent, actions, epClient] = await Promise.all([
-      prisma.callgent.findUnique({ where: { id: entry.callgentId } }),
-      prisma.endpoint.findMany({
-        where: { name: act, callgentId: entry.callgentId },
-      }),
-      withEntry &&
-        prisma.entry.findFirst({ where: { ...entry, type: 'CLIENT' } }),
-    ]);
-
-    // check targets
-    if (!callgent)
-      throw new NotFoundException('callgent not found: ' + entry.callgentId);
-    if (actions.length === 0)
-      throw new NotFoundException(
-        `callgent=${entry.callgentId} API action not found: ${act}`,
-      );
-    if (withEntry) {
-      if (!epClient)
-        throw new NotFoundException(
-          `Client entry not found for callgent=${entry.callgentId}: ${
-            entry.id || entry.adaptorKey
-          }`,
-        );
-      this.tenancyService.setTenantId(callgent.tenantPk);
-      this.tenancyService.bypassTenancy(prisma, false);
-    }
-
-    let action;
-    if (actions.length > 1) {
-      // FIXME: match action by args
-      action = actions[0];
-    } else action = actions[0];
-
-    // pre-meta, pre-routing, pre-mapping
   }
 }

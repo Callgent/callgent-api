@@ -1,8 +1,8 @@
 import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Entry } from '@prisma/client';
 import { CallgentApiText } from '../../endpoints/endpoints.controller';
 import { EndpointsService } from '../../endpoints/endpoints.service';
-import { EntryDto } from '../../entries/dto/entry.dto';
 import { JwtGuard } from '../../infras/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../../infras/repo/validators/entity-exists.validator';
 @ApiTags('BFF')
@@ -25,12 +25,8 @@ export class BffEndpointsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
-    await this.endpointService.importBatch(
-      entry,
-      apiTxt,
-      req.user?.sub,
-    );
+    const entry = EntityIdExists.entity<Entry>(apiTxt, 'entryId');
+    await this.endpointService.importBatch(entry, apiTxt, req.user?.sub);
 
     const data = await this.endpointService.findAll({
       where: { entryId: entry.id },

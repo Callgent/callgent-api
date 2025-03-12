@@ -36,6 +36,7 @@ export class EntriesChangedSumCallgentListener {
           pk: false,
           name: true,
           summary: true,
+          createdBy: true,
           instruction: true,
         },
       );
@@ -44,7 +45,7 @@ export class EntriesChangedSumCallgentListener {
     if (result.totally) {
       // totally re-summarize
       const news = await this.entriesService.findAll({
-        select: { pk: true },
+        select: { pk: true, securities: false },
         where: { callgentId: callgent.id, type: 'SERVER' },
       });
       if (!news.length) return;
@@ -56,10 +57,13 @@ export class EntriesChangedSumCallgentListener {
         totally: true,
       });
     }
-    return this.callgentsService.update({
-      id: callgent.id,
-      summary: result.summary,
-      instruction: result.instruction,
-    });
+    return this.callgentsService.updateByCreator(
+      {
+        id: callgent.id,
+        summary: result.summary,
+        instruction: result.instruction,
+      },
+      opBy,
+    );
   }
 }

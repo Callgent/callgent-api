@@ -175,7 +175,7 @@ export class WebpageController {
   private async _load(callgentId: string, entryId: string) {
     // TODO owner defaults to caller callgent
     // find callgent cep, then set tenantPk
-    const entry = await this.entriesService.$findFirstByType(
+    const entry = await this.entriesService.findFirstByType(
       EntryType.CLIENT,
       callgentId,
       'Webpage',
@@ -185,7 +185,7 @@ export class WebpageController {
       throw new NotFoundException(
         '`Webpage` Client Entry not found for callgent: ' + callgentId,
       );
-    this.tenancyService.setTenantId(entry.tenantPk);
+    // this.tenancyService.setTenantId(entry.tenantPk);
 
     const callgent = await this.callgentsService.findOne(callgentId, {
       id: true,

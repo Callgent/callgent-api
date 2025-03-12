@@ -50,7 +50,12 @@ export class CallgentHubService {
     page?: number;
     perPage?: number;
   }) {
-    return this._onHubAction(() => this.callgentsService.findMany(params));
+    params.where = params.where
+      ? { ...params.where, tenantPk_: this.hubTenantPK }
+      : { tenantPk_: this.hubTenantPK };
+    return this._onHubAction(() =>
+      this.callgentsService.findManyByTenant(params),
+    );
   }
 
   /**
@@ -131,6 +136,7 @@ export class CallgentHubService {
         });
       }
 
+      // FIXME: if callgent entry from tenant, throw error?
       const ens = from.entries;
       from.entries = undefined;
       this.tenancyService.setTenantId(toTenant);

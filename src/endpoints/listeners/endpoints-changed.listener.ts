@@ -64,7 +64,8 @@ export class EndpointsChangedSumEntryListener {
           summary: result.summary,
           instruction: result.instruction,
         },
-        { pk: true },
+        opBy,
+        { pk: true, securities: false },
       )
       .catch((err) => {
         this.logger.error('Failed to update entry: %j', err);

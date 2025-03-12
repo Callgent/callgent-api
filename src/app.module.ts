@@ -23,6 +23,7 @@ import { AuthModule } from './infras/auth/auth.module';
 import { LoggingModule } from './infras/logging/logging.module';
 import { ReposModule } from './infras/repo/repos.module';
 import { InvokeModule } from './invoke/invoke.module';
+import { TenantsService } from './tenants/tenants.service';
 import { TransactionsModule } from './transactions/transactions.module';
 import { UsersModule } from './users/users.module';
 
@@ -80,6 +81,7 @@ import { UsersModule } from './users/users.module';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    TenantsService,
   ],
 })
 export class AppModule {}

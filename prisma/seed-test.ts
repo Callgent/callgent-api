@@ -14,7 +14,20 @@ async function main() {
   return await prisma
     .$transaction(async (prisma) => {
       await prisma.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${true})`;
-      await Promise.all(initTestData(prisma));
+
+      const tenant: Prisma.TenantUncheckedCreateInput = {
+        id: 'TEST_TENANT_ID',
+        statusCode: 1,
+        emailHost: 'test.callgent.com',
+        balance: 1e20,
+      };
+      const { pk: tenantPk } = await prisma.tenant.upsert({
+        where: { id: tenant.id },
+        update: tenant,
+        create: tenant,
+      });
+      if (tenantPk !== 1) throw new Error('Tenant PK must be 1');
+      await Promise.all(initTestData(tenantPk, prisma));
     })
     .catch((e) => {
       console.error(e);
@@ -30,19 +43,12 @@ async function main() {
 main();
 
 function initTestData(
+  tenantPk: number,
   prisma: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  const tenantPk = 2;
-  const tenant: Prisma.TenantUncheckedCreateInput = {
-    pk: tenantPk,
-    id: 'TEST_TENANT_ID',
-    statusCode: 1,
-    balance: 1e20,
-  };
-
   const userId = 'TEST_USER_ID';
   const u: Prisma.UserUncheckedCreateInput = {
     id: userId,
@@ -75,59 +81,50 @@ function initTestData(
   const callgentDto: Prisma.CallgentUncheckedCreateInput = {
     id: 'TEST_CALLGENT_ID',
     name: 'test-callgent',
-    tenantPk,
+    tenantPk_: tenantPk,
     createdBy: userId,
   };
 
   const callgentHubDto: Prisma.CallgentUncheckedCreateInput = {
     id: 'TEST_HUB_CALLGENT_ID',
     name: 'hub-callgent',
-    tenantPk: -1,
+    tenantPk_: -1,
     createdBy: userId,
   };
 
   const cepDto: Prisma.EntryUncheckedCreateInput = {
     id: 'TEST_CEP_ID',
+    tenantPk_: tenantPk,
     callgentId: 'TEST_CALLGENT_ID',
     type: 'CLIENT',
     adaptorKey: 'restAPI',
     host: '',
-    tenantPk,
     createdBy: userId,
   };
 
   return [
-    prisma.tenant
+    prisma.user
       .upsert({
-        where: { id: tenant.id },
-        update: tenant,
-        create: tenant,
+        where: { id: u.id },
+        update: u,
+        create: u,
       })
-      .then(async (tenant) => {
-        console.log({ tenant });
-        await prisma.user
+      .then(async (user) => {
+        (ui as any).userId = user.id;
+        await prisma.userIdentity
           .upsert({
-            where: { id: u.id },
-            update: u,
-            create: u,
+            where: {
+              authType_provider_uid_deletedAt: {
+                authType: ui.authType,
+                provider: ui.provider,
+                uid: ui.uid,
+                deletedAt: 0,
+              },
+            },
+            update: ui,
+            create: { ...ui, userPk: user.pk },
           })
-          .then(async (user) => {
-            (ui as any).userId = user.id;
-            await prisma.userIdentity
-              .upsert({
-                where: {
-                  authType_provider_uid_deletedAt: {
-                    authType: ui.authType,
-                    provider: ui.provider,
-                    uid: ui.uid,
-                    deletedAt: 0,
-                  },
-                },
-                update: ui,
-                create: { ...ui, userPk: user.pk },
-              })
-              .then((userIdentity) => console.log({ user, userIdentity }));
-          });
+          .then((userIdentity) => console.log({ user, userIdentity }));
       }),
     prisma.authToken
       .upsert({
@@ -187,5 +184,5 @@ async function addLlmCache(
           data: llmCacheDto,
         })
       : prisma.llmCache.create({ data: { name, model, prompt, result } })
-  ).then((lmCache) => console.log({ lmCache }));
+  ).then((lmCache) => console.log('lmCache', lmCache.name));
 }

@@ -19,15 +19,16 @@ import {
   ApiTags,
   getSchemaPath,
 } from '@nestjs/swagger';
+import { Entry } from '@prisma/client';
 import { IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiSpec } from '../entries/adaptors/entry-adaptor.base';
 import { EntryDto } from '../entries/dto/entry.dto';
 import { JwtGuard } from '../infras/auth/jwt/jwt.guard';
 import { EntityIdExists } from '../infras/repo/validators/entity-exists.validator';
 import { RestApiResponse } from '../restapi/response.interface';
-import { EndpointsService } from './endpoints.service';
 import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
+import { EndpointsService } from './endpoints.service';
 
 export class CallgentApis extends ApiSpec {
   @EntityIdExists('entry', 'id')
@@ -81,9 +82,9 @@ export class EndpointsController {
     @Body()
     apis: CallgentApis,
   ) {
-    const entry = EntityIdExists.entity<EntryDto>(apis, 'entryId');
+    const entry = EntityIdExists.entity<Entry>(apis, 'entryId');
     return {
-      data: await this.endpointService.createBatch(entry, apis, req.user?.sub),
+      data: await this.endpointService.createBatch(entry, apis, req.user.sub),
     };
   }
 
@@ -97,7 +98,7 @@ export class EndpointsController {
     @Body()
     apiTxt: CallgentApiText,
   ) {
-    const entry = EntityIdExists.entity<EntryDto>(apiTxt, 'entryId');
+    const entry = EntityIdExists.entity<Entry>(apiTxt, 'entryId');
     return {
       data: await this.endpointService.importBatch(
         entry,

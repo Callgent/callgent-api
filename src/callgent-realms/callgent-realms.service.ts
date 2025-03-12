@@ -2,6 +2,7 @@ import { Transactional, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -32,6 +33,7 @@ import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { CallgentRealm } from './entities/callgent-realm.entity';
 import { PostAuthEvent } from './events/post-auth.event';
 import { AuthProcessor } from './processors/auth-processor.base';
+import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
 
 /** each callgent may have several security realms */
 @Injectable()
@@ -44,10 +46,12 @@ export class CallgentRealmsService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly moduleRef: ModuleRef,
     private readonly eventEmitter: EventEmitter2,
+    private readonly tenancyService: PrismaTenancyService,
   ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
     pk: false,
-    tenantPk: false,
+    secret: false,
+    tenantPk_: false,
     createdAt: false,
     updatedAt: false,
     deletedAt: false,
@@ -79,7 +83,7 @@ export class CallgentRealmsService implements OnModuleInit {
       select,
       (select) =>
         prisma.callgentRealm.create({
-          data: { ...(data as any), pk: undefined },
+          data: { ...(data as any), pk: undefined, tenantPk_: undefined },
           select,
         }),
       this.defSelect,
@@ -118,6 +122,7 @@ export class CallgentRealmsService implements OnModuleInit {
           ...realm,
           authType,
           realmKey,
+          tenantPk_: undefined, // db default
           scheme: scheme as any,
           pricing: realm.pricing as any,
         },
@@ -133,6 +138,7 @@ export class CallgentRealmsService implements OnModuleInit {
         provider: realm.provider,
         scheme: scheme as any,
         pricing: realm.pricing as any,
+        tenantPk_: undefined,
       },
     });
   }
@@ -148,11 +154,15 @@ export class CallgentRealmsService implements OnModuleInit {
     type: 'entry' | 'function',
     id: string,
     securities: RealmSecurityItemForm[],
+    opBy: string,
   ) {
     let entry: EntryDto, targetService: EntriesService | EndpointsService;
     if (type == 'entry') {
       targetService = this.entriesService;
-      entry = await this.entriesService.findOne(id);
+      entry = await this.entriesService.findOne(id, {
+        pk: false,
+        securities: true,
+      });
     } else {
       targetService = this.endpointsService;
       const fun = await this.endpointsService.findOne(id, {
@@ -161,6 +171,8 @@ export class CallgentRealmsService implements OnModuleInit {
       entry = fun && (await this.entriesService.findOne(fun.entryId));
     }
     if (!entry) throw new NotFoundException('Not found ' + type);
+    if (opBy !== entry.createdBy)
+      throw new ForbiddenException('Only creator can update securities');
 
     const secs = await Promise.all(
       securities.map(async (security) => {
@@ -186,7 +198,10 @@ export class CallgentRealmsService implements OnModuleInit {
   async checkCenAuth(
     reqEvent: ClientRequestEvent,
   ): Promise<{ data: ClientRequestEvent; resumeFunName?: string }> {
-    const cen = await this.entriesService.findOne(reqEvent.srcId);
+    const cen = await this.entriesService.findOne(reqEvent.srcId, {
+      securities: true,
+      createdBy: true,
+    });
     if (!cen)
       throw new NotFoundException(
         'Client entry not found, id: ' + reqEvent.srcId,
@@ -213,7 +228,9 @@ export class CallgentRealmsService implements OnModuleInit {
       else this.logger.log(e.message);
     }
 
-    const sen = await this.entriesService.findOne(endpoint.entryId);
+    const sen = await this.entriesService.findOne(endpoint.entryId, {
+      securities: true,
+    });
     return this.checkSecurities(reqEvent, sen.securities as any);
   }
 
@@ -457,7 +474,10 @@ export class CallgentRealmsService implements OnModuleInit {
     select?: Prisma.CallgentRealmSelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    const old = await this.findOne(id);
+    const tenantPk_ = this.tenancyService.getTenantId();
+    const old = await this.findOne(id, { pk: false, tenantPk_: true });
+    if ((old as any)?.tenantPk_ !== tenantPk_) throw new NotFoundException();
+
     dto = { ...old, ...dto }; // merge
     if (!dto.scheme) throw new BadRequestException('realm.scheme is required');
 
@@ -483,8 +503,9 @@ export class CallgentRealmsService implements OnModuleInit {
   @Transactional()
   async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
+    const tenantPk_ = this.tenancyService.getTenantId();
     const realm = await prisma.callgentRealm.delete({
-      where: { id },
+      where: { id, tenantPk_ },
       select: { callgentId: true },
     });
     if (!realm) return;

@@ -46,7 +46,8 @@ export class EntriesService implements OnModuleInit {
   ) {}
   protected readonly defSelect: Prisma.EntrySelect = {
     pk: false,
-    tenantPk: false,
+    tenantPk_: false,
+    securities: false,
     deletedAt: false,
   };
   private readonly serverAdaptors: {
@@ -138,25 +139,7 @@ export class EntriesService implements OnModuleInit {
     });
   }
 
-  /** bypassTenancy before query, setTenantId after query */
-  @Transactional()
-  async $findFirstByType(
-    type: EntryType,
-    callgentId: string,
-    adaptorKey: string,
-    entryId?: string,
-  ) {
-    const prisma = this.txHost.tx as PrismaClient;
-    await this.tenancyService.bypassTenancy(prisma);
-    return this.findFirstByType(type, callgentId, adaptorKey, entryId).then(
-      async (v) => {
-        await this.tenancyService.bypassTenancy(prisma, false);
-        v && this.tenancyService.setTenantId(v.tenantPk);
-        return v;
-      },
-    );
-  }
-
+  /** tenant irrelevant */
   @Transactional()
   findAll({
     select,
@@ -180,6 +163,7 @@ export class EntriesService implements OnModuleInit {
     );
   }
 
+  /** tenant irrelevant */
   @Transactional()
   findMany({
     select,
@@ -236,7 +220,10 @@ export class EntriesService implements OnModuleInit {
 
   @Transactional()
   async create(
-    dto: Optional<Prisma.EntryUncheckedCreateInput, 'id' | 'host'>,
+    dto: Optional<
+      Prisma.EntryUncheckedCreateInput,
+      'id' | 'host' | 'tenantPk_'
+    >,
     select?: Prisma.EntrySelect,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
@@ -248,6 +235,7 @@ export class EntriesService implements OnModuleInit {
 
     dto.id = Utils.uuid();
     const data = dto as Prisma.EntryUncheckedCreateInput;
+    // tenantPk_ using db default value
 
     adaptor.preCreate(data);
 
@@ -263,18 +251,29 @@ export class EntriesService implements OnModuleInit {
 
     await this.eventEmitter.emitAsync(
       EntryCreatedEvent.eventName,
-      new EntryCreatedEvent(entry as any),
+      new EntryCreatedEvent({ ...dto, ...entry } as any),
     );
 
     return entry;
   }
 
   @Transactional()
-  update(id: string, dto: UpdateEntryDto, select?: Prisma.EntrySelect) {
+  update(
+    id: string,
+    dto: UpdateEntryDto,
+    opBy: string,
+    select?: Prisma.EntrySelect,
+  ) {
+    const tenantPk_ = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
-      (select) => prisma.entry.update({ select, where: { id }, data: dto }),
+      (select) =>
+        prisma.entry.update({
+          select,
+          where: { id, tenantPk_, createdBy: opBy },
+          data: dto,
+        }),
       this.defSelect,
     );
   }
@@ -283,15 +282,17 @@ export class EntriesService implements OnModuleInit {
   async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
 
+    const tenantPk_ = this.tenancyService.getTenantId();
     const [ret] = await Promise.all([
       selectHelper(this.defSelect, (select) =>
-        prisma.entry.delete({ select, where: { id } }),
+        prisma.entry.delete({ select, where: { id, tenantPk_ } }),
       ),
       // directly delete endpoints, needn't EndpointsChangedEvent
       prisma.endpoint.deleteMany({
         where: { entryId: id },
       }),
     ]);
+    if (!ret) return;
 
     this.eventEmitter.emitAsync(
       EntriesChangedEvent.eventName,
@@ -303,40 +304,6 @@ export class EntriesService implements OnModuleInit {
     );
     return ret;
   }
-
-  // @Transactional()
-  // upsertEntryAuth(
-  //   dto: Prisma.EntryAuthUncheckedCreateInput,
-  //   entry: EntryDto,
-  // ) {
-  //   if (!entry) throw new BadRequestException('entry not found');
-  //   if (entry.authType == 'NONE')
-  //     throw new BadRequestException("auth type `NONE` needn't be set");
-  //   else if (entry.authType == 'USER') {
-  //     if (!dto.userKey)
-  //       throw new BadRequestException(
-  //         '`userKey` is required for auth type `USER`',
-  //       );
-  //   } else if (entry.authType == 'APP') dto.userKey = '';
-  //   // else
-  //   //   throw new BadRequestException('Invalid auth type: ' + entry.authType);
-  //   dto.entryId = entry.id;
-
-  //   const prisma = this.txHost.tx as PrismaClient;
-  //   return selectHelper(this.defSelect as Prisma.EntryAuthSelect, (select) =>
-  //     prisma.endpointAuth.upsert({
-  //       select,
-  //       where: {
-  //         endpointId_userKey: {
-  //           entryId: dto.entryId,
-  //           userKey: dto.userKey,
-  //         },
-  //       },
-  //       create: dto,
-  //       update: dto,
-  //     }),
-  //   );
-  // }
 
   @Transactional(Propagation.RequiresNew)
   async init(id: string, initParams: object) {
@@ -395,73 +362,12 @@ export class EntriesService implements OnModuleInit {
     await adaptor.preprocess(reqEvent, entry as any);
   }
 
-  // /** invoke SEPs based on macro service */
-  // @Transactional()
-  // async invokeSEPs(reqEvent: ClientRequestEvent) {
-  //   // map2Endpoints: { req2Args: string; args?: {}; }
-  //   const { map2Endpoints, endpoints, sentry } = reqEvent.context;
-  //   if (!map2Endpoints || !endpoints?.length)
-  //     throw new Error('Failed to invoke, No mapping function found');
-
-  //   const func = endpoints[0] as EndpointDto;
-  //   const sen =
-  //     sentry ||
-  //     (await this.findOne(func.entryId, {
-  //       id: true,
-  //       name: true,
-  //       type: true,
-  //       adaptorKey: true,
-  //       priority: true,
-  //       host: true,
-  //       content: true,
-  //       callgentId: true,
-  //       callgent: { select: { id: true, name: true } },
-  //     }));
-  //   const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
-  //   if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-
-  //   // may returns pending result
-  //   return adapter
-  //     .invoke(func, map2Endpoints.args, sen as any, reqEvent)
-  //     .then((res) => {
-  //       if (res && res.resumeFunName) return res;
-  //       return this.postInvokeSEP((res && res.data) || reqEvent);
-  //     });
-  // }
-
-  // /** called after pending invokeSEP, convert resp to formal object */
-  // @Transactional()
-  // async postInvokeSEP(reqEvent: ClientRequestEvent) {
-  //   const { endpoints, sentry } = reqEvent.context;
-  //   if (!endpoints?.length)
-  //     throw new Error('Failed to invoke, No mapping function found');
-
-  //   const func = endpoints[0] as EndpointDto;
-  //   const sen =
-  //     sentry ||
-  //     (await this.findOne(func.entryId, {
-  //       id: true,
-  //       name: true,
-  //       type: true,
-  //       adaptorKey: true,
-  //       priority: true,
-  //       host: true,
-  //       content: true,
-  //       callgentId: true,
-  //       callgent: { select: { id: true, name: true } },
-  //     }));
-  //   const adapter = sen && this.getAdaptor(sen.adaptorKey, EntryType.SERVER);
-  //   if (!adapter) throw new Error('Failed to invoke, No SEP adaptor found');
-  //   await adapter.postprocess(reqEvent, func);
-
-  //   return { data: reqEvent }; // do nothing
-  // }
-
   @Transactional()
   async updateSecurities(id: string, securities: RealmSecurityVO[]) {
     const prisma = this.txHost.tx as PrismaClient;
+    const tenantPk_ = this.tenancyService.getTenantId();
     return prisma.entry.update({
-      where: { id },
+      where: { id, tenantPk_ },
       data: { securities: securities as any },
     });
   }
