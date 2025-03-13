@@ -51,7 +51,7 @@ export class CallgentHubController {
     name: 'perPage',
     required: false,
     type: Number,
-    schema: { default: "`${10 + page}`" },
+    schema: { default: 10 },
   })
   @ApiOkResponse({
     schema: {
