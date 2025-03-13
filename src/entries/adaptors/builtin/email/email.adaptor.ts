@@ -97,7 +97,7 @@ export class EmailAdaptor extends BothEntryAdaptor {
    * @param sentry - config
    * @param reqEvent - context event
    */
-  async invoke(
+  protected async _invoke(
     endpoint: EndpointDto,
     args: object,
     sentry: Entry,

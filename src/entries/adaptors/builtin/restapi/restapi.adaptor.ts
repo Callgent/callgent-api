@@ -66,7 +66,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     reqEvent.context.req = this.req2Json(req);
   }
 
-  async invoke(
+  protected async _invoke(
     fun: EndpointDto,
     args: object,
     sen: EntryDto,

@@ -1,6 +1,8 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
+  ParameterObject,
+  RequestBodyObject,
   SecurityRequirementObject,
   SecuritySchemeObject,
   ServerObject,
@@ -67,7 +69,58 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
    * @param sentry config
    * @param reqEvent context
    */
-  abstract invoke(
+  async invoke(
+    fun: EndpointDto,
+    args: { [key: string]: any },
+    sentry: EntryDto,
+    reqEvent: ClientRequestEvent,
+    ctx: InvokeStatus,
+  ): Promise<{
+    statusCode?: 2;
+    message?: string;
+    data?: any;
+  }> {
+    args = this._mergeDefaultArgs(fun, args);
+    return this._invoke(fun, args, sentry, reqEvent, ctx);
+  }
+
+  /**
+   * merge default args:
+   * - eval arg template
+   * - fill default value
+   * - merge array/map k/v
+   */
+  private _mergeDefaultArgs(
+    fun: EndpointDto,
+    args: { [key: string]: any },
+  ): { [key: string]: any } {
+    const { params } = fun;
+    if (!params) return args;
+    const { parameters, requestBody } = params as unknown as {
+      parameters: ParameterObject[];
+      requestBody: RequestBodyObject;
+    };
+
+    // parameters.forEach((p) => {
+    //   const { name, required, schema } = p;
+    //   if (!args[name] && required) {
+    //     if (schema?.default) {
+    //       args[name] = schema.default;
+    //     } else {
+    //       throw new BadRequestException(`missing required param: ${name}`);
+    //     }
+    //   }
+    // });
+
+    if (requestBody) {
+      const { content } = requestBody;
+
+      if (!args['body'] && content) {
+      }
+    }
+  }
+
+  protected abstract _invoke(
     fun: EndpointDto,
     args: { [key: string]: any },
     sentry: EntryDto,

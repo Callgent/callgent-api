@@ -47,7 +47,12 @@ export class CallgentHubController {
 
   @ApiQuery({ name: 'query', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'perPage', required: false, type: Number })
+  @ApiQuery({
+    name: 'perPage',
+    required: false,
+    type: Number,
+    schema: { default: "`${10 + page}`" },
+  })
   @ApiOkResponse({
     schema: {
       anyOf: [
