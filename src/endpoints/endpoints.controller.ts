@@ -29,6 +29,7 @@ import { RestApiResponse } from '../restapi/response.interface';
 import { EndpointDto } from './dto/endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { EndpointsService } from './endpoints.service';
+import { CreateEndpointDto } from './dto/create-endpoint.dto';
 
 export class CallgentApis extends ApiSpec {
   @EntityIdExists('entry', 'id')
@@ -76,7 +77,7 @@ export class EndpointsController {
       'Create batch of new Endpoint. Exception if existing one with same name in the same callgent',
     description: 'return { data: imported_functions_count } on success',
   })
-  @Post()
+  @Post('batch')
   async createBatch(
     @Req() req,
     @Body()
@@ -108,6 +109,18 @@ export class EndpointsController {
     };
   }
 
+  @ApiOperation({
+    summary: 'Create new Endpoint',
+    description:
+      'You may create several endpoints for the same API with different default values',
+  })
+  @Post()
+  async create(@Req() req, @Body() dto: CreateEndpointDto) {
+    return {
+      data: await this.endpointService.create(dto, req.user.sub),
+    };
+  }
+
   @ApiOkResponse({
     schema: {
       allOf: [
@@ -124,40 +137,6 @@ export class EndpointsController {
   async findOne(@Param('id') id: string) {
     return { data: await this.endpointService.findOne(id) };
   }
-
-  // @ApiQuery({ name: 'query', required: false, type: String })
-  // @ApiQuery({ name: 'page', required: false, type: Number })
-  // @ApiQuery({ name: 'perPage', required: false, type: Number })
-  // @ApiOkResponse({
-  //   schema: {
-  //     allOf: [
-  //       { $ref: getSchemaPath(RestApiResponse) },
-  //       {
-  //         properties: {
-  //           data: {
-  //             type: 'array',
-  //             items: { $ref: getSchemaPath(EndpointDto) },
-  //           },
-  //         },
-  //       },
-  //     ],
-  //   },
-  // })
-  // @Get()
-  // async findAll(
-  //   @Query() query: { query?: string; page?: 1; perPage?: 10 },
-  // ) {
-  //   const where = query.query
-  //     ? {
-  //         name: { contains: query.query },
-  //       }
-  //     : undefined;
-  //   return this.endpointService.findAll({
-  //     page: query.page,
-  //     perPage: query.perPage,
-  //     where,
-  //   });
-  // }
 
   @ApiOkResponse({
     schema: {
