@@ -316,7 +316,6 @@ model Endpoint {
   tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   name        String  @db.VarChar(1023) /// @description `${method} ${path}`
   operationId String  @db.VarChar(1023) /// @description if empty, use path as operationId
   path        String  @db.VarChar(1000) /// @description openAPI path
@@ -327,13 +326,11 @@ model Endpoint {
   /// @DtoEntityHidden
   servers     Json[]  @db.Json /// @description openAPI servers
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
   securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?   @db.Json /// @description declaration of API params
   responses   Json?   @db.Json /// @description declaration of API responses
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   rawJson     Json?   @db.Json
 
   // @DtoReadOnly
@@ -344,16 +341,12 @@ model Endpoint {
   entryId    String  @db.VarChar(30)
   /// @description whether async endpoint, e.g. invoked by email adaptor
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   isAsync    Boolean @db.Boolean
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   adaptorKey String  @db.VarChar(127) /// @description entry adaptor key
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   cacheKey   String? @db.VarChar(511) /// @description {string | (endpoint, request)=> string}; if empty&method=='get': cache by name, else no cache
   /// @DtoReadOnly
-  /// @DtoEntityHidden
   cacheTtl   Int?    @default(0) @db.Integer /// @description in seconds. < 0 means no cache, 0&isAsync means cache pending response, else >0 cache
 
   /// @DtoReadOnly
