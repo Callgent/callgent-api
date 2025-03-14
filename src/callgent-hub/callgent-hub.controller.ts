@@ -51,7 +51,7 @@ export class CallgentHubController {
     name: 'perPage',
     required: false,
     type: Number,
-    schema: { default: 10 },
+    schema: { default: 10, type: 'integer', format: 'int32' },
   })
   @ApiOkResponse({
     schema: {

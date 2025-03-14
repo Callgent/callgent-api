@@ -1,14 +1,20 @@
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common';
 import {
   ParameterObject,
   RequestBodyObject,
+  SchemaObject,
   SecurityRequirementObject,
   SecuritySchemeObject,
   ServerObject,
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import postmanToOpenApi from '@pond918/postman-to-openapi';
 import { EntryType, Prisma } from '@prisma/client';
+import { Liquid } from 'liquidjs';
 import yaml from 'yaml';
 import { AgentsService } from '../../agents/agents.service';
 import { EndpointDto } from '../../endpoints/dto/endpoint.dto';
@@ -20,9 +26,9 @@ import {
 } from '../events/client-request.event';
 
 export abstract class EntryAdaptor {
-  protected readonly agentsService: AgentsService;
-  constructor(agentsService: AgentsService) {
-    this.agentsService = agentsService;
+  protected readonly templateEngine: Liquid;
+  constructor(protected readonly agentsService: AgentsService) {
+    this.templateEngine = new Liquid({ keepOutputType: true });
   }
 
   preCreate(data: Prisma.EntryUncheckedCreateInput) {
@@ -80,43 +86,183 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
     message?: string;
     data?: any;
   }> {
-    args = this._mergeDefaultArgs(fun, args);
+    if (!args) args = {};
+    this._mergeDefaultValues(fun, args);
     return this._invoke(fun, args, sentry, reqEvent, ctx);
   }
 
   /**
    * merge default args:
-   * - eval arg template
-   * - fill default value
-   * - merge array/map k/v
+   * - eval arg name/value template
+   * - fill default value, including merge array/object undefined props
+   * @param args must not empty
    */
-  private _mergeDefaultArgs(
+  protected _mergeDefaultValues(
     fun: EndpointDto,
     args: { [key: string]: any },
-  ): { [key: string]: any } {
-    const { params } = fun;
-    if (!params) return args;
-    const { parameters, requestBody } = params as unknown as {
-      parameters: ParameterObject[];
-      requestBody: RequestBodyObject;
-    };
+  ) {
+    const { parameters, requestBody } =
+      (fun.params as unknown as {
+        parameters: ParameterObject[];
+        requestBody: RequestBodyObject;
+      }) || {};
+    if (!parameters?.length && !requestBody) return;
 
-    // parameters.forEach((p) => {
-    //   const { name, required, schema } = p;
-    //   if (!args[name] && required) {
-    //     if (schema?.default) {
-    //       args[name] = schema.default;
-    //     } else {
-    //       throw new BadRequestException(`missing required param: ${name}`);
-    //     }
-    //   }
-    // });
+    // add request body as param
+    const params = parameters ? [...parameters] : [];
+    const { content } = requestBody || {};
+    const schemas = Object.values(content);
+    if (schemas.length) {
+      if (schemas.length > 1)
+        throw new NotImplementedException('multiple content type');
+      params.push({
+        name: 'requestBody',
+        schema: schemas[0].schema,
+        in: 'body',
+      } as any);
+    }
 
-    if (requestBody) {
-      const { content } = requestBody;
+    // merge default values
+    for (const p of params) {
+      this._mergeSchemaDefaultValue(
+        p as { name: string; schema: SchemaObject },
+        args,
+        args,
+      );
+    }
+  }
 
-      if (!args['body'] && content) {
+  /**
+   * merge default values into args if not set, e.g.:
+   * - { name:'requestBody', schema: { properties: { messages: [LLMMessage], 'messages.0': { default: '{{}}' } } } }
+   *   - default value will be merged into messages=[undefined, 1,2], as messages[0] is undefined
+   * - { name:'requestBody', schema: { "type": "array" } }
+   * - { name:'requestBody.0', schema: { "type": "array" } }
+   *
+   * - if any prop is undefined, default value is applied
+   * - if any prop is not empty, try merge nested undefined props
+   * - null is treat as set, and no nested merge
+   * - if arg is empty, no merge
+   * - array is deeply flattened, and item count not changed
+   *
+   * @param p p.name may be template and path, e.g. 'requestBody.{{ index }}'
+   * @param arg current parameter value
+   */
+  protected _mergeSchemaDefaultValue(
+    { name, schema }: { name: string; schema: SchemaObject },
+    ctx: { [key: string]: any },
+    arg: any,
+  ): void {
+    // if arg empty or no def and nested def, no merge
+    if (!arg || !schema) return;
+
+    // eval name template to path
+    const names = this._templateEval(name, ctx, arg).split('.');
+    let val = this._getValue(arg, names); // value to merge
+
+    //// treat all as array
+    // if val is array, flatten all items and switch schema to item
+    const isArrayValue = schema.items || schema.type === 'array';
+    let flatArray: any[];
+    if (isArrayValue) {
+      // if array length, means no item to merge
+      flatArray = val?.flat(100);
+      if (!flatArray?.length) return;
+      do {
+        schema = schema.items as SchemaObject; // flatten arrays
+      } while (schema.items || schema.type === 'array');
+      if (!schema) return; // no def nor nested def to merge
+    } else flatArray = [val];
+
+    // merge each item
+    flatArray.forEach((v, i) => {
+      // replace to default value if not set
+      if (v === undefined) {
+        if (schema.default === undefined) return; // no default, ignore nested
+
+        v = this._templateEval(schema.default, ctx, arg);
+        if (v === undefined) return;
+        if (isArrayValue) {
+          // attach new val to array
+          this._setValueTraverse(val, v);
+        } else this._setValue(arg, names, val); // attach new v to arg
       }
+      if (!v || !schema.properties) return; // no nested props to merge
+
+      //// merge nested props
+      for (const [name, propSchema] of Object.entries(schema.properties)) {
+        this._mergeSchemaDefaultValue(
+          { schema: propSchema as SchemaObject, name },
+          ctx,
+          v,
+        );
+      }
+    });
+  }
+
+  /** traverse deep array, replace first undefined item with v */
+  private _setValueTraverse(arr: any[], v: any) {
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i];
+      if (item === undefined) {
+        arr[i] = v;
+        return true;
+      } else if (Array.isArray(item)) {
+        if (this._setValueTraverse(item, v)) return true;
+      }
+    }
+  }
+
+  /**
+   * null safe set: if middle value empty, init it. name: a.b
+   * @returns new obj if obj is undefined or null, else obj
+   */
+  private _setValue(obj: object, name: string, defVal: any) {
+    const ns = name.split('.');
+    const o = ns.length > 1 ? this._getValue(obj, ns.slice(0, -1)) : obj;
+    o[ns[ns.length - 1]] = defVal;
+    return obj;
+  }
+
+  /** null safe get. name: a.b */
+  private _getValue(args: { [key: string]: any }, name: string | string[]) {
+    const names = Array.isArray(name) ? name : name.split('.');
+    let v: any = args;
+    for (const n of names) {
+      // return if undefined or null
+      if (v === undefined || v === null) return v;
+      v = v[n];
+    }
+    return v;
+  }
+
+  /**
+   * @param value if string, eval it as template; if object/array, eval every prop
+   * @param ctx
+   * @param _ current value
+   * @returns evaluated value keeping same type as vars, e.g. '{{age}}' -> 10
+   */
+  protected _templateEval(value: any, ctx: { [key: string]: any }, _?: any) {
+    if (typeof value === 'string') return this._templateEvalStr(value, ctx, _);
+    if (!value || typeof value !== 'object') return value;
+    if (Array.isArray(value))
+      return value.map((v) => this._templateEval(v, ctx, _));
+
+    value = { ...value };
+    for (const [k, v] of Object.entries(value))
+      value[k] = this._templateEval(v, ctx, _);
+    return value;
+  }
+
+  /**
+   * @returns evaluated value keeping same type as vars, e.g. '{{age}}' -> 10
+   */
+  private _templateEvalStr(tpl: string, ctx: { [key: string]: any }, _?: any) {
+    if (tpl.indexOf('{') < 0) return tpl;
+    try {
+      return this.templateEngine.parseAndRenderSync(tpl, { ...ctx, _ });
+    } catch (e) {
+      throw new BadRequestException(e.message);
     }
   }
 
@@ -217,7 +363,8 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
       for (const [path, pathApis] of ps) {
         const entries = Object.entries(pathApis);
         for (const [method, restApi] of entries) {
-          const summary = `${restApi.operationId || ''}${restApi.operationId && restApi.summary ? ': ' : ''}${restApi.summary || ''}`;
+          const operationId = restApi.operationId;
+          const summary = restApi.summary || '';
           const description = `${restApi.description || ''}${restApi.description && restApi.tags?.length ? '; ' : ''}${restApi.tags?.length ? 'Tags: ' + restApi.tags.join(', ') : ''}`;
           const responses = restApi.responses;
           const params = {
@@ -231,6 +378,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
 
           ret.apis.push({
             path,
+            operationId,
             method: method.toUpperCase(),
             summary,
             description,
@@ -285,6 +433,7 @@ export abstract class BothEntryAdaptor
 
 export class ApiSpec {
   apis: {
+    operationId: string;
     path: string;
     method: string;
     summary: string;
@@ -301,99 +450,3 @@ export class ApiSpec {
   /** array with or-relation, SecurityRequirementObject with and-relation */
   securities?: SecurityRequirementObject[];
 }
-
-// export class EntryParam {
-//   @ApiProperty({
-//     description:
-//       'param type. `readonly` shows some instructions in markdown format',
-//   })
-//   type:
-//     | 'text'
-//     | 'textarea'
-//     | 'integer'
-//     | 'float'
-//     | 'boolean'
-//     | 'date'
-//     | 'time'
-//     | 'datetime'
-//     | 'password'
-//     | 'email'
-//     | 'tel'
-//     | 'url'
-//     | 'domain'
-//     | 'cron'
-//     | 'regex'
-//     | 'file'
-//     | 'image'
-//     | 'radio'
-//     | 'select'
-//     | 'checkbox'
-//     | 'multiselect'
-//     | 'range'
-//     | 'slider'
-//     | 'color'
-//     | 'yaml'
-//     | 'json'
-//     | 'markdown'
-//     | 'file'
-//     | 'image'
-//     | 'script'
-//     | 'readonly';
-//   @ApiProperty({ description: 'Param name' })
-//   name: string;
-//   @ApiProperty({ description: 'Default to param name' })
-//   label?: string;
-//   @ApiProperty()
-//   placeholder?: string;
-//   @ApiProperty()
-//   optional?: boolean;
-//   @ApiProperty({ description: 'Default value, or select options' })
-//   value?: any | { [key: string]: EntryParam[] };
-//   @ApiProperty()
-//   constraint?: string;
-//   @ApiProperty()
-//   position?: number | 'bottom' | 'top';
-//   // @ApiProperty()
-//   // hidden?: boolean | (form: object) => boolean;
-// }
-
-// class EntryHost {
-//   @ApiProperty({
-//     description: 'host address',
-//     example: 'task+sdfhjw4349fe@my.callgent.com',
-//   })
-//   address: EntryParam;
-
-//   @ApiProperty({
-//     description: 'default auth type',
-//     enum: ['NONE', 'APP', 'USER'],
-//   })
-//   authType?: 'NONE' | 'APP' | 'USER';
-
-//   @ApiProperty({ description: 'Authentication Configuration' })
-//   authConfig?: EntryParam[];
-// }
-
-// class Entry {
-//   @ApiProperty({
-//     description: 'Optional entry host config',
-//   })
-//   host?: EntryHost;
-//   @ApiProperty({ description: 'Entry requesting params template' })
-//   params?: EntryParam[];
-//   @ApiProperty({ description: 'Whether allow additional params' })
-//   addParams?: boolean;
-//   @ApiProperty({ description: 'Entry initialization params template' })
-//   initParams?: EntryParam[];
-// }
-
-// export class EntryConfig {
-//   @ApiProperty({ description: 'Entry host' })
-//   host?: EntryHost;
-
-//   @ApiProperty({ description: 'The task client entry' })
-//   client?: Entry;
-
-//   @ApiProperty({ description: 'The task server entry' })
-//   server?: Entry;
-// }

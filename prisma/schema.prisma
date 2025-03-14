@@ -315,18 +315,26 @@ model Endpoint {
   // add to migration.sql
   tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
 
-  /// @DtoCreateOptional
-  name        String  @db.VarChar(1023) /// @description default: `${method} ${path}`
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  name        String  @db.VarChar(1023) /// @description `${method} ${path}`
+  operationId String  @db.VarChar(1023) /// @description if empty, use path as operationId
   path        String  @db.VarChar(1000) /// @description openAPI path
   method      String  @db.VarChar(15) /// @description openAPI method
   summary     String? @db.VarChar(2047)
   description String? @db.VarChar(4095)
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   servers     Json[]  @db.Json /// @description openAPI servers
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   /// @DtoCastType(RealmSecurityVO, ../../callgent-realms/dto/realm-security.vo)
   securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?   @db.Json /// @description declaration of API params
   responses   Json?   @db.Json /// @description declaration of API responses
-  rawJson     Json    @db.Json
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  rawJson     Json?   @db.Json
 
   // @DtoReadOnly
   /// @CustomValidator(EntityIdExists, 'callgent', 'id', ../../infras/repo/validators/entity-exists.validator)
@@ -335,15 +343,17 @@ model Endpoint {
   /// @CustomValidator(EntityIdExists, 'entry', 'id', ../../infras/repo/validators/entity-exists.validator)
   entryId    String  @db.VarChar(30)
   /// @description whether async endpoint, e.g. invoked by email adaptor
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   isAsync    Boolean @db.Boolean
-  /// @DtoCreateApiResponse
-  /// @DtoUpdateApiResponse
-  /// @DtoPlainApiResponse
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   adaptorKey String  @db.VarChar(127) /// @description entry adaptor key
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   cacheKey   String? @db.VarChar(511) /// @description {string | (endpoint, request)=> string}; if empty&method=='get': cache by name, else no cache
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
   cacheTtl   Int?    @default(0) @db.Integer /// @description in seconds. < 0 means no cache, 0&isAsync means cache pending response, else >0 cache
 
   /// @DtoReadOnly

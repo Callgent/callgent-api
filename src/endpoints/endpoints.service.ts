@@ -88,14 +88,16 @@ export class EndpointsService {
     if (!entry) return;
     const adaptor = this.entriesService.getAdaptor(entry.adaptorKey, 'SERVER');
     const isAsync = adaptor.isAsync(dto as any);
-    const name = dto.name || Utils.formalApiName(dto.method, dto.path);
+    dto.operationId || (dto.operationId = dto.path);
+    const name = Utils.formalApiName(dto.method, dto.operationId);
     const data: Prisma.EndpointUncheckedCreateInput = {
       ...dto,
       name,
+      method: dto.method.toUpperCase(),
       isAsync,
       id: Utils.uuid(),
       adaptorKey: entry.adaptorKey,
-      securities: dto.securities as any,
+      securities: [],
       createdBy: opBy,
       tenantPk_: undefined, // db default
     };
@@ -156,12 +158,15 @@ export class EndpointsService {
     const actMap = apis.map<
       Omit<Prisma.EndpointUncheckedCreateInput, 'isAsync'>
     >((f) => {
+      const operationId = f.operationId || f.path;
+      const name = Utils.formalApiName(f.method, operationId);
       const ret = {
         ...f,
+        name,
         createdBy,
         id: Utils.uuid(),
         entryId: entry.id,
-        name: Utils.formalApiName(f.method, f.path),
+        operationId,
         adaptorKey: entry.adaptorKey,
         callgentId: entry.callgentId,
         tenantPk_: undefined, // db default
@@ -310,14 +315,15 @@ export class EndpointsService {
   @Transactional()
   async update(dto: UpdateEndpointDto, opBy: string) {
     if (!dto.id) return;
-    dto.name = Utils.formalApiName(dto.method, dto.path);
+    const operationId = dto.operationId || dto.path;
+    const name = Utils.formalApiName(dto.method, operationId);
     const prisma = this.txHost.tx as PrismaClient;
     const old = await this.findOne(dto.id, this.defSelect);
     const ret = await selectHelper(this.defSelect, (select) =>
       prisma.endpoint.update({
         select,
         where: { id: dto.id, createdBy: opBy },
-        data: dto as any,
+        data: { ...dto, name, operationId },
       }),
     );
     if (!ret) return;

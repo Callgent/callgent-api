@@ -121,7 +121,7 @@ CREATE TABLE "Endpoint" (
     "securities" JSON[],
     "params" JSON,
     "responses" JSON,
-    "rawJson" JSON NOT NULL,
+    "rawJson" JSON,
     "callgentId" VARCHAR(30) NOT NULL,
     "entryId" VARCHAR(30),
     "isAsync" BOOLEAN NOT NULL,
