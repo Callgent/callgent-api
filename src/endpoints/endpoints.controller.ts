@@ -135,7 +135,12 @@ export class EndpointsController {
   })
   @Get('/:id')
   async findOne(@Param('id') id: string) {
-    return { data: await this.endpointService.findOne(id) };
+    return {
+      data: await this.endpointService.findOne(id, {
+        pk: false,
+        rawJson: true,
+      }),
+    };
   }
 
   @ApiOkResponse({
