@@ -174,19 +174,20 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
       if (!schema) return; // no def nor nested def to merge
     } else flatArray = [val];
 
-    // merge each item
-    flatArray.forEach((v, i) => {
-      // replace to default value if not set
-      if (v === undefined) {
-        if (schema.default === undefined) return; // no default, ignore nested
-
-        v = this._templateEval(schema.default, ctx, arg);
-        if (v === undefined) return;
-        if (isArrayValue) {
-          // attach new val to array
-          this._setValueTraverse(val, v);
-        } else this._setValue(arg, names, val); // attach new v to arg
+    //// replace undefined value with default
+    if (
+      schema.default !== undefined &&
+      flatArray.some((v) => v === undefined)
+    ) {
+      const defValue = this._templateEval(schema.default, ctx, arg);
+      if (defValue !== undefined) {
+        if (isArrayValue) this._setValueTraverse(val, defValue);
+        else this._setValue(arg, names, defValue);
       }
+    }
+
+    //// merge item nested props
+    flatArray.forEach((v, i) => {
       if (!v || !schema.properties) return; // no nested props to merge
 
       //// merge nested props
@@ -200,16 +201,12 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
     });
   }
 
-  /** traverse deep array, replace first undefined item with v */
+  /** traverse deep array, replace all undefined item with v */
   private _setValueTraverse(arr: any[], v: any) {
     for (let i = 0; i < arr.length; i++) {
       const item = arr[i];
-      if (item === undefined) {
-        arr[i] = v;
-        return true;
-      } else if (Array.isArray(item)) {
-        if (this._setValueTraverse(item, v)) return true;
-      }
+      if (item === undefined) arr[i] = v;
+      else if (Array.isArray(item)) this._setValueTraverse(item, v);
     }
   }
 

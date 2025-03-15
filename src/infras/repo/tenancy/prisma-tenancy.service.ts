@@ -6,7 +6,8 @@ import { ClsService } from 'nestjs-cls';
 export class PrismaTenancyService {
   constructor(readonly cls: ClsService) {}
 
-  public static readonly TENANT_ID_KEY = 'TENANT_ID';
+  private static readonly TENANT_ID_KEY = 'P-T_ID';
+  private static readonly USER_ID_KEY = 'P-U_ID';
 
   setTenantId(tenantPk: number) {
     this.cls.set(PrismaTenancyService.TENANT_ID_KEY, tenantPk);
@@ -14,6 +15,13 @@ export class PrismaTenancyService {
 
   getTenantId(): number {
     return this.cls.get(PrismaTenancyService.TENANT_ID_KEY);
+  }
+
+  setUserId(userId: string) {
+    this.cls.set(PrismaTenancyService.USER_ID_KEY, userId);
+  }
+  getUserId(): string {
+    return this.cls.get(PrismaTenancyService.USER_ID_KEY);
   }
 
   /**

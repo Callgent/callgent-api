@@ -113,6 +113,7 @@ CREATE TABLE "Endpoint" (
     "id" VARCHAR(30) NOT NULL,
     "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
     "name" VARCHAR(1023) NOT NULL,
+    "operationId" VARCHAR(1023) NOT NULL,
     "path" VARCHAR(1000) NOT NULL,
     "method" VARCHAR(15) NOT NULL,
     "summary" VARCHAR(2047),

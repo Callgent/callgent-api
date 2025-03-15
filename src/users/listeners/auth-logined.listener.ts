@@ -12,7 +12,8 @@ export class AuthLoginedListener {
 
   @OnEvent(AuthLoginedEvent.eventName)
   async handleEvent(event: AuthLoginedEvent) {
-    event.user?.tenantPk &&
-      this.tenancyService.setTenantId(event.user.tenantPk);
+    const { sub: userId, tenantPk } = event.user || {};
+    this.tenancyService.setTenantId(tenantPk);
+    this.tenancyService.setUserId(userId);
   }
 }

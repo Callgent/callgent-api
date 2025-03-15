@@ -330,7 +330,6 @@ model Endpoint {
   securities  Json[]  @db.Json /// @description RealmSecurityVO[], where RealmSecurityVO{ [realmName]: RealmSecurityItem }
   params      Json?   @db.Json /// @description declaration of API params
   responses   Json?   @db.Json /// @description declaration of API responses
-  /// @DtoReadOnly
   rawJson     Json?   @db.Json
 
   // @DtoReadOnly
