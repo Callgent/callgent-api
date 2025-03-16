@@ -26,7 +26,7 @@ export class Utils {
     // mins = now - `2024-12-25 08:35` + 262144, intToBase64(262144) = '1000'
     // need 31.4 years to reach 'zzzz'
     const prefix = ((Date.now() / 60000) | 0) - 28656451;
-    return Utils.intToBase64(prefix) + nanoid(opt?.size || 16);
+    return Utils.intToBase64(prefix) + nanoid(opt?.size || 17);
   }
 
   static intToBase64(num: number) {

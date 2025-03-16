@@ -175,6 +175,7 @@ export class CallgentHubService {
             orderBy: { pk: 'asc' },
             select: {
               name: true,
+              operationId: true,
               path: true,
               method: true,
               summary: true,
