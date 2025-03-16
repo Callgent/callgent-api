@@ -18,7 +18,7 @@ import { AuthLoginedEvent } from '../infras/auth/events/auth-logined.event';
 import { JwtPayload } from '../infras/auth/jwt/jwt-auth.service';
 import { Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import { CreateUserIdentityDto } from '../user-identities/dto/create-user-identity.dto';
 import { ValidationEmailVo } from './dto/validation-email.vo';
 
@@ -28,7 +28,7 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
     private readonly emailsService: EmailsService,
     private readonly authTokensService: AuthTokensService,
     private readonly eventEmitter: EventEmitter2,
@@ -74,7 +74,7 @@ export class UsersService {
     },
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    if (options?.noTenant) await this.tenancyService.bypassTenancy(prisma);
+    if (options?.noTenant) await this.tenancyService.bypassAbac(prisma);
     try {
       // find user identity
       const where = options?.evenInvalid
@@ -87,7 +87,7 @@ export class UsersService {
       return ui;
     } finally {
       if (options?.noTenant)
-        await this.tenancyService.bypassTenancy(prisma, false);
+        await this.tenancyService.bypassAbac(prisma, false);
     }
   }
 
@@ -97,7 +97,7 @@ export class UsersService {
     authType: string,
   ) {
     const prisma = this.txHost.tx as PrismaClient;
-    await this.tenancyService.bypassTenancy(prisma);
+    await this.tenancyService.bypassAbac(prisma);
     try {
       return await prisma.userIdentity.findUnique({
         where: {
@@ -110,7 +110,7 @@ export class UsersService {
         },
       });
     } finally {
-      await this.tenancyService.bypassTenancy(prisma, false);
+      await this.tenancyService.bypassAbac(prisma, false);
     }
   }
 
@@ -180,7 +180,7 @@ export class UsersService {
       // create user
       const user: Prisma.UserUncheckedCreateWithoutUserIdentityInput = {
         tenantPk: tenant.pk,
-        id: Utils.uuid(),
+        id: Utils.uuid({ size: 11 }),
         name: ui.name,
         avatar: ui.avatar,
         deletedAt: tenant.deletedAt,
@@ -234,7 +234,7 @@ export class UsersService {
       // create a tenant
       tenant = await prisma.tenant.create({
         data: {
-          id: Utils.uuid(),
+          id: Utils.uuid({ size: 11 }),
           emailHost,
           name: emailHost,
           type: 1,
@@ -399,7 +399,7 @@ export class UsersService {
     if (!userId) return;
 
     const prisma = this.txHost.tx as PrismaClient;
-    await this.tenancyService.bypassTenancy(prisma);
+    await this.tenancyService.bypassAbac(prisma);
     try {
       return await prisma.user
         .findUnique({
@@ -408,13 +408,13 @@ export class UsersService {
         })
         .then((u) => u?.tenant);
     } finally {
-      await this.tenancyService.bypassTenancy(prisma, false);
+      await this.tenancyService.bypassAbac(prisma, false);
     }
   }
 
   async $balance(tenantPk: number, amount: Decimal) {
     const prisma = this.txHost.tx as PrismaClient;
-    await this.tenancyService.bypassTenancy(prisma);
+    await this.tenancyService.bypassAbac(prisma);
     try {
       return await prisma.tenant.update({
         select: { balance: true },
@@ -422,7 +422,7 @@ export class UsersService {
         data: { balance: { increment: amount } },
       });
     } finally {
-      await this.tenancyService.bypassTenancy(prisma, false);
+      await this.tenancyService.bypassAbac(prisma, false);
     }
   }
 }

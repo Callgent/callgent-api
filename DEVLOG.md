@@ -95,10 +95,10 @@ If all the above steps are done, and nothing failed, you can access the API at `
 
 ### multi-tenancy
 
-1. write default value for `tenancy.tenantPk` in db
+1. write default value for `abac.tenantPk` in db
 
   ```text
-  tenantPk Int  @default(dbgenerated("(current_setting('tenancy.tenantPk'))::int"))
+  tenantPk Int  @default(dbgenerated("(current_setting('abac.tenantPk'))::int"))
   ```
 
 1. enable postgres row level security(RLS), so that we can filter data by `tenantPk` automatically:
@@ -114,19 +114,19 @@ If all the above steps are done, and nothing failed, you can access the API at `
 3. extend `PrismaClient` to set `tenantPk` before any query
 
    ```sql
-   SELECT set_config('tenancy.tenantPk', cls.get('TENANT_ID') ...
+   SELECT set_config('abac.tenantPk', cls.get('TENANT_ID') ...
    ```
 
 4. bypass rls, for example, by admin, or looking up the logon user to determine their tenant ID:
 
    ```sql
-   CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('tenancy.bypass_rls', TRUE)::text = 'on');
+   CREATE POLICY bypass_rls_policy ON "User" USING (current_setting('abac.bypass_rls', TRUE)::text = 'on');
    ```
 
-   then when you want to bypass rls, you must set `tenancy.bypass_rls` to `on` before running the query:
+   then when you want to bypass rls, you must set `abac.bypass_rls` to `on` before running the query:
 
    ```js
-   await prisma.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', TRUE)`;
+   await prisma.$executeRaw`SELECT set_config('abac.bypass_rls', 'on', TRUE)`;
    ```
 
 ### Authentication

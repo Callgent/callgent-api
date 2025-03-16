@@ -8,7 +8,8 @@ async function main() {
 
   return await prisma
     .$transaction(async (prisma) => {
-      await prisma.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${true})`;
+      await prisma.$executeRaw`SELECT set_config('abac.bypass_rls', 'on', ${true})`;
+      await prisma.$executeRaw`SELECT set_config('abac.bypass_rls', 'on', ${true})`;
       await Promise.all(initData(prisma));
     })
     .catch((e) => {
@@ -58,7 +59,6 @@ function initEventListeners(
       funName: 'preprocessClientRequest',
       description:
         'Find the CEP, then preprocess the request, replace raw request.',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -70,7 +70,6 @@ function initEventListeners(
       serviceName: 'CallgentRealmsService',
       funName: 'checkCenAuth',
       description: 'Auth-check before centry invocation.',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -82,7 +81,6 @@ function initEventListeners(
       serviceName: 'EventStoresService',
       funName: 'loadClientEventHistories',
       description: 'Load all events of same taskId into event.histories',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -94,7 +92,6 @@ function initEventListeners(
       serviceName: 'EndpointsService',
       funName: 'loadEndpoints',
       description: 'Load all endpoints into event.context.endpoints',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -107,7 +104,6 @@ function initEventListeners(
       funName: 'genWebpages',
       description:
         'Generate webpage[view/model/view-model] from request & endpoints',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -120,7 +116,6 @@ function initEventListeners(
       funName: 'map2Endpoints',
       description:
         'Map the request to endpoints and corresponding args, put into event.context.map2Endpoints and event.context.endpoints[0]',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
     {
@@ -133,7 +128,6 @@ function initEventListeners(
       funName: 'runAndFix',
       description:
         'Run and fix script until success, return the final response',
-      createdBy: 'GLOBAL',
       priority: (priority += 100),
     },
   ];
@@ -960,6 +954,7 @@ function initGlobalCallgent(
     },
     secret: `Bearer ${process.env.LLM_API_KEY}`,
     pricing: { perResponse: 'string' },
+    createdBy: adminUserId,
   };
   const sen: Prisma.EntryUncheckedCreateInput = {
     id: 'GLOBAL_CG_SEN_ID',

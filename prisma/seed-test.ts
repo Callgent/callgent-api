@@ -13,7 +13,7 @@ async function main() {
 
   return await prisma
     .$transaction(async (prisma) => {
-      await prisma.$executeRaw`SELECT set_config('tenancy.bypass_rls', 'on', ${true})`;
+      await prisma.$executeRaw`SELECT set_config('abac.bypass_rls', 'on', ${true})`;
 
       const tenant: Prisma.TenantUncheckedCreateInput = {
         id: 'TEST_TENANT_ID',

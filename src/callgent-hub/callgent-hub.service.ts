@@ -14,14 +14,14 @@ import { CreateCallgentDto } from '../callgents/dto/create-callgent.dto';
 import { EndpointsService } from '../endpoints/endpoints.service';
 import { EntriesService } from '../entries/entries.service';
 import { Utils } from '../infras/libs/utils';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 
 @Injectable()
 export class CallgentHubService {
   public readonly hubTenantPK = -1;
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
     private readonly callgentsService: CallgentsService,
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,

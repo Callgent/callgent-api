@@ -6,7 +6,7 @@ import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Callgent, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import { CreateCallgentDto } from './dto/create-callgent.dto';
 import { UpdateCallgentDto } from './dto/update-callgent.dto';
 import { CallgentCreatedEvent } from './events/callgent-created.event';
@@ -20,7 +20,7 @@ export class CallgentsService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
     private readonly eventEmitter: EventEmitter2,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
   ) {}
   protected readonly defSelect: Prisma.CallgentSelect = {
     pk: false,
@@ -143,6 +143,7 @@ export class CallgentsService {
     const prisma = this.txHost.tx as PrismaClient;
 
     try {
+      await this.tenancyService.bypassAbac(prisma);
       const c = await selectHelper(
         select,
         (select) =>
@@ -157,6 +158,8 @@ export class CallgentsService {
     } catch (e) {
       if (e.message.includes(' not found.')) return null;
       throw e;
+    } finally {
+      await this.tenancyService.bypassAbac(prisma, false);
     }
   }
 

@@ -74,7 +74,7 @@ model User {
   tenant       Tenant         @relation(fields: [tenantPk], references: [pk])
   /// @DtoRelationIncludeId
   // add to migration.sql
-  tenantPk     Int            @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk     Int            @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
   /// @DtoReadOnly
   /// @DtoEntityHidden
   userIdentity UserIdentity[]
@@ -94,7 +94,7 @@ model UserIdentity {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk       Int     @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk       Int     @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -173,7 +173,7 @@ model Callgent {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
   name        String  @db.VarChar(255)
   avatar      String? @db.VarChar(1023)
@@ -210,7 +210,7 @@ model Callgent {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String   @db.VarChar(30)
+  createdBy String   @default(dbgenerated("(current_setting('abac.userId'))")) @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -222,6 +222,7 @@ model Callgent {
 
   @@unique([tenantPk_, name, deletedAt])
   @@index([tenantPk_])
+  @@index([createdBy])
   @@index([forkedPk])
   @@index([mainTagId])
 }
@@ -257,7 +258,7 @@ model Entry {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
   name        String    @default("") @db.VarChar(2047)
   /// @description Summary to quickly understand in what scenarios to use this service.
@@ -290,7 +291,7 @@ model Entry {
   callgent   Callgent @relation(fields: [callgentId], references: [id])
 
   /// @DtoReadOnly
-  createdBy String   @db.VarChar(30)
+  createdBy String   @default(dbgenerated("(current_setting('abac.userId'))")) @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -300,6 +301,7 @@ model Entry {
 
   @@index([callgentId])
   @@index([tenantPk_])
+  @@index([createdBy])
 }
 
 /// @description endpoint in openAPI.json format
@@ -313,7 +315,7 @@ model Endpoint {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
   /// @DtoReadOnly
   name        String  @db.VarChar(1023) /// @description `${method} ${path}`
@@ -350,7 +352,7 @@ model Endpoint {
 
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  createdBy String   @db.VarChar(30)
+  createdBy String   @default(dbgenerated("(current_setting('abac.userId'))")) @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -361,6 +363,7 @@ model Endpoint {
   @@unique([callgentId, name, deletedAt])
   @@index([callgentId])
   @@index([tenantPk_])
+  @@index([createdBy])
   @@index([entryId])
 }
 
@@ -376,7 +379,7 @@ model CallgentRealm {
   /// @DtoReadOnly
   /// @DtoEntityHidden
   // add to migration.sql
-  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)"))
+  tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
@@ -415,6 +418,9 @@ model CallgentRealm {
   /// @description pricing for the realm invocation, paid by user, earn by callgent owner
   pricing Json? @db.Json
 
+  /// @DtoReadOnly
+  /// @DtoEntityHidden
+  createdBy String   @default(dbgenerated("(current_setting('abac.userId'))")) @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -424,6 +430,7 @@ model CallgentRealm {
 
   @@unique([callgentId, realmKey, deletedAt])
   @@index([tenantPk_])
+  @@index([createdBy])
   @@index(callgentId)
 }
 
@@ -515,9 +522,6 @@ model EventListener {
   description String      @default("") @db.VarChar(2000)
   // TODO add the listener's input/output props in event.context, for automatic checking
 
-  /// @DtoReadOnly
-  /// @DtoEntityHidden
-  createdBy String   @db.VarChar(30)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   // DONOT FORGET TO ADD the model into `createSoftDeleteMiddleware`
@@ -658,7 +662,7 @@ model Transaction {
   userId    String @db.VarChar(30)
   /// @DtoReadOnly
   /// @DtoEntityHidden
-  tenantPk_ Int    @default(dbgenerated("(current_setting('tenancy.tenantPk')::int)")) /// @description no rls
+  tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)")) /// @description no rls
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt

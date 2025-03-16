@@ -8,6 +8,11 @@ const execPromise = promisify(exec);
 
 export class Utils {
   /**
+   * Size ~ 0.48⋅ln(60*10^n)−0.24⋅ln(2 10^(-P)) ~ 1.8 + 1.11n + 0.553P
+   * - 60*10^n: number of ids per minute
+   * - 10^(-P): probability of collision, P 12~financial, 10~trade
+   * @description {n:3,P:10}:10.6, {n:3,P:12}:11.7, {n:6,P:12}:15
+   *
    * @param opt - size: length of the uuid, raw: if false, prefix uuid with intToBase64(mins) since `2024-12-25 08:35`
    * @returns a random uuid, specifically not starts with '-'
    */
@@ -21,7 +26,7 @@ export class Utils {
     // mins = now - `2024-12-25 08:35` + 262144, intToBase64(262144) = '1000'
     // need 31.4 years to reach 'zzzz'
     const prefix = ((Date.now() / 60000) | 0) - 28656451;
-    return Utils.intToBase64(prefix) + nanoid(opt?.size);
+    return Utils.intToBase64(prefix) + nanoid(opt?.size || 16);
   }
 
   static intToBase64(num: number) {
@@ -95,7 +100,7 @@ export class Utils {
   }
 
   static formalApiName = (method: string, path: string) =>
-    `${method.toUpperCase()} ${path}`;
+    `${method.toUpperCase()} ${path?.[0] === '/' ? path : '/' + path}`;
 
   static toFunction<T extends Function>(funCode: string): T {
     try {

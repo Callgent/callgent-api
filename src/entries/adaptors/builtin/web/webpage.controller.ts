@@ -25,7 +25,7 @@ import { CallgentsService } from '../../../../callgents/callgents.service';
 import { EventListenersService } from '../../../../event-listeners/event-listeners.service';
 import { JwtGuard } from '../../../../infras/auth/jwt/jwt.guard';
 import { Utils } from '../../../../infras/libs/utils';
-import { PrismaTenancyService } from '../../../../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../../../../infras/repo/abac/prisma-abac.service';
 import { EntriesService } from '../../../entries.service';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { RequestRequirement } from '../../dto/request-requirement.dto';
@@ -40,7 +40,7 @@ export class WebpageController {
     @Inject('EntriesService')
     protected readonly entriesService: EntriesService,
     protected readonly eventListenersService: EventListenersService,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
   ) {}
 
   @ApiOperation({

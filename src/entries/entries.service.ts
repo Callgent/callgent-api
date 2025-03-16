@@ -19,7 +19,7 @@ import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import {
   ClientEntryAdaptor,
   ServerEntryAdaptor,
@@ -41,7 +41,7 @@ export class EntriesService implements OnModuleInit {
     @Inject(ModulesContainer)
     private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.EntrySelect = {

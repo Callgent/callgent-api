@@ -1,16 +1,18 @@
 /*
   Warnings:
 
+  - A unique constraint covering the columns `[id]` on the table `Callgent` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[tenantPk_,name,deletedAt]` on the table `Callgent` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[id]` on the table `CallgentRealm` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[callgentId,realmKey,deletedAt]` on the table `CallgentRealm` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[id]` on the table `Endpoint` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[callgentId,name,deletedAt]` on the table `Endpoint` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[id]` on the table `Entry` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[id]` on the table `User` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[authType,provider,uid,deletedAt]` on the table `UserIdentity` will be added. If there are existing duplicate values, this will fail.
+  - Made the column `entryId` on table `Endpoint` required. This step will fail if there are existing NULL values in that column.
 
 */
--- CreateEnum
-CREATE TYPE "EntryType" AS ENUM ('CLIENT', 'SERVER', 'EVENT');
-
--- CreateEnum
-CREATE TYPE "EventCallbackType" AS ENUM ('URL', 'EVENT');
-
 -- CreateTable
 CREATE TABLE "Tenant" (
     "pk" SERIAL NOT NULL,
@@ -49,31 +51,6 @@ CREATE TABLE "Tag" (
 );
 
 -- CreateTable
-CREATE TABLE "Callgent" (
-    "pk" BIGSERIAL NOT NULL,
-    "id" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
-    "name" VARCHAR(255) NOT NULL,
-    "avatar" VARCHAR(1023),
-    "summary" VARCHAR(4095),
-    "instruction" VARCHAR(4095),
-    "liked" INTEGER NOT NULL DEFAULT 0,
-    "viewed" INTEGER NOT NULL DEFAULT 0,
-    "forked" INTEGER NOT NULL DEFAULT 0,
-    "favorite" INTEGER NOT NULL DEFAULT 0,
-    "official" BOOLEAN NOT NULL DEFAULT false,
-    "featured" BOOLEAN NOT NULL DEFAULT false,
-    "forkedPk" BIGINT,
-    "mainTagId" INTEGER,
-    "createdBy" VARCHAR(30) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedAt" BIGINT NOT NULL DEFAULT 0,
-
-    CONSTRAINT "Callgent_pkey" PRIMARY KEY ("pk")
-);
-
--- CreateTable
 CREATE TABLE "CallgentTag" (
     "pk" BIGSERIAL NOT NULL,
     "tagId" INTEGER NOT NULL,
@@ -81,82 +58,6 @@ CREATE TABLE "CallgentTag" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "CallgentTag_pkey" PRIMARY KEY ("pk")
-);
-
--- CreateTable
-CREATE TABLE "Entry" (
-    "pk" BIGSERIAL NOT NULL,
-    "id" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
-    "name" VARCHAR(2047) NOT NULL DEFAULT '',
-    "summary" VARCHAR(4095),
-    "instruction" VARCHAR(4095),
-    "type" "EntryType" NOT NULL,
-    "adaptorKey" VARCHAR(127) NOT NULL,
-    "priority" INTEGER NOT NULL DEFAULT 0,
-    "host" VARCHAR(2047) NOT NULL,
-    "initParams" JSON,
-    "content" JSON,
-    "securities" JSON[],
-    "callgentId" VARCHAR(30) NOT NULL,
-    "createdBy" VARCHAR(30) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedAt" BIGINT NOT NULL DEFAULT 0,
-
-    CONSTRAINT "Entry_pkey" PRIMARY KEY ("pk")
-);
-
--- CreateTable
-CREATE TABLE "Endpoint" (
-    "pk" BIGSERIAL NOT NULL,
-    "id" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
-    "name" VARCHAR(1023) NOT NULL,
-    "operationId" VARCHAR(1023) NOT NULL,
-    "path" VARCHAR(1000) NOT NULL,
-    "method" VARCHAR(15) NOT NULL,
-    "summary" VARCHAR(2047),
-    "description" VARCHAR(4095),
-    "servers" JSON[],
-    "securities" JSON[],
-    "params" JSON,
-    "responses" JSON,
-    "rawJson" JSON,
-    "callgentId" VARCHAR(30) NOT NULL,
-    "entryId" VARCHAR(30),
-    "isAsync" BOOLEAN NOT NULL,
-    "adaptorKey" VARCHAR(127) NOT NULL,
-    "cacheKey" VARCHAR(511),
-    "cacheTtl" INTEGER DEFAULT 0,
-    "createdBy" VARCHAR(30) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedAt" BIGINT NOT NULL DEFAULT 0,
-
-    CONSTRAINT "Endpoint_pkey" PRIMARY KEY ("pk")
-);
-
--- CreateTable
-CREATE TABLE "CallgentRealm" (
-    "pk" BIGSERIAL NOT NULL,
-    "id" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('tenancy.tenantPk')::int),
-    "callgentId" VARCHAR(30) NOT NULL,
-    "realmKey" VARCHAR(256) NOT NULL,
-    "authType" VARCHAR(16) NOT NULL,
-    "provider" VARCHAR(30) NOT NULL,
-    "realm" VARCHAR(30) DEFAULT '',
-    "scheme" JSON NOT NULL,
-    "secret" JSON,
-    "perUser" BOOLEAN NOT NULL DEFAULT false,
-    "enabled" BOOLEAN NOT NULL DEFAULT true,
-    "pricing" JSON,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedAt" BIGINT NOT NULL DEFAULT 0,
-
-    CONSTRAINT "CallgentRealm_pkey" PRIMARY KEY ("pk")
 );
 
 -- CreateTable
@@ -221,7 +122,6 @@ CREATE TABLE "EventListener" (
     "serviceName" VARCHAR(255) NOT NULL,
     "funName" VARCHAR(255) NOT NULL,
     "description" VARCHAR(2000) NOT NULL DEFAULT '',
-    "createdBy" VARCHAR(30) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" BIGINT NOT NULL DEFAULT 0,
@@ -295,7 +195,7 @@ CREATE TABLE "Transaction" (
     "amount" DECIMAL(30,0) NOT NULL,
     "currency" VARCHAR(6) NOT NULL DEFAULT 'USD',
     "userId" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL,
+    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('abac.tenantPk')::int),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" BIGINT NOT NULL DEFAULT 0,
@@ -316,27 +216,6 @@ CREATE UNIQUE INDEX "PublicMailHost_dotHost_key" ON "PublicMailHost"("dotHost");
 CREATE UNIQUE INDEX "Tag_name_key" ON "Tag"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Callgent_id_key" ON "Callgent"("id");
-
--- CreateIndex
-CREATE INDEX "Callgent_tenantPk__idx" ON "Callgent"("tenantPk_");
-
--- CreateIndex
-CREATE INDEX "Callgent_forkedPk_idx" ON "Callgent"("forkedPk");
-
--- CreateIndex
-CREATE INDEX "Callgent_mainTagId_idx" ON "Callgent"("mainTagId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Callgent_tenantPk__name_deletedAt_key" ON "Callgent"("tenantPk_", "name", "deletedAt");
-
--- CreateIndex
-CREATE INDEX "Entry_tenantPk__idx" ON "Entry"("tenantPk_");
-
--- CreateIndex
-CREATE INDEX "Endpoint_tenantPk__idx" ON "Endpoint"("tenantPk_");
-
--- CreateIndex
 CREATE INDEX "CallgentTag_tagId_idx" ON "CallgentTag"("tagId");
 
 -- CreateIndex
@@ -344,36 +223,6 @@ CREATE INDEX "CallgentTag_callgentId_idx" ON "CallgentTag"("callgentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CallgentTag_callgentId_tagId_key" ON "CallgentTag"("callgentId", "tagId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Entry_id_key" ON "Entry"("id");
-
--- CreateIndex
-CREATE INDEX "Entry_callgentId_idx" ON "Entry"("callgentId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Endpoint_id_key" ON "Endpoint"("id");
-
--- CreateIndex
-CREATE INDEX "Endpoint_callgentId_idx" ON "Endpoint"("callgentId");
-
--- CreateIndex
-CREATE INDEX "Endpoint_entryId_idx" ON "Endpoint"("entryId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Endpoint_callgentId_name_deletedAt_key" ON "Endpoint"("callgentId", "name", "deletedAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CallgentRealm_id_key" ON "CallgentRealm"("id");
-
--- CreateIndex
-CREATE INDEX "CallgentRealm_tenantPk__idx" ON "CallgentRealm"("tenantPk_");
-
--- CreateIndex
-CREATE INDEX "CallgentRealm_callgentId_idx" ON "CallgentRealm"("callgentId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "CallgentRealm_callgentId_realmKey_deletedAt_key" ON "CallgentRealm"("callgentId", "realmKey", "deletedAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AuthToken_token_key" ON "AuthToken"("token");
@@ -425,6 +274,69 @@ CREATE UNIQUE INDEX "Transaction_txId_key" ON "Transaction"("txId");
 
 -- CreateIndex
 CREATE INDEX "Transaction_tenantPk__idx" ON "Transaction"("tenantPk_");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Callgent_id_key" ON "Callgent"("id");
+
+-- CreateIndex
+CREATE INDEX "Callgent_tenantPk__idx" ON "Callgent"("tenantPk_");
+
+-- CreateIndex
+CREATE INDEX "Callgent_createdBy_idx" ON "Callgent"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "Callgent_forkedPk_idx" ON "Callgent"("forkedPk");
+
+-- CreateIndex
+CREATE INDEX "Callgent_mainTagId_idx" ON "Callgent"("mainTagId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Callgent_tenantPk__name_deletedAt_key" ON "Callgent"("tenantPk_", "name", "deletedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CallgentRealm_id_key" ON "CallgentRealm"("id");
+
+-- CreateIndex
+CREATE INDEX "CallgentRealm_tenantPk__idx" ON "CallgentRealm"("tenantPk_");
+
+-- CreateIndex
+CREATE INDEX "CallgentRealm_createdBy_idx" ON "CallgentRealm"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "CallgentRealm_callgentId_idx" ON "CallgentRealm"("callgentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CallgentRealm_callgentId_realmKey_deletedAt_key" ON "CallgentRealm"("callgentId", "realmKey", "deletedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Endpoint_id_key" ON "Endpoint"("id");
+
+-- CreateIndex
+CREATE INDEX "Endpoint_callgentId_idx" ON "Endpoint"("callgentId");
+
+-- CreateIndex
+CREATE INDEX "Endpoint_tenantPk__idx" ON "Endpoint"("tenantPk_");
+
+-- CreateIndex
+CREATE INDEX "Endpoint_createdBy_idx" ON "Endpoint"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "Endpoint_entryId_idx" ON "Endpoint"("entryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Endpoint_callgentId_name_deletedAt_key" ON "Endpoint"("callgentId", "name", "deletedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Entry_id_key" ON "Entry"("id");
+
+-- CreateIndex
+CREATE INDEX "Entry_callgentId_idx" ON "Entry"("callgentId");
+
+-- CreateIndex
+CREATE INDEX "Entry_tenantPk__idx" ON "Entry"("tenantPk_");
+
+-- CreateIndex
+CREATE INDEX "Entry_createdBy_idx" ON "Entry"("createdBy");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_id_key" ON "User"("id");

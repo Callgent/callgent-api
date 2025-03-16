@@ -19,7 +19,7 @@ import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { Endpoint } from './entities/endpoint.entity';
@@ -36,7 +36,7 @@ export class EndpointsService {
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     pk: false,

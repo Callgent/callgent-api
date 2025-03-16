@@ -276,13 +276,13 @@ export class EventListenersService {
   }
 
   @Transactional()
-  addListener(data: CreateEventListenerDto, createdBy: string) {
+  addListener(data: CreateEventListenerDto) {
     data.eventType || (data.eventType = '*');
     data.dataType || (data.dataType = '*');
 
     const id = Utils.uuid();
     const prisma = this.txHost.tx as PrismaClient;
-    return prisma.eventListener.create({ data: { ...data, id, createdBy } });
+    return prisma.eventListener.create({ data: { ...data, id } });
   }
 
   @Transactional()

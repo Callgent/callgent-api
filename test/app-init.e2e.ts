@@ -9,10 +9,10 @@ import { LogLevel } from 'pactum/src/exports/settings';
 import { AppModule } from '../src/app.module';
 import { bootstrapForTest } from '../src/bootstrap';
 import {
-  TENANTED_PRISMA_SERVICE,
-  prismaTenancyUseFactory,
-} from '../src/infras/repo/tenancy/prisma-tenancy.provider';
-import { PrismaTenancyService } from '../src/infras/repo/tenancy/prisma-tenancy.service';
+  ABAC_PRISMA_SERVICE,
+  prismaAbacUseFactory,
+} from '../src/infras/repo/abac/prisma-abac.provider';
+import { AbacContextService } from '../src/infras/repo/abac/prisma-abac.service';
 
 export let testApp: NestFastifyApplication;
 let moduleFixture: TestingModule;
@@ -69,9 +69,9 @@ const initOriginalPrismaService = (
   process.env.LOG_LEVELS_PRISMA = JSON.stringify(log);
 
   // create as same as prod, from mainPrismaServiceOptions
-  originalPrismaService = prismaTenancyUseFactory(
+  originalPrismaService = prismaAbacUseFactory(
     prisma,
-    new PrismaTenancyService(store),
+    new AbacContextService(store),
   );
 
   log_level > 3 &&
@@ -89,7 +89,7 @@ export const beforeAllFn = async () => {
   pactum.request.setDefaultTimeout(3000000);
   moduleFixture = await Test.createTestingModule({ imports: [AppModule] })
     // proxy the tenanted PrismaService
-    .overrideProvider(TENANTED_PRISMA_SERVICE)
+    .overrideProvider(ABAC_PRISMA_SERVICE)
     .useFactory({
       factory: (prisma: PrismaService, store: ClsService) => {
         // NestJS specific code: Replace the original PrismaService when creating a testing module
@@ -134,7 +134,7 @@ export async function beforeEachFn() {
 
 export async function beforeEachFnTenanted(tenantPk = 1) {
   await prismaTestingHelper.startNewTransaction({ timeout: 888888 });
-  testApp.get(PrismaTenancyService).setTenantId(tenantPk);
+  testApp.get(AbacContextService).setTenantId(tenantPk);
   console.log('Starts test transaction, tenantPk:', tenantPk);
 }
 

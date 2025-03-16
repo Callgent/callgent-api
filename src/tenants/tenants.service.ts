@@ -1,10 +1,10 @@
 import { Transactional } from '@nestjs-cls/transactional';
 import { Injectable } from '@nestjs/common';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 
 @Injectable()
 export class TenantsService {
-  constructor(private readonly tenancyService: PrismaTenancyService) {}
+  constructor(private readonly tenancyService: AbacContextService) {}
   @Transactional()
   async runAs<T>(tenantPk: number, fn: () => Promise<T>): Promise<T> {
     const origPk = this.tenancyService.getTenantId();

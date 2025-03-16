@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { AuthLoginedEvent } from '../../infras/auth/events/auth-logined.event';
-import { PrismaTenancyService } from '../../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../../infras/repo/abac/prisma-abac.service';
 
 /** set tenantPk into cls context */
 @Injectable()
 export class AuthLoginedListener {
-  constructor(private readonly tenancyService: PrismaTenancyService) {}
+  constructor(private readonly tenancyService: AbacContextService) {}
 
   private readonly logger = new Logger(AuthLoginedListener.name);
 

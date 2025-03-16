@@ -33,7 +33,7 @@ import { UpdateCallgentRealmDto } from './dto/update-callgent-realm.dto';
 import { CallgentRealm } from './entities/callgent-realm.entity';
 import { PostAuthEvent } from './events/post-auth.event';
 import { AuthProcessor } from './processors/auth-processor.base';
-import { PrismaTenancyService } from '../infras/repo/tenancy/prisma-tenancy.service';
+import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 
 /** each callgent may have several security realms */
 @Injectable()
@@ -46,7 +46,7 @@ export class CallgentRealmsService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly moduleRef: ModuleRef,
     private readonly eventEmitter: EventEmitter2,
-    private readonly tenancyService: PrismaTenancyService,
+    private readonly tenancyService: AbacContextService,
   ) {}
   protected readonly defSelect: Prisma.CallgentRealmSelect = {
     pk: false,

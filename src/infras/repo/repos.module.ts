@@ -11,9 +11,9 @@ import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-pr
 import { ConfigService } from '@nestjs/config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ClsModule } from 'nestjs-cls';
+import { PrismaAbacOnPgModule } from './abac/prisma-abac.module';
+import { ABAC_PRISMA_SERVICE } from './abac/prisma-abac.provider';
 import { mainPrismaServiceOptions } from './prisma.middlewares';
-import { PrismaTenancyOnPgModule } from './tenancy/prisma-tenancy.module';
-import { TENANTED_PRISMA_SERVICE } from './tenancy/prisma-tenancy.provider';
 import { ValidatorModule } from './validators/validator.module';
 
 @Global()
@@ -24,7 +24,7 @@ import { ValidatorModule } from './validators/validator.module';
       useFactory: mainPrismaServiceOptions,
       inject: [ConfigService],
     }),
-    PrismaTenancyOnPgModule,
+    PrismaAbacOnPgModule,
     // redis cache: https://docs.nestjs.com/techniques/caching#:~:text=%5B%0A%20%20%20%20CacheModule.-,register,-%3CRedisClientOptions%3E
     CacheModule.register({
       isGlobal: true,
@@ -49,7 +49,7 @@ import { ValidatorModule } from './validators/validator.module';
           // imports: [PrismaModule],
           adapter: new TransactionalAdapterPrisma({
             // each adapter has its own options, see the adapter docs for more info
-            prismaInjectionToken: TENANTED_PRISMA_SERVICE,
+            prismaInjectionToken: ABAC_PRISMA_SERVICE,
           }),
         }),
       ],
