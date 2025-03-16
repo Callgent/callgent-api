@@ -108,7 +108,7 @@ export class CallgentTreeController {
   })
   @Post('callgent-tree')
   async create(@Req() req, @Body() dto: CreateCallgentDto) {
-    let callgent = (await this.callgentsService.getByName(
+    let callgent = (await this.callgentsService.getInTenantByName(
       dto.name,
     )) as CallgentDto;
     if (!callgent)

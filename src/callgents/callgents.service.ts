@@ -38,7 +38,6 @@ export class CallgentsService {
   ) {
     const data = dto as Prisma.CallgentUncheckedCreateInput;
     (data.id = Utils.uuid()), (data.createdBy = createdBy), delete data.pk;
-    // using db default: data.tenantPk_ = this.tenancyService.getTenantId();
 
     const prisma = this.txHost.tx as PrismaClient;
     const ret: Callgent = await selectHelper(
@@ -163,7 +162,7 @@ export class CallgentsService {
     }
   }
 
-  async getByName(name: string, select?: Prisma.CallgentSelect) {
+  async getInTenantByName(name: string, select?: Prisma.CallgentSelect) {
     const tenantPk_ = this.tenancyService.getTenantId();
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(

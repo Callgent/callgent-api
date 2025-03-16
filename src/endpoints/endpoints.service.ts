@@ -2,7 +2,6 @@ import { TransactionHost, Transactional } from '@nestjs-cls/transactional';
 import { TransactionalAdapterPrisma } from '@nestjs-cls/transactional-adapter-prisma';
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -19,7 +18,6 @@ import { EntriesService } from '../entries/entries.service';
 import { ClientRequestEvent } from '../entries/events/client-request.event';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import { CreateEndpointDto } from './dto/create-endpoint.dto';
 import { UpdateEndpointDto } from './dto/update-endpoint.dto';
 import { Endpoint } from './entities/endpoint.entity';
@@ -36,7 +34,6 @@ export class EndpointsService {
     @Inject('CallgentRealmsService')
     private readonly callgentRealmsService: CallgentRealmsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly tenancyService: AbacContextService,
   ) {}
   protected readonly defSelect: Prisma.EndpointSelect = {
     pk: false,
@@ -131,8 +128,6 @@ export class EndpointsService {
       throw new BadRequestException(
         'entry must be of type `SERVER`, id=' + entry.id,
       );
-    const tenantPk = this.tenancyService.getTenantId();
-    if (tenantPk !== entry.tenantPk_) throw new ForbiddenException();
     const entryDto = entry as unknown as EntryDto;
 
     const { apis, securitySchemes, servers, securities } = spec;

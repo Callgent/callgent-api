@@ -109,10 +109,8 @@ export class EntriesController {
   async updateEntry(
     @Param('id') id: string,
     @Body() dto: UpdateEntryDto,
-    @Req() req,
   ) {
-    const { sub: opBy } = req.user;
-    const data = await this.entriesService.update(id, dto, opBy);
+    const data = await this.entriesService.update(id, dto);
     return {
       data,
     };

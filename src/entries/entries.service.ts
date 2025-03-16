@@ -19,7 +19,6 @@ import { EntryType, Prisma, PrismaClient } from '@prisma/client';
 import { RealmSecurityVO } from '../callgent-realms/dto/realm-security.vo';
 import { Optional, Utils } from '../infras/libs/utils';
 import { selectHelper } from '../infras/repo/select.helper';
-import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
 import {
   ClientEntryAdaptor,
   ServerEntryAdaptor,
@@ -41,7 +40,6 @@ export class EntriesService implements OnModuleInit {
     @Inject(ModulesContainer)
     private readonly modulesContainer: ModulesContainer,
     private readonly txHost: TransactionHost<TransactionalAdapterPrisma>,
-    private readonly tenancyService: AbacContextService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
   protected readonly defSelect: Prisma.EntrySelect = {
@@ -258,20 +256,14 @@ export class EntriesService implements OnModuleInit {
   }
 
   @Transactional()
-  update(
-    id: string,
-    dto: UpdateEntryDto,
-    opBy: string,
-    select?: Prisma.EntrySelect,
-  ) {
-    const tenantPk_ = this.tenancyService.getTenantId();
+  update(id: string, dto: UpdateEntryDto, select?: Prisma.EntrySelect) {
     const prisma = this.txHost.tx as PrismaClient;
     return selectHelper(
       select,
       (select) =>
         prisma.entry.update({
           select,
-          where: { id, tenantPk_, createdBy: opBy },
+          where: { id },
           data: dto,
         }),
       this.defSelect,
@@ -282,10 +274,9 @@ export class EntriesService implements OnModuleInit {
   async delete(id: string, opBy: string) {
     const prisma = this.txHost.tx as PrismaClient;
 
-    const tenantPk_ = this.tenancyService.getTenantId();
     const [ret] = await Promise.all([
       selectHelper(this.defSelect, (select) =>
-        prisma.entry.delete({ select, where: { id, tenantPk_ } }),
+        prisma.entry.delete({ select, where: { id } }),
       ),
       // directly delete endpoints, needn't EndpointsChangedEvent
       prisma.endpoint.deleteMany({
@@ -365,9 +356,8 @@ export class EntriesService implements OnModuleInit {
   @Transactional()
   async updateSecurities(id: string, securities: RealmSecurityVO[]) {
     const prisma = this.txHost.tx as PrismaClient;
-    const tenantPk_ = this.tenancyService.getTenantId();
     return prisma.entry.update({
-      where: { id, tenantPk_ },
+      where: { id },
       data: { securities: securities as any },
     });
   }

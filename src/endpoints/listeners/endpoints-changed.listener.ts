@@ -64,7 +64,6 @@ export class EndpointsChangedSumEntryListener {
           summary: result.summary,
           instruction: result.instruction,
         },
-        opBy,
         { pk: true, securities: false },
       )
       .catch((err) => {

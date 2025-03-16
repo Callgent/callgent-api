@@ -503,9 +503,8 @@ export class CallgentRealmsService implements OnModuleInit {
   @Transactional()
   async delete(id: string) {
     const prisma = this.txHost.tx as PrismaClient;
-    const tenantPk_ = this.tenancyService.getTenantId();
     const realm = await prisma.callgentRealm.delete({
-      where: { id, tenantPk_ },
+      where: { id },
       select: { callgentId: true },
     });
     if (!realm) return;

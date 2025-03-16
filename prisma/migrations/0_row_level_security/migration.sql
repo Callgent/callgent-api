@@ -44,31 +44,6 @@ CREATE TABLE "UserIdentity" (
 
 
 -- CreateTable
-CREATE TABLE "Callgent" (
-    "pk" BIGSERIAL NOT NULL,
-    "id" VARCHAR(30) NOT NULL,
-    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('abac.tenantPk')::int),
-    "name" VARCHAR(255) NOT NULL,
-    "avatar" VARCHAR(1023),
-    "summary" VARCHAR(4095),
-    "instruction" VARCHAR(4095),
-    "liked" INTEGER NOT NULL DEFAULT 0,
-    "viewed" INTEGER NOT NULL DEFAULT 0,
-    "forked" INTEGER NOT NULL DEFAULT 0,
-    "favorite" INTEGER NOT NULL DEFAULT 0,
-    "official" BOOLEAN NOT NULL DEFAULT false,
-    "featured" BOOLEAN NOT NULL DEFAULT false,
-    "forkedPk" BIGINT,
-    "mainTagId" INTEGER,
-    "createdBy" VARCHAR(30) NOT NULL DEFAULT (current_setting('abac.userId')),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "deletedAt" BIGINT NOT NULL DEFAULT 0,
-
-    CONSTRAINT "Callgent_pkey" PRIMARY KEY ("pk")
-);
-
--- CreateTable
 -- CreateEnum
 CREATE TYPE "EntryType" AS ENUM ('CLIENT', 'SERVER', 'EVENT');
 CREATE TABLE "Entry" (
@@ -147,6 +122,31 @@ CREATE TABLE "CallgentRealm" (
     CONSTRAINT "CallgentRealm_pkey" PRIMARY KEY ("pk")
 );
 
+-- CreateTable
+CREATE TABLE "Callgent" (
+    "pk" BIGSERIAL NOT NULL,
+    "id" VARCHAR(30) NOT NULL,
+    "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('abac.tenantPk')::int),
+    "name" VARCHAR(255) NOT NULL,
+    "avatar" VARCHAR(1023),
+    "summary" VARCHAR(4095),
+    "instruction" VARCHAR(4095),
+    "liked" INTEGER NOT NULL DEFAULT 0,
+    "viewed" INTEGER NOT NULL DEFAULT 0,
+    "forked" INTEGER NOT NULL DEFAULT 0,
+    "favorite" INTEGER NOT NULL DEFAULT 0,
+    "official" BOOLEAN NOT NULL DEFAULT false,
+    "featured" BOOLEAN NOT NULL DEFAULT false,
+    "forkedPk" BIGINT,
+    "mainTagId" INTEGER,
+    "createdBy" VARCHAR(30) NOT NULL DEFAULT (current_setting('abac.userId')),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" BIGINT NOT NULL DEFAULT 0,
+
+    CONSTRAINT "Callgent_pkey" PRIMARY KEY ("pk")
+);
+
 -- Enable Row Level Security
 ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "UserIdentity" ENABLE ROW LEVEL SECURITY;
@@ -179,15 +179,46 @@ CREATE POLICY all_readable_policy ON "Entry" FOR SELECT USING (true);
 CREATE POLICY all_readable_policy ON "Endpoint" FOR SELECT USING (true);
 CREATE POLICY all_readable_policy ON "CallgentRealm" FOR SELECT USING (true);
 
--- writable by creator
-CREATE POLICY creator_update_policy ON "Callgent" FOR ALL
+-- created in same tenant
+CREATE POLICY tenant_create_policy ON "Callgent" FOR INSERT WITH CHECK ("tenantPk_" = NULLIF(current_setting('abac.tenantPk', TRUE), '')::int);
+CREATE POLICY tenant_create_policy ON "Entry" FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM "Callgent" c WHERE c."id" = "Entry"."callgentId"
+     AND c."tenantPk_" = NULLIF(current_setting('abac.tenantPk', TRUE), '')::int)
+);
+CREATE POLICY tenant_create_policy ON "Endpoint" FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM "Callgent" c WHERE c."id" = "Endpoint"."callgentId"
+     AND c."tenantPk_" = NULLIF(current_setting('abac.tenantPk', TRUE), '')::int)
+);
+CREATE POLICY tenant_create_policy ON "CallgentRealm" FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "CallgentRealm"."callgentId"
+     AND "tenantPk_" = NULLIF(current_setting('abac.tenantPk', TRUE), '')::int)
+);
+
+-- update by creator
+CREATE POLICY creator_update_policy ON "Callgent" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_update_policy ON "Entry" FOR ALL
+CREATE POLICY creator_update_policy ON "Entry" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_update_policy ON "Endpoint" FOR ALL
+CREATE POLICY creator_update_policy ON "Endpoint" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_update_policy ON "CallgentRealm" FOR ALL
+CREATE POLICY creator_update_policy ON "CallgentRealm" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE));
+
+-- delete self and sub-nodes by creator
+CREATE POLICY creator_delete_policy ON "Callgent" FOR DELETE
+  USING ("createdBy" = current_setting('abac.userId', TRUE));
+CREATE POLICY creator_delete_policy ON "Entry" FOR DELETE
+  USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+    EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Entry"."callgentId"
+     AND "createdBy" = current_setting('abac.userId', TRUE)));
+CREATE POLICY creator_delete_policy ON "Endpoint" FOR DELETE
+  USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+    EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Endpoint"."callgentId"
+     AND "createdBy" = current_setting('abac.userId', TRUE)));
+CREATE POLICY creator_delete_policy ON "CallgentRealm" FOR DELETE
+  USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+    EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "CallgentRealm"."callgentId"
+     AND "createdBy" = current_setting('abac.userId', TRUE)));
 
 -- Create policies to bypass RLS (optional)
 CREATE POLICY bypass_rls_policy ON "User" USING (

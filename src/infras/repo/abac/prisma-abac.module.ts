@@ -4,6 +4,7 @@ import {
   ABAC_PRISMA_SERVICE,
 } from './prisma-abac.provider';
 import { AbacContextService } from './prisma-abac.service';
+import { providePrismaClientUnknownExceptionFilter } from './prisma-exception.filter';
 
 /**
  * Attribute based access control (ABAC), based on postgres row level security (RLS).
@@ -13,7 +14,11 @@ import { AbacContextService } from './prisma-abac.service';
  */
 @Global()
 @Module({
-  providers: [AbacContextService, PrismaAbacClientProvider],
+  providers: [
+    AbacContextService,
+    PrismaAbacClientProvider,
+    providePrismaClientUnknownExceptionFilter(),
+  ],
   exports: [AbacContextService, ABAC_PRISMA_SERVICE],
 })
 export class PrismaAbacOnPgModule {}
