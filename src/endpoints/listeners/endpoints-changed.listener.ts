@@ -39,9 +39,7 @@ export class EndpointsChangedSumEntryListener {
     let result = await this.agentsService.summarizeEntry(event.data);
     if (result.totally) {
       // totally re-summarize
-      const news = await this.endpointsService.findAll({
-        where: { entryId: oldEntry.id },
-      });
+      const news = await this.endpointsService.findByEntry(oldEntry.id);
       if (!news.length) return;
 
       result = await this.agentsService.summarizeEntry({

@@ -241,7 +241,7 @@ export class EndpointsService {
   }
 
   /** tenant irrelevant */
-  findMany({
+  protected findMany({
     select,
     where,
     orderBy = { pk: 'desc' },
@@ -277,8 +277,29 @@ export class EndpointsService {
     );
   }
 
+  async findByEntry(
+    entryId: string,
+    args?: {
+      select?: Prisma.EndpointSelect;
+      where?: Prisma.EndpointWhereInput;
+      orderBy?: Prisma.EndpointOrderByWithRelationInput;
+    },
+  ) {
+    const e: any = await this.entriesService.findOne(entryId, {
+      tenantPk_: true,
+    });
+    if (!e) return [];
+
+    const { select, where, orderBy } = args || {};
+    return this.findAll({
+      select,
+      where: { ...where, entryId: e.id, tenantPk_: e.tenantPk_ },
+      orderBy,
+    });
+  }
+
   /** tenant irrelevant */
-  findAll({
+  protected findAll({
     select,
     where,
     orderBy = { pk: 'asc' },

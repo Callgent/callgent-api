@@ -5,8 +5,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PaginatorTypes, paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { Callgent, Prisma, PrismaClient } from '@prisma/client';
 import { Utils } from '../infras/libs/utils';
-import { selectHelper } from '../infras/repo/select.helper';
 import { AbacContextService } from '../infras/repo/abac/prisma-abac.service';
+import { selectHelper } from '../infras/repo/select.helper';
 import { CreateCallgentDto } from './dto/create-callgent.dto';
 import { UpdateCallgentDto } from './dto/update-callgent.dto';
 import { CallgentCreatedEvent } from './events/callgent-created.event';
@@ -102,10 +102,10 @@ export class CallgentsService {
   }
 
   @Transactional()
-  async deleteByCreator(callgentId: string, createdBy: string) {
+  async delete(callgentId: string) {
     const prisma = this.txHost.tx as PrismaClient;
     const c = await selectHelper(this.defSelect, (select) =>
-      prisma.callgent.delete({ select, where: { id: callgentId, createdBy } }),
+      prisma.callgent.delete({ select, where: { id: callgentId } }),
     );
     if (!c) return;
 

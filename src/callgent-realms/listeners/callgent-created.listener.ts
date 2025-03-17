@@ -1,8 +1,10 @@
 import { Transactional } from '@nestjs-cls/transactional';
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EntryType } from '@prisma/client';
 import { CallgentCreatedEvent } from '../../callgents/events/callgent-created.event';
+import { CreateEntryDto } from '../../entries/dto/create-entry.dto';
 import { EntriesService } from '../../entries/entries.service';
 import { CallgentRealmsService } from '../callgent-realms.service';
 
@@ -14,6 +16,7 @@ export class CallgentCreatedListener {
     private readonly callgentRealmsService: CallgentRealmsService,
     @Inject('EntriesService')
     private readonly entriesService: EntriesService,
+    private readonly configService: ConfigService,
   ) {}
 
   /** create a callgent with default api client entry, and Email client/server entry */
@@ -57,24 +60,37 @@ export class CallgentCreatedListener {
     if (callgent.forkedPk) return; // forked callgent
 
     // add default entries
+    const defaultEntries: (CreateEntryDto & {
+      createdBy: string;
+      adaptorKey: string;
+      tenantPk_?: number;
+    })[] = [
+      // API client entry
+      {
+        callgentId: callgent.id,
+        type: 'CLIENT' as EntryType,
+        adaptorKey: 'restAPI',
+        createdBy: callgent.createdBy,
+      },
+      // Email client entry
+      {
+        callgentId: callgent.id,
+        type: 'CLIENT' as EntryType,
+        adaptorKey: 'Email',
+        createdBy: callgent.createdBy,
+      },
+      // system server entry, used by adaptor default script
+      {
+        callgentId: callgent.id,
+        type: 'SERVER' as EntryType,
+        adaptorKey: 'Callgent',
+        host: this.configService.get('SYSTEM_CALLGENT_ID'),
+        createdBy: this.configService.get('ADMIN_USER_ID'),
+        tenantPk_: 0,
+      },
+    ];
     const results = await Promise.all(
-      [
-        // API client entry
-        {
-          callgentId: callgent.id,
-          type: 'CLIENT' as EntryType,
-          adaptorKey: 'restAPI',
-          createdBy: callgent.createdBy,
-        },
-        // Email client entry
-        {
-          callgentId: callgent.id,
-          type: 'CLIENT' as EntryType,
-          adaptorKey: 'Email',
-          createdBy: callgent.createdBy,
-        },
-        // TODO API event entry
-      ].map(async (e) =>
+      defaultEntries.map(async (e) =>
         this.entriesService.create(e).then((entry) => {
           // no await init, it may be slow, init must restart a new tx
           this.entriesService.init(entry.id, []);

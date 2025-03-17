@@ -28,9 +28,7 @@ export class BffEndpointsController {
     const entry = EntityIdExists.entity<Entry>(apiTxt, 'entryId');
     await this.endpointService.importBatch(entry, apiTxt, req.user?.sub);
 
-    const data = await this.endpointService.findAll({
-      where: { entryId: entry.id },
-    });
+    const data = await this.endpointService.findByEntry(entry.id);
 
     return { data };
   }

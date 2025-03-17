@@ -882,7 +882,7 @@ function initModelPricing(
   );
 }
 
-const adminUserId = 'CALLGENT_ADMIN_ID';
+const adminUserId = process.env.ADMIN_USER_ID;
 function initAdminUser(
   prisma: Omit<
     PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
@@ -928,7 +928,7 @@ function initGlobalCallgent(
     '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
   >,
 ) {
-  const callgentId = 'GLOBAL_CG_ID';
+  const callgentId = process.env.SYSTEM_CALLGENT_ID;
   const realmId = 'GLOBAL_CG_SEN_REALM_ID';
 
   const tenantPk_ = 0;

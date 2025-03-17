@@ -175,9 +175,7 @@ export class CallgentsController {
   })
   @Delete('/:id')
   async remove(@Param('id') id: string,
-  @Req() req,
 ) {
-  const { sub: userId } = req.user;
-  return { data: await this.callgentsService.deleteByCreator(id, userId) };
+  return { data: await this.callgentsService.delete(id) };
   }
 }

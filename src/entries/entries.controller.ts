@@ -106,10 +106,7 @@ export class EntriesController {
   })
   @UseGuards(JwtGuard)
   @Put(':id')
-  async updateEntry(
-    @Param('id') id: string,
-    @Body() dto: UpdateEntryDto,
-  ) {
+  async updateEntry(@Param('id') id: string, @Body() dto: UpdateEntryDto) {
     const data = await this.entriesService.update(id, dto);
     return {
       data,
@@ -217,7 +214,6 @@ export class EntriesController {
     perPage = perPage ? +perPage : undefined;
     const where: Prisma.EntryWhereInput = {
       type: 'SERVER',
-      tenantPk_: tenantPk,
       adaptorKey: adaptorKey || undefined,
       callgentId: callgentId || undefined,
     };
@@ -227,7 +223,7 @@ export class EntriesController {
       ['name', 'type', 'adaptorKey', 'host', 'pk', 'updatedAt'],
     );
     // FIXME: only list visible entries: mine/team/hub
-    return this.entriesService.findMany({
+    return this.entriesService.findInTenant(tenantPk, {
       page,
       perPage,
       where,

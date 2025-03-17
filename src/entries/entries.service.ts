@@ -137,9 +137,37 @@ export class EntriesService implements OnModuleInit {
     });
   }
 
+  /** don't list system entries */
+  async findByCallgent(
+    callgentId: string,
+    args?: {
+      select?: Prisma.EntrySelect;
+      where?: Prisma.EntryWhereInput;
+      orderBy?: Prisma.EntryOrderByWithRelationInput;
+    },
+  ) {
+    const prisma = this.txHost.tx as PrismaClient;
+    const c = await prisma.callgent.findUnique({
+      select: { tenantPk_: true },
+      where: { id: callgentId },
+    });
+    if (!c) return [];
+
+    const { select, where, orderBy } = args || {};
+    return this.findAll({
+      select,
+      where: {
+        ...where,
+        callgentId,
+        tenantPk_: c.tenantPk_,
+      },
+      orderBy,
+    });
+  }
+
   /** tenant irrelevant */
   @Transactional()
-  findAll({
+  protected findAll({
     select,
     where,
     orderBy = { pk: 'desc' },
@@ -161,9 +189,24 @@ export class EntriesService implements OnModuleInit {
     );
   }
 
+  findInTenant(
+    tenantPk_: number,
+    arg?: {
+      select?: Prisma.EntrySelect;
+      where?: Prisma.EntryWhereInput;
+      orderBy?: Prisma.EntryOrderByWithRelationInput[];
+      page?: number;
+      perPage?: number;
+    },
+  ) {
+    const where = arg?.where || {};
+    where.tenantPk_ = tenantPk_;
+    return this.findMany({ ...arg, where });
+  }
+
   /** tenant irrelevant */
   @Transactional()
-  findMany({
+  protected findMany({
     select,
     where,
     orderBy = [{ pk: 'desc' }],

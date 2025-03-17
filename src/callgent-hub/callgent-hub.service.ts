@@ -170,8 +170,7 @@ export class CallgentHubService {
       const endpointMap = {};
       await Promise.all(
         ens.map(async (epOld) => {
-          const endpoints = await this.endpointsService.findAll({
-            where: { entryId: epOld.id },
+          const endpoints = await this.endpointsService.findByEntry(epOld.id, {
             orderBy: { pk: 'asc' },
             select: {
               name: true,

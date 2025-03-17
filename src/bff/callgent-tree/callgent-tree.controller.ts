@@ -118,9 +118,8 @@ export class CallgentTreeController {
   }
 
   private async _callgentTree(callgent: CallgentDto) {
-    const entries = await this.entriesService.findAll({
+    const entries = await this.entriesService.findByCallgent(callgent.id, {
       select: { callgentId: false, securities: true },
-      where: { callgentId: callgent.id },
     });
 
     const cas = this.entriesService.listAdaptors(true);
@@ -134,14 +133,13 @@ export class CallgentTreeController {
           CEN.push(en);
           en.icon_url = cas[en.adaptorKey];
         } else if (en.type == 'SERVER') {
-          en.children = await this.endpointsService.findAll({
+          en.children = await this.endpointsService.findByEntry(en.id, {
             select: {
               pk: false,
               params: false,
               responses: false,
               callgentId: false,
             },
-            where: { entryId: en.id },
           });
           SEN.push(en);
           en.icon_url = sas[en.adaptorKey];

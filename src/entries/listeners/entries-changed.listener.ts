@@ -44,9 +44,9 @@ export class EntriesChangedSumCallgentListener {
     let result = await this.agentsService.summarizeCallgent(event.data);
     if (result.totally) {
       // totally re-summarize
-      const news = await this.entriesService.findAll({
+      const news = await this.entriesService.findByCallgent(callgent.id, {
         select: { pk: true, securities: false },
-        where: { callgentId: callgent.id, type: 'SERVER' },
+        where: { type: 'SERVER' },
       });
       if (!news.length) return;
 
