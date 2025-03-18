@@ -20,9 +20,9 @@ import {
   InvokeStatus,
 } from '../../../events/client-request.event';
 import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
-import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
+import { EntryAdaptor } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorDecorator('Email', { both: '/icons/Email.svg' })
+@EntryAdaptor('Email', { both: '/icons/Email.svg' })
 export class EmailAdaptor extends BothEntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,

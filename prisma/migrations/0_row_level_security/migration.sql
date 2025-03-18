@@ -194,31 +194,38 @@ CREATE POLICY tenant_create_policy ON "CallgentRealm" FOR INSERT WITH CHECK (
      AND "tenantPk_" = NULLIF(current_setting('abac.tenantPk', TRUE), '')::int)
 );
 
--- update by creator
+-- update by creator or callgent is creator
 CREATE POLICY creator_update_policy ON "Callgent" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE));
 CREATE POLICY creator_update_policy ON "Entry" FOR UPDATE
-  USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_update_policy ON "Endpoint" FOR UPDATE
-  USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_update_policy ON "CallgentRealm" FOR UPDATE
-  USING ("createdBy" = current_setting('abac.userId', TRUE));
-
--- delete self and sub-nodes by creator
-CREATE POLICY creator_delete_policy ON "Callgent" FOR DELETE
-  USING ("createdBy" = current_setting('abac.userId', TRUE));
-CREATE POLICY creator_delete_policy ON "Entry" FOR DELETE
   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Entry"."callgentId"
      AND "createdBy" = current_setting('abac.userId', TRUE)));
-CREATE POLICY creator_delete_policy ON "Endpoint" FOR DELETE
+CREATE POLICY creator_update_policy ON "Endpoint" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Endpoint"."callgentId"
      AND "createdBy" = current_setting('abac.userId', TRUE)));
-CREATE POLICY creator_delete_policy ON "CallgentRealm" FOR DELETE
+CREATE POLICY creator_update_policy ON "CallgentRealm" FOR UPDATE
   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "CallgentRealm"."callgentId"
      AND "createdBy" = current_setting('abac.userId', TRUE)));
+
+-- delete self and sub-nodes by creator
+-- no physical delete
+-- CREATE POLICY creator_delete_policy ON "Callgent" FOR DELETE
+--   USING ("createdBy" = current_setting('abac.userId', TRUE));
+-- CREATE POLICY creator_delete_policy ON "Entry" FOR DELETE
+--   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+--     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Entry"."callgentId"
+--      AND "createdBy" = current_setting('abac.userId', TRUE)));
+-- CREATE POLICY creator_delete_policy ON "Endpoint" FOR DELETE
+--   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+--     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "Endpoint"."callgentId"
+--      AND "createdBy" = current_setting('abac.userId', TRUE)));
+-- CREATE POLICY creator_delete_policy ON "CallgentRealm" FOR DELETE
+--   USING ("createdBy" = current_setting('abac.userId', TRUE) OR
+--     EXISTS (SELECT 1 FROM "Callgent" WHERE "id" = "CallgentRealm"."callgentId"
+--      AND "createdBy" = current_setting('abac.userId', TRUE)));
 
 -- Create policies to bypass RLS (optional)
 CREATE POLICY bypass_rls_policy ON "User" USING (

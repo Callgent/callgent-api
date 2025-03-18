@@ -25,12 +25,10 @@ import {
   InvokeStatus,
 } from '../events/client-request.event';
 
-export abstract class EntryAdaptor {
-  protected readonly templateEngine: Liquid;
-  constructor(protected readonly agentsService: AgentsService) {
-    this.templateEngine = new Liquid({ keepOutputType: true });
-  }
+abstract class AbstractEntryAdaptor {
+  constructor(protected readonly agentsService: AgentsService) {}
 
+  /** entry lifecycle */
   preCreate(data: Prisma.EntryUncheckedCreateInput) {
     if (!data.host) throw new BadRequestException('host is required');
     data.host = data.host.replace('{id}', data.id);
@@ -64,13 +62,20 @@ export class PendingOrResponse {
   data?: ServiceResponse;
 }
 
-export abstract class ServerEntryAdaptor extends EntryAdaptor {
+export abstract class ServerEntryAdaptor extends AbstractEntryAdaptor {
+  protected readonly templateEngine: Liquid;
+  constructor(protected readonly agentsService: AgentsService) {
+    super(agentsService);
+    this.templateEngine = new Liquid({ keepOutputType: true });
+  }
+
   abstract isAsync(endpoint: EndpointDto): boolean;
 
   /** init the entry. result in generated content */
   abstract initServer(initParams: object, entry: EntryDto): Promise<string>;
 
   /**
+   * request lifecycle.
    * invoke server, returns pending or real response
    * @param sentry config
    * @param reqEvent context
@@ -263,6 +268,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
     }
   }
 
+  /** request lifecycle */
   protected abstract _invoke(
     fun: EndpointDto,
     args: { [key: string]: any },
@@ -275,7 +281,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
     data?: any;
   }>;
 
-  /** postprocess response */
+  /** request lifecycle: postprocess response */
   abstract postprocess(
     resp: any,
     reqEvent: ClientRequestEvent,
@@ -284,7 +290,7 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
   ): Promise<ServiceResponse>;
 
   /**
-   * parse APIs to openAPI.json format
+   * sep lifecycle, parse APIs to openAPI.json format
    * @see https://github.com/OAI/OpenAPI-Specification/blob/main/schemas/v3.0/schema.json
    */
   async parseApis({
@@ -394,20 +400,25 @@ export abstract class ServerEntryAdaptor extends EntryAdaptor {
 }
 
 export abstract class ClientEntryAdaptor
-  extends EntryAdaptor
+  extends AbstractEntryAdaptor
   implements _ClientEntryAdaptor
 {
+  /** entry init */
   preCreate(data: Prisma.EntryUncheckedCreateInput): void {
     this._genClientHost(data);
     super.preCreate(data);
   }
 
+  /** entry init */
   abstract _genClientHost(entry: Prisma.EntryUncheckedCreateInput);
+  /** entry init */
   abstract initClient(initParams: object, entry: EntryDto): Promise<string>;
+  /** request lifecycle */
   abstract preprocess(
     reqEvent: ClientRequestEvent,
     entry: EntryDto,
   ): Promise<void>;
+  /** cep lifecycle */
 }
 
 export abstract class BothEntryAdaptor

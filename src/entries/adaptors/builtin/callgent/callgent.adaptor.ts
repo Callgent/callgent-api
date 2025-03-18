@@ -23,10 +23,10 @@ import {
   PendingOrResponse,
   ServerEntryAdaptor,
 } from '../../entry-adaptor.base';
-import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
+import { EntryAdaptor } from '../../entry-adaptor.decorator';
 
 /** a callgent as the server entry */
-@EntryAdaptorDecorator('Callgent', { server: '/icons/Callgent.svg' })
+@EntryAdaptor('Callgent', { server: '/icons/Callgent.svg' })
 export class CallgentAdaptor extends ServerEntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,

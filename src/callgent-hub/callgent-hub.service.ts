@@ -75,6 +75,7 @@ export class CallgentHubService {
 
   /**
    * Callgent, Entry, Endpoint, CallgentRealm.
+   * TODO: name prepend with tenant emailHost
    */
   @Transactional()
   async commitToHub(dupId: string, dto: CreateCallgentDto, createdBy: string) {

@@ -220,6 +220,7 @@ model Callgent {
 
   entries Entry[]
 
+  // hub callgent unique name?
   @@unique([tenantPk_, name, deletedAt])
   @@index([tenantPk_])
   @@index([createdBy])

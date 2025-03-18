@@ -11,9 +11,9 @@ import { ServiceResponse } from '../../../../event-listeners/event-object';
 import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { BothEntryAdaptor } from '../../entry-adaptor.base';
-import { EntryAdaptorDecorator } from '../../entry-adaptor.decorator';
+import { EntryAdaptor } from '../../entry-adaptor.decorator';
 
-@EntryAdaptorDecorator('restAPI', { both: '/icons/RestAPI.svg' })
+@EntryAdaptor('restAPI', { both: '/icons/RestAPI.svg' })
 export class RestAPIAdaptor extends BothEntryAdaptor {
   constructor(@Inject('AgentsService') readonly agentsService: AgentsService) {
     super(agentsService);
