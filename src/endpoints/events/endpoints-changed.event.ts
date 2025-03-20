@@ -9,8 +9,8 @@ export class EndpointsChangedEvent {
       opBy: string;
       entry: {
         id: string;
-        summary?: string;
-        instruction?: string;
+        whatFor?: string;
+        how2Use?: string;
         callgentId?: string;
       };
       news?: Omit<Endpoint, 'securities' | 'createdAt'>[];

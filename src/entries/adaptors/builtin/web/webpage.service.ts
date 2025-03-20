@@ -79,8 +79,8 @@ export class WebpageService {
       [comName: string]: {
         file: string;
         // props: string[];
-        summary: string;
-        instruction: string;
+        how2Use: string;
+        howImpl: string;
         endpoints: string[];
         inViews: string[];
         spec?: object;
@@ -150,21 +150,21 @@ export class WebpageService {
         name: view,
         path: viewMap[view].path,
         title: viewMap[view].title,
-        summary: viewMap[view].summary,
-        instruction: viewMap[view].instruction,
+        how2Use: viewMap[view].how2Use,
+        howImpl: viewMap[view].howImpl,
         components: viewComps[view],
       }));
       const otherViews = viewList
         .filter((v) => !relatedViews.find((v0) => v0.name === v.name))
-        .map((v) => ({ name: v.name, path: v.path, summary: v.summary }));
+        .map((v) => ({ name: v.name, path: v.path, how2Use: v.how2Use }));
 
       // and comps related to the views
       const relatedComps: {
         name: string;
         // props: string[];
         file?: string;
-        summary: string;
-        instruction?: string;
+        how2Use: string;
+        howImpl?: string;
         endpoints?: { name: string; params: object; responses: object }[];
       }[] = [...new Set(relatedViews.map((v) => viewComps[v.name]).flat())]
         .filter((c) => c !== compName)
@@ -172,8 +172,8 @@ export class WebpageService {
           name: c,
           // props: components[c].props,
           spec: components[c].spec,
-          summary: components[c].summary,
-          instruction: components[c].instruction,
+          how2Use: components[c].how2Use,
+          howImpl: components[c].howImpl,
         }));
       relatedComps.unshift({
         name: compName,

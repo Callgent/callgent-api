@@ -161,9 +161,10 @@ export class EmailsService implements OnModuleInit {
   }
 }
 
-export enum EmailRelayKey {
+export const EmailRelayKey = {
   /** ClientRequestEvent callback from email SEP */
-  request = 'request',
+  request: 'request',
   /** callgent email CEN */
-  callgent = 'callgent',
-}
+  callgent: 'callgent',
+} as const;
+export type EmailRelayKey = (typeof EmailRelayKey)[keyof typeof EmailRelayKey];

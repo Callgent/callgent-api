@@ -49,8 +49,8 @@ export default class PostmanCollectionImporter {
                 requestBody: {
                   name: item.name,
                   avatar: item.logo,
-                  summary: `${item.name} APIs`,
-                  instruction: `This callgent provides access to the ${item.name} APIs.`,
+                  whatFor: `${item.name} APIs`,
+                  how2Use: `This callgent provides access to the ${item.name} APIs.`,
                   mainTagId: -1,
                 },
               });
@@ -92,8 +92,8 @@ export default class PostmanCollectionImporter {
                 requestBody: {
                   name: item.name,
                   avatar: item.logo,
-                  summary: `${item.name} APIs`,
-                  instruction: `This callgent provides access to the ${item.name} APIs.`,
+                  whatFor: `${item.name} APIs`,
+                  how2Use: `This callgent provides access to the ${item.name} APIs.`,
                   mainTagId: -1,
                 },
               });

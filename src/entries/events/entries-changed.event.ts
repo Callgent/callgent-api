@@ -10,8 +10,8 @@ export class EntriesChangedEvent {
       callgent: {
         id: string;
         name?: string;
-        summary?: string;
-        instruction?: string;
+        whatFor?: string;
+        how2Use?: string;
       };
       news?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: bigint })[];
       olds?: (Omit<Entry, 'securities' | 'createdAt'> & { pk: bigint })[];

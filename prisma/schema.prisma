@@ -177,10 +177,10 @@ model Callgent {
 
   name        String  @db.VarChar(255)
   avatar      String? @db.VarChar(1023)
-  /// @description Summary to quickly understand in what scenarios to use this service.
-  summary     String? @db.VarChar(4095)
-  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
-  instruction String? @db.VarChar(4095)
+  /// @description whatFor to quickly understand basic concepts and in what scenarios to use this APP.
+  whatFor     String? @db.VarChar(4095)
+  /// @description to know roughly on how to use this APP: operations/flows etc.
+  how2Use String? @db.VarChar(4095)
 
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
@@ -262,10 +262,10 @@ model Entry {
   tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
   name        String    @default("") @db.VarChar(2047)
-  /// @description Summary to quickly understand in what scenarios to use this service.
-  summary     String?   @db.VarChar(4095)
-  /// @description Instruction to know roughly on how to use this service: concepts/operations etc.
-  instruction String?   @db.VarChar(4095)
+  /// @description whatFor to quickly understand basic concepts and in what scenarios to use this service.
+  whatFor     String?   @db.VarChar(4095)
+  /// @description to know roughly on how to use this service: operations/flows etc.
+  how2Use String?   @db.VarChar(4095)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type        EntryType /// @description entry type: CLIENT, SERVER OR EVENT

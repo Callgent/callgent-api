@@ -185,8 +185,8 @@ output just json no explanation`,
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2User":"{{=it.callgent.how2User}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -234,8 +234,8 @@ output complete purposes in json format:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -287,8 +287,8 @@ output complete purposes in json format:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -326,8 +326,8 @@ Note: Ensure accuracy and avoid assumptions beyond the provided info`,
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -390,8 +390,8 @@ Output the argument sourcing in JSON format:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -456,8 +456,8 @@ Output the Uncertain arguments sourcing in JSON format:
    \`\`\`json
    {
      "serviceName": "{{=it.callgent.name}}",
-     "summary":"{{=it.callgent.summary}}",
-     "instruction":"{{=it.callgent.instruction}}",
+     "whatFor":"{{=it.callgent.whatFor}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -549,18 +549,18 @@ Output:`,
     {
       name: 'summarizeEntry',
       prompt: `## Objectives:
-Given below API service{{ if (!it.totally) { }} changes, some added/removed endpoints{{ } }}:, please re-summarize just for the API service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more business critical)
+Given below API service{{ if (!it.totally) { }} changes, some added/removed endpoints{{ } }}:, please re-summarize just for the API service \`whatFor\` and \`how2Use\`, for user to quickly know when and how to use this service based only on these 2 fields(you may ignore those trivial endpoints like auth/users/etc, focusing on those that are more business critical)
 
 ## Deliverables:
 output a single-lined JSON object:
-{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}", "summary": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
+{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service endpoints to re-summarize, else left empty.{{ } }}", "whatFor": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "how2Use": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
 
 ## Input:
 Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 {{ } else { }}
-  summary: '{{=it.entry.summary}}',
-  instruction: '{{=it.entry.instruction}}',
+  whatFor: '{{=it.entry.whatFor}}',
+  how2Use: '{{=it.entry.how2Use}}',
   endpoints: { {{ if (it.news && it.news.length) { }}
     existing: {...},
     added: { {{~ it.news : ep }}
@@ -579,25 +579,25 @@ the json result is:
     {
       name: 'summarizeCallgent',
       prompt: `## Objectives:
-Given below API service{{ if (!it.totally) { }} changes, some added/removed entries{{ } }}:, please re-summarize just for the API service \`summary\` and \`instruction\`, for user to quickly know when and how to use this service based only on these 2 fields,
+Given below API service{{ if (!it.totally) { }} changes, some added/removed entries{{ } }}:, please re-summarize just for the API service \`whatFor\` and \`how2Use\`, for user to quickly know when and how to use this service based only on these 2 fields,
 
 ## Deliverables:
 output a single-lined JSON object:
-{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "summary": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "instruction": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
+{ "totally": "boolean: {{ if (it.totally) { }}set to empty{{ }else{ }}set to true if you need to reload all service entries to re-summarize, else left empty.{{ } }}", "whatFor": "Concise summary of \`WHEN\`: to let users quickly understand the core business concepts and in what scenarios to use this service(don't mention service name since it may change). leave empty if \`totally\` is true. 3k chars most", "how2Use": "Concise instruction of \`HOW\`: to let users know roughly on how to use this service: operations described, etc. leave empty if \`totally\` is true. 3k chars most" }
 
 ## Input:
 Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
-  "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+  "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
 {{ } else { }}
-  summary: '{{=it.callgent.summary}}',
-  instruction: '{{=it.callgent.instruction}}',
+  whatFor: '{{=it.callgent.whatFor}}',
+  how2Use: '{{=it.callgent.how2Use}}',
   entries: { {{ if (it.news && it.news.length) { }}
     existing: {...},
     added: { {{~ it.news : ep }}
-      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
     },{{ } }}{{ if (it.olds && it.olds.length) { }}
     removed: { {{~ it.olds : ep }}
-      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "instruction":"{{=ep.instruction}}"},{{~}}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
     },{{ } }}
   }{{ } }}
 }
@@ -612,7 +612,7 @@ the json result is:
 { "description": "{{=it.requirement}}" }
 
 You need to generate a Vue3+Pinia app for user to interact with backend service APIs:
-Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": {...} },
+Service \`{{=it.callgent.name}}\` { "whatFor": "{{=it.callgent.whatFor}}", "how2Use": "{{=it.callgent.how2Use}}", "endpoints": {...} },
 
 There are 6 steps to generate code to fulfil the requirement:
 1. generate \`/src/router/index.js\`, only necessary \`views\` for the requirement
@@ -623,15 +623,15 @@ There are 6 steps to generate code to fulfil the requirement:
 6. generate /src/App.vue, /src/main.js
 
 Now let's goto #1, as world-class frontend expert, please design necessary simple view pages, output a single-lined json array of routes:
-[{ "name": "just same as component name", "component": "component name, unique in this array, must suffix with 'View'", "path": "route path", "file": "/src/views/{file-name}.vue", "title":"view title", "summary":"brief summary of use cases", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root" }]`,
+[{ "name": "just same as component name", "component": "component name, unique in this array, must suffix with 'View'", "path": "route path", "file": "/src/views/{file-name}.vue", "title":"view title", "how2Use":"brief summary of use cases", "howImpl": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement", "distance":"integer to indicate distance of the view to root view, 0 means root" }]`,
     },
     // TODO vue-i18n: src/i18n.js, app.use(i18n);
     {
       name: 'genVue2Components',
       prompt: `For Vue3+Pinia app with views:
 [
-  {"name":"{{=it.view.name}}","path":"{{=it.view.path}}","file":"{{=it.view.file}}","title":"{{=it.view.title}}","summary":"{{=it.view.summary}}","instruction":"{{=it.view.instruction}}},{{~it.otherViews:ov}}
-  {"name":"{{=ov.name}}","path":"{{=ov.path}}","title":"{{=ov.title}}","summary":"{{=ov.summary}}"},{{~}}
+  {"name":"{{=it.view.name}}","path":"{{=it.view.path}}","file":"{{=it.view.file}}","title":"{{=it.view.title}}","whatFor":"{{=it.view.whatFor}}","howImpl":"{{=it.view.howImpl}}},{{~it.otherViews:ov}}
+  {"name":"{{=ov.name}}","path":"{{=ov.path}}","title":"{{=ov.title}}","whatFor":"{{=ov.whatFor}}"},{{~}}
 ],
 and existing UI components:
 {{=JSON.stringify(it.components)}},
@@ -643,7 +643,7 @@ As world-class frontend architect, please design simple components for entire vi
 Note: all API params are already documented here! Components access them only via store states/actions.
 
 Please refine existing or add new components for view \`{{=it.view.name}}\`, output a single-lined json object:
-{ [FormalComponentName: string]: {"file": "/src/components/{file-name}.vue", "endpoints":["endpoint ids(METHOD /resource/url), which **may** be used by the component", "may empty array" ..], "summary":"precise summary to let developers correctly use the component without reading the code!", "instruction": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement. ignore auth logic, which is handled outside of the VUE app" }}
+{ [FormalComponentName: string]: {"file": "/src/components/{file-name}.vue", "endpoints":["endpoint ids(METHOD /resource/url), which **may** be used by the component", "may empty array" ..], "how2Use":"precise summary to let developers correctly use the component without reading the code!", "howImpl": "Description of interactive prototype(layout, elements, operations, dynamic effects, etc) to guide developer to implement. ignore auth logic, which is handled outside of the VUE app" }}
 After design before output, please redesign to meet rules:
 - Design component simple but as few as possible: don't add new component if existing in installed packages！
 - Design component independent: prevent embedding one to another!
@@ -656,26 +656,9 @@ After design before output, please redesign to meet rules:
 - Not including functionalities from other views, we'll design them later
 - component props are prohibited, all state goes into pinia stores
 - It's OK to cut functionalities to make components only uses API params listed above!
-- if \`endpoints\` empty, please describe brief store actions logic in \`instruction\`
-- describe interactive dynamics between components in \`instruction\``,
+- if \`endpoints\` empty, please describe brief store actions logic in \`how2Use\`
+- describe interactive dynamics between components in \`how2Use\``,
     },
-    //     {
-    //       name: 'genVue3Apis',
-    //       prompt: `Given proposed UI components of a Vue3+Pinia app: [{{~ it.compsList :comp }}
-    //   { "name": "{{=comp.name}}", "props": {{=JSON.stringify(comp.props)}}, "summary":"{{=comp.summary}}", "instruction": "{{=comp.instruction}}" },{{~}}
-    // ],
-
-    // Back-ended with the following service APIs:
-    // Service \`{{=it.callgent.name}}\` { "summary": "{{=it.callgent.summary}}", "instruction": "{{=it.callgent.instruction}}", "endpoints": [{{~ it.endpoints :ep }}
-    //   { "id": "{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters": {{=JSON.stringify(ep.params)}} },{{~}}
-    //   ]
-    // },
-
-    // As world-class frontend expert, please adjust/remove components to fit APIs params, even if it means reducing the required functionality!
-    // Note: all API params are totally listed above!
-    // output a single-lined json object:
-    // {[ComponentName: string]: {"endpoints":["endpoint ids(METHOD /resource/url), which \`may\` be used by the component", ..], "removed": "mark current component as removed if APIs can't fulfill the functionality, then set component's other attributes to empty.", "props": ["similar to function params. please use store state as possible", "must remove unsupported props, may empty", ..], "summary":"Adjusted summary", "instruction": "Adjusted instruction"} }`,
-    //     },
     {
       name: 'genVue3Component',
       prompt: `For Vue3+Pinia app with components structure:
@@ -690,7 +673,7 @@ After design before output, please redesign to meet rules:
 As world-class frontend expert, please write \`{{=it.components[0].file}}\` full code based on it's instruction and endpoint APIs(especially params).
 the component must import relevant \`stores/*.js\` for Pinia models and actions, needn't generate stores code in current step.
 output a single-lined json object:
-{ "packages":["additional real packages(format: package@version) imported by current file","make sure packages exists!"], "importedComponents":["directly imported components"], "importedStores": [{"file": "/src/stores/{file-name}.js", "name":"the exported store name, must prefix with 'use'", "state": {"State JSON object used by current component, list detailed props used by component for each entity(give example object in each arrays, if prop is complex type(like File),express as string of js). don't list props unused by current component. better use existing, add new if really need"}, "actions": ["Actions(full params/return in ts function signature format) used by current component, especially wrap APIs into actions. better use existing, add new if really need", "don't list actions not used by current component", ..], "getters": [{"name": "name of derived state used by current component", "code": "(state) => { /*full js code to return derived value*/ }"}], ..]}, ..], "spec": {"props":[{"name":"", "type":"primitive types only!; prohibit to bind props with state or variables, only static constant values!"}],"slots":[{"name":"","summary":""}],"importedComponents":["directly imported self-defined ComponentName, only list components from \`/src/components/*.vue\`!"]}, "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation code for \`{{=it.components[0].file}}}\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions" }
+{ "packages":["additional real packages(format: package@version) imported by current file","make sure packages exists!"], "importedComponents":["directly imported components"], "importedStores": [{"file": "/src/stores/{file-name}.js", "name":"the exported store name, must prefix with 'use'", "state": {"State JSON object used by current component, list detailed props used by component for each entity(give example object in each arrays, if prop is complex type(like File),express as string of js). don't list props unused by current component. better use existing, add new if really need"}, "actions": ["Actions(full params/return in ts function signature format) used by current component, especially wrap APIs into actions. better use existing, add new if really need", "don't list actions not used by current component", ..], "getters": [{"name": "name of derived state used by current component", "code": "(state) => { /*full js code to return derived value*/ }"}], ..]}, ..], "spec": {"props":[{"name":"", "type":"primitive types only!; prohibit to bind props with state or variables, only static constant values!"}],"slots":[{"name":"","whatFor":""}],"importedComponents":["directly imported self-defined ComponentName, only list components from \`/src/components/*.vue\`!"]}, "code": "formatted lines of full(don't ignore any code, since we put the code directly into project without modification) implementation code for \`{{=it.components[0].file}}}\`. pay special attentions to interaction states/error handling/validations; Only access endpoint APIs through store actions" }
 after generate before output, please double-check the result json meets all rules:
 - all arrays may be \`[]\`, array items must not empty values!
 - don't add \`installedPackages\` into $.packages, only new ones; prohibit version conflicts!

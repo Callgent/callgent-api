@@ -42,8 +42,8 @@ export class AgentsService {
     opBy: string;
     entry: {
       id: string;
-      summary?: string;
-      instruction?: string;
+      whatFor?: string;
+      how2Use?: string;
       callgentId?: string;
     };
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
@@ -51,7 +51,7 @@ export class AgentsService {
     totally?: boolean;
   }) {
     const result = await this.llmService.query('summarizeEntry', data, {
-      parseSchema: { summary: '', instruction: '', totally: true },
+      parseSchema: { whatFor: '', how2Use: '', totally: true },
       bizKey: data.entry.id,
       paidBy: data.opBy,
     });
@@ -66,15 +66,15 @@ export class AgentsService {
     opBy: string;
     callgent: {
       id: string;
-      summary?: string;
-      instruction?: string;
+      whatFor?: string;
+      how2Use?: string;
     };
     news?: Omit<Entry, 'securities' | 'createdAt'>[];
     olds?: Omit<Entry, 'securities' | 'createdAt'>[];
     totally?: boolean;
   }) {
     const result = await this.llmService.query('summarizeCallgent', data, {
-      parseSchema: { summary: '', instruction: '', totally: true },
+      parseSchema: { whatFor: '', how2Use: '', totally: true },
       bizKey: data.callgent.id,
       paidBy: data.opBy,
     });
@@ -84,7 +84,7 @@ export class AgentsService {
 
   async genVue1Route(data: {
     requirement: string;
-    callgent: { name: string; summary: string; instruction: string };
+    callgent: { name: string; whatFor: string; how2Use: string };
     event: ClientRequestEvent;
   }) {
     const result = await this.llmService.query('genVue1Route', data, {
@@ -95,8 +95,8 @@ export class AgentsService {
           component: '',
           file: '',
           title: '',
-          summary: '',
-          instruction: '',
+          how2Use: '',
+          howImpl: '',
           distance: 0,
         },
       ],
@@ -113,21 +113,21 @@ export class AgentsService {
       path: string;
       file: string;
       title: string;
-      summary: string;
-      instruction: string;
+      how2Use: string;
+      howImpl: string;
     };
     otherViews: {
       name: string;
       path: string;
       title: string;
-      summary: string;
+      how2Use: string;
     }[];
     components: {
       [comName: string]: {
         file: string;
         // props: string[];
-        summary: string;
-        instruction: string;
+        how2Use: string;
+        howImpl: string;
         inViews: string[];
       };
     };
@@ -147,8 +147,8 @@ export class AgentsService {
           file: '',
           endpoints: [''],
           // props: [''],
-          summary: '',
-          instruction: '',
+          how2Use: '',
+          howImpl: '',
         },
       },
       paidBy: data.event.paidBy,
@@ -174,20 +174,20 @@ export class AgentsService {
       name: string;
       // props: string[];
       file?: string;
-      summary: string;
-      instruction?: string;
+      how2Use: string;
+      howImpl?: string;
       endpoints?: { name: string; params: object; responses: object }[];
     }[];
     relatedViews: {
       name: string;
       title: string;
-      summary: string;
+      how2Use: string;
       components: string[];
     }[];
     otherViews: {
       name: string;
       path: string;
-      summary: string;
+      how2Use: string;
     }[];
     stores: {
       file: string;
@@ -207,7 +207,7 @@ export class AgentsService {
         ],
         spec: {
           props: [''],
-          slots: [{ name: '', summary: '' }],
+          slots: [{ name: '', how2Use: '' }],
           // events: [{ name: '', summary: '', payload: {} }],
           importedComponents: ['ComponentName', 'may empty array'],
         },
@@ -269,8 +269,8 @@ export class AgentsService {
       name: string;
       title: string;
       path: string;
-      summary: string;
-      instruction: string;
+      how2Use: string;
+      howImpl: string;
       file: string;
     };
     otherViews: {
@@ -281,8 +281,8 @@ export class AgentsService {
     components: {
       name: string;
       // props: string[];
-      summary: string;
-      instruction: string;
+      how2Use: string;
+      howImpl: string;
       file: string;
       spec: object;
     }[];

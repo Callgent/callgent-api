@@ -26,7 +26,7 @@ export class EntriesChangedSumCallgentListener {
     await Utils.sleep(1000); // wait for entries change committed
     this.logger.debug('%j: Handling event,', event);
 
-    // re-summarize summary/instruction
+    // re-summarize whatFor/how2Use
     let { opBy, callgent } = event.data;
     if (typeof callgent.name === 'undefined')
       callgent = event.data.callgent = await this.callgentsService.findOne(
@@ -35,9 +35,9 @@ export class EntriesChangedSumCallgentListener {
           id: true,
           pk: false,
           name: true,
-          summary: true,
+          whatFor: true,
+          how2Use: true,
           createdBy: true,
-          instruction: true,
         },
       );
 
@@ -60,8 +60,8 @@ export class EntriesChangedSumCallgentListener {
     return this.callgentsService.updateByCreator(
       {
         id: callgent.id,
-        summary: result.summary,
-        instruction: result.instruction,
+        whatFor: result.whatFor,
+        how2Use: result.how2Use,
       },
       opBy,
     );

@@ -190,8 +190,8 @@ export class WebpageController {
     const callgent = await this.callgentsService.findOne(callgentId, {
       id: true,
       name: true,
-      summary: true,
-      instruction: true,
+      whatFor: true,
+      how2Use: true,
     });
     if (!callgent)
       throw new NotFoundException('callgent not found: ' + callgentId);

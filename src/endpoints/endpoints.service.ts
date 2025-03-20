@@ -77,9 +77,9 @@ export class EndpointsService {
     const prisma = this.txHost.tx as PrismaClient;
     const entry = await this.entriesService.findOne(dto.entryId, {
       id: true,
-      summary: true,
       type: true,
-      instruction: true,
+      whatFor: true,
+      how2Use: true,
       adaptorKey: true,
     });
     if (!entry) return;
@@ -110,8 +110,8 @@ export class EndpointsService {
     opBy: string;
     entry: {
       id: string;
-      summary?: string;
-      instruction?: string;
+      whatFor?: string;
+      how2Use?: string;
     };
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];
