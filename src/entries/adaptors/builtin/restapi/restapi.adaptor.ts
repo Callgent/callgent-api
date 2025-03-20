@@ -12,6 +12,7 @@ import { EntryDto } from '../../../dto/entry.dto';
 import { ClientRequestEvent } from '../../../events/client-request.event';
 import { BothEntryAdaptor } from '../../entry-adaptor.base';
 import { EntryAdaptor } from '../../entry-adaptor.decorator';
+import { ParameterObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 @EntryAdaptor('restAPI', { both: '/icons/RestAPI.svg' })
 export class RestAPIAdaptor extends BothEntryAdaptor {
@@ -67,20 +68,37 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
   }
 
   protected async _invoke(
-    fun: EndpointDto,
-    args: object,
+    sep: EndpointDto,
+    args: { parameters: ParameterObject[]; requestBody: any },
     sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
+    const { parameters, requestBody } = args;
+    const { query, header, path, cookie } = this._extractParameters(
+      parameters,
+      args,
+    );
+    const url = this._resolveUrl(path, query, sep.path);
+
+    const existingCookie = this._getCookie(reqEvent.context.req.headers);
+    if (Object.keys(cookie).length > 0) {
+      header['Cookie'] = this._formatCookies(cookie);
+      if (existingCookie)
+        header['Cookie'] = existingCookie + '; ' + header['Cookie'];
+    } else header['Cookie'] = existingCookie;
+
     let data;
     try {
       const resp = await axios.request({
         ...reqEvent.context.req,
         headers: {
-          ...reqEvent.context.req.headers,
+          ...header,
           host: undefined,
           'content-length': undefined,
         },
+        url,
+        method: sep.method,
+        data: requestBody,
         baseURL: sen.host,
         withCredentials: !!reqEvent.context.securityItem,
         // httpsAgent: new https.Agent({
@@ -97,6 +115,72 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
       };
     }
     return { data };
+  }
+  private _resolveUrl(
+    path: { [key: string]: any },
+    query: { [key: string]: any },
+    urlTemplate: string,
+  ) {
+    let resolvedUrl = urlTemplate;
+    Object.keys(path).forEach((key) => {
+      const regex = new RegExp(`:${key}(\\/|$)`, 'g');
+      resolvedUrl = resolvedUrl.replace(regex, `${path[key]}$1`);
+    });
+    const queryString = Object.keys(query)
+      .map(
+        (key) => `${encodeURIComponent(key)}=${encodeURIComponent(query[key])}`,
+      )
+      .join('&');
+    return queryString ? `${resolvedUrl}?${queryString}` : resolvedUrl;
+  }
+
+  private _getCookie(headers: any) {
+    if (!headers) return;
+    const keys = Object.keys(headers);
+    for (let key of keys)
+      if (key.toLowerCase() === 'cookie') return headers[key];
+  }
+
+  private _formatCookies(cookie: { [key: string]: any }): string {
+    return Object.keys(cookie)
+      .map(
+        (key) =>
+          `${encodeURIComponent(key)}=${encodeURIComponent(cookie[key])}`,
+      )
+      .join('; ');
+  }
+
+  private _extractParameters(
+    params: ParameterObject[],
+    args: { [name: string]: any },
+  ) {
+    const query: { [key: string]: any } = {};
+    const header: { [key: string]: any } = {};
+    const path: { [key: string]: any } = {};
+    const cookie: { [key: string]: any } = {};
+
+    params?.forEach((param) => {
+      if (args[param.name] !== undefined) {
+        switch (param.in) {
+          case 'query':
+            query[param.name] = args[param.name];
+            break;
+          case 'header':
+            header[param.name] = args[param.name];
+            break;
+          case 'path':
+            path[param.name] = args[param.name];
+            break;
+          case 'cookie':
+            cookie[param.name] = args[param.name];
+            break;
+          default:
+            break;
+        }
+      }
+    });
+
+    return { query, header, path, cookie };
   }
 
   async postprocess(resp: any): Promise<ServiceResponse> {
