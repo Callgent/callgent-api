@@ -382,9 +382,9 @@ export class ScriptAgentService {
             },
           ],
         },
-        // validate endpoints exist
+        // validate endpoints exist, or no proper one
         validate: (gen) =>
-          (gen.usedEndpoints.length || gen.unaddressedAPI.length) &&
+          (!gen.usedEndpoints.length && !gen.unaddressedAPI.length) ||
           gen.usedEndpoints.every((ep0) => {
             if (!ep0.epName || endpoints.find((ep) => ep.name == ep0.epName))
               return true;
@@ -476,7 +476,10 @@ export class ScriptAgentService {
             }),
         },
       );
-    } else usedEndpoints = confirmedEndpoints;
+    } else {
+      usedEndpoints = confirmedEndpoints;
+      messages.push(null);
+    }
 
     // all endpoints are confirmed
     return { usedEndpoints };

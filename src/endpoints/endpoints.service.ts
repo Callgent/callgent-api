@@ -47,6 +47,10 @@ export class EndpointsService {
     deletedAt: false,
   };
 
+  /** load eps for orchestration:
+   * - real endpoints from callgent
+   * - virtual endpoints from callgent-SEN
+   */
   async loadEndpoints(
     reqEvent: ClientRequestEvent,
   ): Promise<void | { data: ClientRequestEvent; resumeFunName?: string }> {

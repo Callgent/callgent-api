@@ -4,7 +4,7 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 /** request with requirement description */
 export class RequestRequirement {
   @ApiProperty({
-    type: 'object',
+    type: 'string',
     description: 'Requirement for callgent to fulfill.',
     example:
       'I want to apply for the Senior Algorithm Engineer based in Singapore.',

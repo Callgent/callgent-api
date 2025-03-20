@@ -131,16 +131,13 @@ export class PipeClient {
    * @param code exit code: 0 for success, >0 for error
    * @param args
    */
-  public async sendResult(code: number, ...args: any[]) {
+  public async sendResult(code: number, result: any) {
     const resultKey = this.requestPrefix + ':' + code;
     await this.waitForConnection(resultKey);
-    const result = JSON.stringify(
-      args.map(
-        (arg) =>
-          (Object.prototype.toString.call(arg) === '[object Error]' &&
-            (arg.stack || arg.message)) ||
-          arg,
-      ),
+    result = JSON.stringify(
+      (Object.prototype.toString.call(result) === '[object Error]' &&
+        (result.stack || result.message)) ||
+        result,
     );
     const request = `${this.cmdPrefix}|${resultKey}|${result}\n`;
     this.client.write(request, 'utf8', (err) => {

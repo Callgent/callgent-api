@@ -362,7 +362,7 @@ Output the argument sourcing in JSON format:
       "needConfirm": "if flag true, send user this question alone to clarify. Please least bother user for best user experience. Leave empty if needn't confirm"
     },
     "mapping": {
-      "from":"extracted info type and edge conditions","to":"endpoint parameter type and constraints","mismatch":"boolean: whether \`from\` mismatches \`to\`",
+      "from":"extracted info type and edge conditions","to":"endpoint parameter type and constraints","mismatch":"boolean: whether \`from\` mismatches \`to\`","optional":"boolean: where parameter optional/nullable or has default value",
       "conversion": {
         "steps":["if mismatch, steps to convert extracted info into valid endpoint arg"],
         "missing":"boolean: true if use info is sufficient but, mismatch=true and mapping-dictionaries or API is **not explicitly specified** anywhere, which makes it impossible to convert"
@@ -431,7 +431,7 @@ Output the Uncertain arguments sourcing in JSON format:
     },
     "mapping": {
       "from":"extracted info type and edge conditions","to":"endpoint parameter type and constraints","mismatch":"boolean: whether \`from\` mismatches \`to\`",
-      "optional":"boolean: where parameter optional or has default value",
+      "optional":"boolean: where parameter optional/nullable or has default value",
       "conversion": {
         "steps":["if mismatch, steps to convert extracted info into valid endpoint arg"],
         "missing":"boolean: true if use info is sufficient but, mismatch=true and mapping-dictionaries or API is **not explicitly specified** anywhere, which makes it impossible to convert"

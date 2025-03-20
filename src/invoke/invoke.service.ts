@@ -164,7 +164,7 @@ export class InvokeService {
     const pipePath = path.join(cwd, 'pipe.socket');
     let frozenKilled = false;
     const server = await this.invokeSubprocess.createNamedPipe(pipePath, {
-      onConnect: async (socket) => {
+      onConnect: (socket) => {
         if (response)
           socket.write(
             `${cmdPrefix}|${invokeId}|${JSON.stringify(response)}`,
@@ -175,39 +175,52 @@ export class InvokeService {
             },
           );
       },
-      onLine: async (data, socket) => {
-        const msg = data.toString();
-        if (!msg.startsWith(cmdPrefix + '|')) return;
-        const [_, requestKey, ...cmd] = msg.split('|');
-        const cmdString = cmd.join('|');
+      onLine: async (data, socket) =>
+        this.cls.run(async () => {
+          const msg = data.toString();
+          if (!msg.startsWith(cmdPrefix + '|')) return;
+          const [_, requestKey, ...cmd] = msg.split('|');
+          const cmdString = cmd.join('|');
 
-        const [__, cmdCode] = requestKey.split(':');
-        const code = parseInt(cmdCode, 10);
-        if (code == 0) {
-          finalResponse = cmdString; // final response
-        } else if (code > 0) {
-          finalError = cmdString; // final error
-        } else {
-          // matching command
-          const { epName, args } = JSON.parse(cmdString);
-          const r = await this._invokeSEP(epName, args, reqEvent, cmdCode);
-
-          //if pending response, freeze subprocess
-          if (r?.statusCode == 2) {
-            this.invokeSubprocess.freezeProcess(child, cwd);
-            frozenKilled = true;
+          const [__, cmdCode] = requestKey.split(':');
+          const code = parseInt(cmdCode, 10);
+          if (code == 0) {
+            finalResponse = cmdString; // final response
+          } else if (code > 0) {
+            finalError = cmdString; // final error
           } else {
-            // FIXME retry on error?
-            socket.write(
-              `${cmdPrefix}|${cmdCode}|${JSON.stringify(r)}`,
-              'utf8',
-              (err) => {
-                if (err) this.logger.error(err);
-              },
-            );
+            // matching command
+            const { epName, args } = JSON.parse(cmdString);
+
+            let result;
+            try {
+              result = await this._invokeSEP(
+                epName,
+                args,
+                reqEvent,
+                requestKey,
+              );
+            } catch (e) {
+              this.logger.error(e);
+              result = { statusCode: e.status || -1, message: e.message };
+            }
+
+            //if pending response, freeze subprocess
+            if (result?.statusCode == 2) {
+              this.invokeSubprocess.freezeProcess(child, cwd);
+              frozenKilled = true;
+            } else {
+              // FIXME retry on error?
+              socket.write(
+                `${cmdPrefix}|${requestKey}|${JSON.stringify(result)}`,
+                'utf8',
+                (err) => {
+                  if (err) this.logger.error(err);
+                },
+              );
+            }
           }
-        }
-      },
+        }),
     });
 
     child = await this.invokeSubprocess.spawnOrRestore(

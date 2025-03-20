@@ -136,8 +136,7 @@ class ExtendedTaskRunner extends TaskRunner {
     .execute()
     .then((result: any) => {
       if (!result) return;
-      const response = JSON.stringify(result);
-      taskRunner._pipeClient.sendResult(0, response);
+      taskRunner._pipeClient.sendResult(0, result);
     })
     .catch((err) => {
       taskRunner._pipeClient.sendResult(1, err);

@@ -72,20 +72,30 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
-    const resp = await axios.request({
-      ...reqEvent.context.req,
-      headers: {
-        ...reqEvent.context.req.headers,
-        host: undefined,
-        'content-length': undefined,
-      },
-      baseURL: sen.host,
-      withCredentials: !!reqEvent.context.securityItem,
-      // httpsAgent: new https.Agent({
-      //   rejectUnauthorized: false,
-      // }),
-    });
-    const data = this.resp2json(resp);
+    let data;
+    try {
+      const resp = await axios.request({
+        ...reqEvent.context.req,
+        headers: {
+          ...reqEvent.context.req.headers,
+          host: undefined,
+          'content-length': undefined,
+        },
+        baseURL: sen.host,
+        withCredentials: !!reqEvent.context.securityItem,
+        // httpsAgent: new https.Agent({
+        //   rejectUnauthorized: false,
+        // }),
+      });
+      data = this.resp2json(resp);
+    } catch (e) {
+      // server error is also a resp
+      data = (e.response && this.resp2json(e.response)) || {
+        status: e.status || 500,
+        statusText: e.statusText || 'Internal Server Error',
+        message: e.message,
+      };
+    }
     return { data };
   }
 

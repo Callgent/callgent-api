@@ -1,5 +1,4 @@
 import { getTransactionClsKey } from '@nestjs-cls/transactional/dist/src/lib/symbols';
-import { ClsService } from 'nestjs-cls';
 import { PrismaService } from 'nestjs-prisma';
 import { AbacContextService as PrismaAbacService } from './prisma-abac.service';
 

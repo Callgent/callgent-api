@@ -202,8 +202,11 @@ export class LLMService {
         }
 
         ret = this._parseResultSchema(parseSchema, parseType, llmResult);
-        if (validate && !validate(ret, i))
-          invalidMsg = 'Failed validating generated content';
+        if (validate && !validate(ret, i)) {
+          invalidMsg = 'Failed validating: ' + JSON.stringify(ret);
+          ret = undefined;
+          continue; // default retry
+        }
       } catch (e) {
         if (e.status === HttpStatus.PAYMENT_REQUIRED) throw e;
         // add error to conversation to optimize result

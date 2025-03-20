@@ -24,7 +24,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
-  ApiUnauthorizedResponse,
+  ApiUnauthorizedResponse
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
 import { FastifyReply } from 'fastify';
