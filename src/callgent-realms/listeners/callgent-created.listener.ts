@@ -67,6 +67,7 @@ export class CallgentCreatedListener {
     })[] = [
       // API client entry
       {
+        name: 'Default REST API Client Entry',
         callgentId: callgent.id,
         type: 'CLIENT' as EntryType,
         adaptorKey: 'restAPI',
@@ -74,6 +75,7 @@ export class CallgentCreatedListener {
       },
       // Email client entry
       {
+        name: 'Default Email Client Entry',
         callgentId: callgent.id,
         type: 'CLIENT' as EntryType,
         adaptorKey: 'Email',
@@ -81,6 +83,7 @@ export class CallgentCreatedListener {
       },
       // system server entry, used by adaptor default script
       {
+        name: 'Default System Server Entry',
         callgentId: callgent.id,
         type: 'SERVER' as EntryType,
         adaptorKey: 'Callgent',
