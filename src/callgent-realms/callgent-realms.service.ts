@@ -375,7 +375,9 @@ export class CallgentRealmsService implements OnModuleInit {
 
   private async _loadRealm(reqEvent: ClientRequestEvent) {
     const security: RealmSecurityItem = reqEvent.context.securityItem;
-    const realm = security?.realmId && (await this._findOne(security.realmId));
+    const realm =
+      security?.realmId &&
+      (await this._findOne(security.realmId, { pk: false, secret: true }));
     if (!realm)
       throw new UnauthorizedException('No context.securityItem found');
     const processor = this._getAuthProcessor(realm.authType);

@@ -253,7 +253,7 @@ export class InvokeService {
     if (finalResponse !== undefined)
       try {
         const data = finalResponse && JSON.parse(finalResponse);
-        return { data };
+        return data;
       } catch (e) {
         finalError = JSON.stringify([finalResponse, e.stack]);
       }

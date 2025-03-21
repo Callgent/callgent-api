@@ -53,7 +53,7 @@ export class JwtAuthProcessor extends AuthProcessor {
   }> {
     return this.validateToken(
       // item configured token first
-      item.secret || userIdentity.credentials,
+      item.secret || realm.secret.toString() || userIdentity.credentials,
       reqEvent,
       realm,
     );

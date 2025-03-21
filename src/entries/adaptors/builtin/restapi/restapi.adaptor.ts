@@ -69,14 +69,14 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
 
   protected async _invoke(
     sep: EndpointDto,
-    args: { [name: string]: any },
+    args: { parameters?: { [name: string]: any }; requestBody?: any },
     sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
-    const { parameters, requestBody } = sep.params as any;
+    const { parameters } = sep.params as any;
     const { query, header, path, cookie } = this._extractParameters(
       parameters,
-      args,
+      args.parameters,
     );
     const url = this._resolveUrl(path, query, sep.path);
 
@@ -99,7 +99,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
         },
         url,
         method: sep.method,
-        data: requestBody,
+        data: args.requestBody,
         baseURL: sen.host,
         withCredentials: !!reqEvent.context.securityItem,
         // httpsAgent: new https.Agent({
