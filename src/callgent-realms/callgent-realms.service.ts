@@ -394,11 +394,13 @@ export class CallgentRealmsService implements OnModuleInit {
   }> {
     const { provider, uid, credentials } = processor.getIdentity(req, realm);
     const identity =
-      (await this.usersService.$findFirstUserIdentity(
-        uid,
-        provider,
-        realm.authType,
-      )) || {};
+      (uid &&
+        (await this.usersService.$findFirstUserIdentity(
+          uid,
+          provider,
+          realm.authType,
+        ))) ||
+      {};
     return { provider, uid, credentials, ...identity };
   }
 

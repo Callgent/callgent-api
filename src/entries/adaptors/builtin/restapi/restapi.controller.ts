@@ -84,10 +84,10 @@ export class RestApiController {
     required: false,
     description: 'Client entry id, mey empty: "/rest/invoke/:callgent-id`/`"',
   })
-  @ApiQuery({
-    name: 'taskId',
+  @ApiHeader({
+    name: 'x-callgent-taskId',
     required: false,
-    description: 'Conversation Id',
+    description: 'Task Conversation Id',
   })
   @ApiConsumes('multipart/form-data')
   @ApiUnauthorizedResponse()
@@ -100,7 +100,7 @@ export class RestApiController {
     @Body(new ValidationPipe()) requirement: RequestRequirement,
     @Param('callgentId') callgentId: string,
     @Param('entryId') entryId?: string,
-    @Query('taskId') taskId?: string,
+    @Headers('x-callgent-taskId') taskId?: string,
     @UploadedFiles() tmpFiles?: File[],
     @Headers('x-callgent-progressive') progressive?: string,
   ) {

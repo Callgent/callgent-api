@@ -54,10 +54,10 @@ export class WebpageController {
     required: false,
     description: 'progressive request responder',
   })
-  @ApiQuery({
-    name: 'taskId',
+  @ApiHeader({
+    name: 'x-callgent-taskId',
     required: false,
-    description: 'Conversation Id',
+    description: 'Task Conversation Id',
   })
   @Post('request/:callgentId/:entryId')
   async request(
@@ -66,7 +66,7 @@ export class WebpageController {
     @Req() req,
     @Res() res,
     @Param('entryId') entryId?: string,
-    @Query('taskId') taskId?: string,
+    @Headers('x-callgent-taskId') taskId?: string,
     @Headers('x-callgent-progressive') progressive?: string,
   ) {
     const { entry, callgent } = await this._load(callgentId, entryId);

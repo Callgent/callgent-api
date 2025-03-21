@@ -136,7 +136,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
   }
 
   private _getCookie(headers: any) {
-    if (!headers) return;
+    if (!headers) return {};
     const keys = Object.keys(headers);
     for (let key of keys) {
       key = key.toLowerCase();
