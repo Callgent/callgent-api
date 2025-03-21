@@ -297,7 +297,7 @@ export class EndpointsService {
     const { select, where, orderBy } = args || {};
     return this.findAll({
       select,
-      where: { ...where, entryId: e.id, tenantPk_: e.tenantPk_ },
+      where: { ...where, entryId, ...e },
       orderBy,
     });
   }

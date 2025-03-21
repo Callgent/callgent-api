@@ -175,10 +175,10 @@ model Callgent {
   // add to migration.sql
   tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
-  name        String  @db.VarChar(255)
-  avatar      String? @db.VarChar(1023)
+  name    String  @db.VarChar(255)
+  avatar  String? @db.VarChar(1023)
   /// @description whatFor to quickly understand basic concepts and in what scenarios to use this APP.
-  whatFor     String? @db.VarChar(4095)
+  whatFor String? @db.VarChar(4095)
   /// @description to know roughly on how to use this APP: operations/flows etc.
   how2Use String? @db.VarChar(4095)
 
@@ -261,19 +261,19 @@ model Entry {
   // add to migration.sql
   tenantPk_ Int    @default(dbgenerated("(current_setting('abac.tenantPk')::int)"))
 
-  name        String    @default("") @db.VarChar(2047)
+  name       String    @db.VarChar(2047)
   /// @description whatFor to quickly understand basic concepts and in what scenarios to use this service.
-  whatFor     String?   @db.VarChar(4095)
+  whatFor    String?   @db.VarChar(4095)
   /// @description to know roughly on how to use this service: operations/flows etc.
-  how2Use String?   @db.VarChar(4095)
+  how2Use    String?   @db.VarChar(4095)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  type        EntryType /// @description entry type: CLIENT, SERVER OR EVENT
+  type       EntryType /// @description entry type: CLIENT, SERVER OR EVENT
   /// @DtoCreateApiResponse
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
-  adaptorKey  String    @db.VarChar(127) /// @description entry adaptor key
-  priority    Int       @default(0) /// @description priority in the callgent
+  adaptorKey String    @db.VarChar(127) /// @description entry adaptor key
+  priority   Int       @default(0) /// @description priority in the callgent
 
   /// @DtoCreateOptional
   host       String @db.VarChar(2047) /// @description host address, client entry host are *generated*, e.g. '/api/rest/invoke/rbhes0-w4rff/{id}', where `{id}` will be replaced with current entry id
