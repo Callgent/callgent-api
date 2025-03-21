@@ -69,28 +69,30 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
 
   protected async _invoke(
     sep: EndpointDto,
-    args: { parameters: ParameterObject[]; requestBody: any },
+    args: { [name: string]: any },
     sen: EntryDto,
     reqEvent: ClientRequestEvent,
   ) {
-    const { parameters, requestBody } = args;
+    const { parameters, requestBody } = sep.params as any;
     const { query, header, path, cookie } = this._extractParameters(
       parameters,
       args,
     );
     const url = this._resolveUrl(path, query, sep.path);
 
-    const existingCookie = this._getCookie(reqEvent.context.req.headers);
+    const headers = reqEvent.context.req.headers;
+    const { key, value: oldCookies } = this._getCookie(headers);
+    if (key) delete headers[key];
     if (Object.keys(cookie).length > 0) {
       header['Cookie'] = this._formatCookies(cookie);
-      if (existingCookie)
-        header['Cookie'] = existingCookie + '; ' + header['Cookie'];
-    } else header['Cookie'] = existingCookie;
+      if (oldCookies) header['Cookie'] = oldCookies + '; ' + header['Cookie'];
+    } else header['Cookie'] = oldCookies;
 
     let data;
     try {
       const resp = await axios.request({
         headers: {
+          ...headers,
           ...header,
           host: undefined,
           'content-length': undefined,
@@ -136,8 +138,11 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
   private _getCookie(headers: any) {
     if (!headers) return;
     const keys = Object.keys(headers);
-    for (let key of keys)
-      if (key.toLowerCase() === 'cookie') return headers[key];
+    for (let key of keys) {
+      key = key.toLowerCase();
+      if (key === 'cookie') return { key, value: headers[key] };
+    }
+    return {};
   }
 
   private _formatCookies(cookie: { [key: string]: any }): string {
