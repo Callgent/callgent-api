@@ -93,44 +93,6 @@ export class JwtAuthProcessor extends AuthProcessor {
     return true;
   }
 
-  private _readWriteToken(
-    req: any,
-    scheme: RealmSchemeVO,
-    value?: string,
-  ): string {
-    const read = typeof value !== 'string';
-    if (!read) {
-      if (!value) throw new ForbiddenException('Missing auth token');
-      value = encodeURIComponent(value);
-    }
-
-    let { name, in: in0 } = scheme;
-    switch (in0) {
-      case 'cookie':
-        if (!req.headers) req.headers = {};
-        if (read) {
-          const cookies = req.headers.cookie?.split(';') || [];
-          const cookie = cookies.find((c) => c.trim().startsWith(name + '='));
-          if (!cookie) return '';
-          return cookie.split('=')[1];
-        }
-        req.headers.cookie = `${req.headers.cookie || ''}${
-          req.headers.cookie ? ';' : ''
-        }${name}=${value}`;
-        break;
-      case 'header':
-        in0 += 's';
-      case 'query':
-        if (read) return req[in0]?.[name];
-        if (!req[in0]) req[in0] = {};
-        req[in0][name] = value;
-        break;
-      default:
-        throw new Error('Invalid security scheme `in`: ' + in0);
-    }
-    return value;
-  }
-
   /** check response from validationUrl */
   postValidateToken(
     reqEvent: ClientRequestEvent,

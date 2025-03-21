@@ -115,9 +115,8 @@ export abstract class ServerEntryAdaptor extends AbstractEntryAdaptor {
 
     // add request body as param
     const params = parameters ? [...parameters] : [];
-    const { content } = requestBody || {};
-    const schemas = Object.values(content);
-    if (schemas.length) {
+    const schemas = requestBody?.content && Object.values(requestBody.content);
+    if (schemas?.length) {
       if (schemas.length > 1)
         throw new NotImplementedException('multiple content type');
       params.push({

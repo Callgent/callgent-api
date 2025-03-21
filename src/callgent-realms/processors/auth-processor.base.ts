@@ -1,4 +1,8 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ServerObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { EntryDto } from '../../entries/dto/entry.dto';
 import { ClientRequestEvent } from '../../entries/events/client-request.event';
@@ -127,9 +131,11 @@ export abstract class AuthProcessor {
     // true valid/attached, false invalid, else async
     let result: boolean | void = false;
 
-    if (security?.attach)
-      result = await this._attachToken(token, reqEvent, realm);
-    else if (realm.scheme.validationUrl)
+    if (security?.attach) {
+      const token0 = this._readWriteToken(reqEvent.context.req, realm.scheme, token);
+      result =
+        token0 === token || (await this._attachToken(token, reqEvent, realm));
+    } else if (realm.scheme.validationUrl)
       result = await this._validateTokenByUrl(token, realm);
 
     if (result === false)
@@ -227,4 +233,42 @@ export abstract class AuthProcessor {
     uid: string;
     credentials: string;
   };
+
+  protected _readWriteToken(
+    req: any,
+    scheme: { name?: string; in?: string },
+    value?: string,
+  ): string {
+    const read = typeof value !== 'string';
+    if (!read) {
+      if (!value) throw new ForbiddenException('Missing auth token');
+      value = encodeURIComponent(value);
+    }
+
+    let { name, in: in0 } = scheme;
+    switch (in0) {
+      case 'cookie':
+        if (!req.headers) req.headers = {};
+        if (read) {
+          const cookies = req.headers.cookie?.split(';') || [];
+          const cookie = cookies.find((c) => c.trim().startsWith(name + '='));
+          if (!cookie) return '';
+          return cookie.split('=')[1];
+        }
+        req.headers.cookie = `${req.headers.cookie || ''}${
+          req.headers.cookie ? ';' : ''
+        }${name}=${value}`;
+        break;
+      case 'header':
+        in0 += 's';
+      case 'query':
+        if (read) return req[in0]?.[name];
+        if (!req[in0]) req[in0] = {};
+        req[in0][name] = value;
+        break;
+      default:
+        throw new Error('Invalid security scheme `in`: ' + in0);
+    }
+    return value;
+  }
 }

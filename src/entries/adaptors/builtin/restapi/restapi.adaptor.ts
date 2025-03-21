@@ -90,7 +90,6 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     let data;
     try {
       const resp = await axios.request({
-        ...reqEvent.context.req,
         headers: {
           ...header,
           host: undefined,
@@ -196,7 +195,7 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     if (!request?.method) return request;
 
     // handle http request
-    const { method, headers: rawHeaders, query, body, url: url0 } = request;
+    const { method, headers, query, body, url: url0 } = request;
     if (url0.indexOf('/rest/invoke/') < 0)
       throw new Error(
         'Unsupported URL, should be /rest/invoke/:callgentId/:entry/*',
@@ -208,20 +207,11 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
 
     // const type = request.isFormSubmission ? 'form' : 'body';
 
-    // filter all x-callgent-* args
-    const headers = {};
-    Object.keys(rawHeaders)
-      .sort()
-      .forEach((key) => {
-        key = key.toLowerCase();
-        if (!key.startsWith('x-callgent-')) headers[key] = rawHeaders[key];
-      });
-
     // FIXME change authorization to x-callgent-authorization
     return {
       url,
       method,
-      headers: { ...headers }, // filter callgent authorization
+      headers,
       params: query, // axios
       // files,
       data: body, // TODO axios FormData, URLSearchParams, Blob..
