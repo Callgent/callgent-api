@@ -159,12 +159,10 @@ export class CallgentTreeController {
     realms.forEach((r) => (r.secret = !!r.secret));
 
     const data = {
-      id: callgent.id,
+      ...callgent,
+      avatar: undefined,
       realms,
-      name: callgent.name,
       icon_url: callgent.avatar,
-      createdAt: callgent.createdAt,
-      updatedAt: callgent.updatedAt,
       children: [
         {
           id: 'CLIENT',
