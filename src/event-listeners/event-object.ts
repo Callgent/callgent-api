@@ -94,7 +94,7 @@ export class EventObject {
 
 /** response from service endpoint */
 export class ServiceResponse {
-  data?: any;
+  body?: any;
   headers?: { [key: string]: any };
   status: number;
   statusText?: string;

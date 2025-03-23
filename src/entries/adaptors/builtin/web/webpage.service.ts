@@ -278,7 +278,7 @@ export class WebpageService {
     // 6. needn't generate App.vue, main.js
 
     data.context.resp = {
-      data: {
+      body: {
         packages,
         files,
         routes: viewList.map((v) => ({

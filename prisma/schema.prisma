@@ -654,7 +654,7 @@ model Transaction {
 
   /// @description transaction type: 1: RECHARGE, 2: GIFT, 3. REFUND, 4: EXPENSE
   type     String  @db.VarChar(20)
-  status   Int     @default(0) /// @description status 0: PENDING, 1: SUCCESS, -1: CANCELLED
+  status   Int     @default(0) /// @description status 0: PENDING, 1: SUCCESS, -1: CANCELLED, 2: SETTLED
   /// @description amount: $1 = 1e11
   amount   Decimal @db.Decimal(30, 0)
   /// @description currency: USD, CNY, ...

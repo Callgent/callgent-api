@@ -114,7 +114,7 @@ export default class PostmanCollectionImporter {
     }
   }
 
-  async invokeService(purposeKey: string, args: { parameters?: any; requestBody?: any }): Promise<any> {
+  async invokeService(purposeKey: string, args: { parameters?: any; requestBody?: any }): Promise<{status: number, body?:any, headers?:any }> {
     // This method is predefined and will be provided by the task runner.
     // It handles the actual API calls to the backend service.
     throw new Error('Method not implemented.');

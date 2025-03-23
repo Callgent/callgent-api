@@ -94,7 +94,7 @@ async function bootstrap(app: NestFastifyApplication, port: string) {
         process.env.FRONTEND_APP_URL,
       ],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-callgent-taskId'],
       credentials: true, // allow cookie
     });
 

@@ -223,15 +223,15 @@ export class RestAPIAdaptor extends BothEntryAdaptor {
     };
   }
 
-  resp2json(resp: AxiosResponse) {
-    const { data, headers: rawHeaders, status, statusText } = resp;
+  resp2json(resp: AxiosResponse): ServiceResponse {
+    const { data: body, headers: rawHeaders, status, statusText } = resp;
     const headers = {};
     Object.entries(rawHeaders).forEach(
       ([name, val]) =>
         name.toLowerCase() == 'content-length' ||
         (headers[name.toLowerCase()] = val),
     );
-    return { data, headers, status, statusText };
+    return { body, headers, status, statusText };
   }
 
   callback(resp: any): Promise<boolean> {

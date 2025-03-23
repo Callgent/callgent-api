@@ -303,23 +303,20 @@ export abstract class ServerEntryAdaptor extends AbstractEntryAdaptor {
 
     let json: any;
     try {
-      if (
-        (!format || format == 'json') &&
-        text.startsWith('{') &&
-        text.indexOf('https://schema.getpostman.com/json/collection') > 0
-      ) {
+      if ((!format || format === 'json') && text.startsWith('{')) {
         // convert postman collection to openAPI.JSON
-        text = await postmanToOpenApi(text, null, {
-          outputFormat: 'json',
-          itemServers: true,
-          replaceVars: true,
-        });
+        if (text.indexOf('https://schema.getpostman.com/json/collection') > 0)
+          text = await postmanToOpenApi(text, null, {
+            outputFormat: 'json',
+            itemServers: true,
+            replaceVars: true,
+          });
         format = 'json';
       }
 
-      if (format == 'json') {
+      if (format === 'json') {
         json = JSON.parse(text);
-      } else if (format == 'yaml') {
+      } else if (format === 'yaml') {
         json = yaml.parse(text);
       } else {
         try {

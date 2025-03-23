@@ -192,7 +192,7 @@ export class InvokeService {
             // matching command
             const { epName, args } = JSON.parse(cmdString);
 
-            let result;
+            let result: PendingOrResponse;
             try {
               result = await this._invokeSEP(
                 epName,
@@ -210,9 +210,10 @@ export class InvokeService {
               this.invokeSubprocess.freezeProcess(child, cwd);
               frozenKilled = true;
             } else {
+              // actual service response
               // FIXME retry on error?
               socket.write(
-                `${cmdPrefix}|${requestKey}|${JSON.stringify(result)}`,
+                `${cmdPrefix}|${requestKey}|${JSON.stringify(result.data)}`,
                 'utf8',
                 (err) => {
                   if (err) this.logger.error(err);

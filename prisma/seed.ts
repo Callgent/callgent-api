@@ -485,7 +485,7 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
    - Persistent Class Field: define public \`resumingStates\` object structure to persist via \`JSON.stringify\` in db, enabling the task instance being reloaded to resume from the last iteration stopping point seamlessly by calling reentrant \`execute()\`
      - this is the only field restored to resume the task, task runner will save/load it for you automatically
      - e.g., a \`processedItems\` or \`currentIdx\` may be defined in this object to skip processed items on retry
-   - Endpoint Invoke Helper: an abstract member function \`abstract invokeService(purposeKey: string, args:{parameters?:{[paramName:string]:any},requestBody?:any}): Promise<any>\`
+   - Endpoint Invoke Helper: a member function \`abstract invokeService(purposeKey: string, args:{parameters?:{[paramName:string]:any},requestBody?:any}): Promise<{status: number, body?:any, headers?:any }>\`
      - don't define this method in the class body, the task runner will inject the implementation for you
      - this method just relays req/resp, please handle validations/exceptions/retry by yourself
 3. **Modular and Reusable Code**: Implement well-structured member functions to encapsulate specific logic, ensuring the class is modular, reusable, and easy to maintain

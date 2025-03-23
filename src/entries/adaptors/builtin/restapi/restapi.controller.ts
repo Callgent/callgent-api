@@ -140,7 +140,7 @@ export class RestApiController {
     const resp = data?.context.resp;
     if (resp) {
       resp.headers && Object.assign(headers, resp.headers);
-      const body = resp.data || {
+      const body = resp.body || {
         statusCode: resp.status,
         message: resp.statusText,
       };
@@ -258,7 +258,7 @@ export class RestApiController {
     const resp = data?.context.resp;
     if (resp) {
       resp.headers && Object.assign(headers, resp.headers);
-      const body = resp.data || {
+      const body = resp.body || {
         statusCode: resp.status,
         message: resp.statusText,
       };
