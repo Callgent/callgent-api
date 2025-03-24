@@ -24,7 +24,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
-  ApiUnauthorizedResponse
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { EntryType } from '@prisma/client';
 import { FastifyReply } from 'fastify';
@@ -107,6 +107,7 @@ export class RestApiController {
     const { entry, callgent } = await this._load(callgentId, entryId);
     const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
     const calledBy: string = req.user?.sub;
+    const how2Exe = entry.how2Ops || undefined;
 
     const e = new ClientRequestEvent(
       entry.id,
@@ -118,6 +119,7 @@ export class RestApiController {
         callgentId,
         callgentName: callgent.name,
         progressive,
+        how2Exe,
       },
       calledBy,
       // callback, // 是否需要异步返回结果
@@ -225,6 +227,7 @@ export class RestApiController {
     // TODO owner defaults to caller callgent
     const calledBy = req.user?.sub; // || req.ip || req.socket.remoteAddress;
     const title = 'Invoke: ' + epName;
+    // const how2Exe = entry.how2Ops || undefined; // maybe useless
 
     const data = await this.eventListenersService.emit(
       new ClientRequestEvent(

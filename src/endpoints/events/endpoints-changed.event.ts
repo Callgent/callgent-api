@@ -10,7 +10,7 @@ export class EndpointsChangedEvent {
       entry: {
         id: string;
         whatFor?: string;
-        how2Use?: string;
+        how2Ops?: string;
         callgentId?: string;
       };
       news?: Omit<Endpoint, 'securities' | 'createdAt'>[];

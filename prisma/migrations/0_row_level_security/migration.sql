@@ -52,7 +52,7 @@ CREATE TABLE "Entry" (
     "tenantPk_" INTEGER NOT NULL DEFAULT (current_setting('abac.tenantPk')::int),
     "name" VARCHAR(2047) NOT NULL DEFAULT '',
     "whatFor" VARCHAR(4095),
-    "how2Use" VARCHAR(4095),
+    "how2Ops" VARCHAR(4095),
     "type" "EntryType" NOT NULL,
     "adaptorKey" VARCHAR(127) NOT NULL,
     "priority" INTEGER NOT NULL DEFAULT 0,

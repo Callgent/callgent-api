@@ -73,7 +73,8 @@ export class InvokeService {
   }
 
   /**
-   * invoke a service endpoint through processor chain: auth/cache/..
+   * invoke a service endpoint through processor chain: auth/cache/..  
+   * TODO: may invoke cep == virtual sep
    * @param reqEvent with request context
    * @returns endpoint response, or pending status
    * @throws chain error

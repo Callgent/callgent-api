@@ -264,8 +264,8 @@ model Entry {
   name       String    @db.VarChar(2047)
   /// @description whatFor to quickly understand basic concepts and in what scenarios to use this service.
   whatFor    String?   @db.VarChar(4095)
-  /// @description to know roughly on how to use this service: operations/flows etc.
-  how2Use    String?   @db.VarChar(4095)
+  /// @description Guide on `how2Use` server entry services, or `how2Exe` client entry tasks.
+  how2Ops    String?   @db.VarChar(4095)
   /// @DtoUpdateApiResponse
   /// @DtoPlainApiResponse
   type       EntryType /// @description entry type: CLIENT, SERVER OR EVENT
@@ -323,8 +323,8 @@ model Endpoint {
   operationId String  @db.VarChar(1023) /// @description if empty, use path as operationId
   path        String  @db.VarChar(1000) /// @description openAPI path
   method      String  @db.VarChar(15) /// @description openAPI method
-  summary     String? @db.VarChar(2047)
-  description String? @db.VarChar(4095)
+  summary     String? @db.VarChar(2047) // TODO rename to whatFor
+  description String? @db.VarChar(4095) // TODO rename to how2Ops
   /// @DtoReadOnly
   /// @DtoEntityHidden
   servers     Json[]  @db.Json /// @description openAPI servers

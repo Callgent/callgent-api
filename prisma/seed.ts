@@ -186,7 +186,7 @@ output just json no explanation`,
    {
      "serviceName": "{{=it.callgent.name}}",
      "whatFor":"{{=it.callgent.whatFor}}",
-     "how2User":"{{=it.callgent.how2User}}",
+     "how2Use":"{{=it.callgent.how2Use}}",
      "endpoints": [{{~ it.endpoints :ep }}
        {"epName":"{{=ep.name}}", "summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
      ]
@@ -201,7 +201,10 @@ You are an expert in analyzing OpenAPI documents and understanding user requirem
 4. Explain the Purpose: For each identified API, explain its purpose and how it meets the user's needs
 5. It's very likely there is not enough APIs to fulfill user requirements, place the purposes into \`unaddressedAPI\` list
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 output complete purposes in json format:
 \`\`\`json
 {
@@ -254,7 +257,10 @@ You are an expert in analyzing OpenAPI documents and understanding user requirem
 4. Address which endpoint is best suited for each \`usedFor\` purpose, don't imagine **non-existing** endpoint!
 5. It's very likely there is no appropriate endpoint for \`usedFor\` purpose, move it from \`usedEndpoints\` into \`unaddressedAPI\` list
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 output complete purposes in json format:
 \`\`\`json
 {
@@ -304,7 +310,10 @@ Analyze the provided user requirements in conversation, and the split purposes p
 
 Opt the best endpoint for each item in \`optEndpoints\` to fulfill \`usedFor\` purpose.
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 Output all purposes from \`optEndpoints\` and \`confirmedEndpoints\` in json array:
 \`\`\`json
 [{
@@ -348,7 +357,10 @@ Your goal is to:
    - **Ambiguous**: user provided info is unclear or contradictory
    - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 Output the argument sourcing in JSON format:
 \`\`\`json
 [{
@@ -416,7 +428,10 @@ Your goal is to:
    - **Ambiguous**: user provided info is unclear or contradictory
    - **Missing conversion**: args info is sufficient, but additional mapping-dictionaries or APIs are required(but absent) to convert the user data into endpoint parameter type/value, e.g.: mapping to enumerations, converting name to entity ID, converting keys to values, etc
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 Output the Uncertain arguments sourcing in JSON format:
 \`\`\`json
 [{
@@ -507,7 +522,10 @@ Generate a TypeScript class on node18+ that adheres to the following criteria:
    - \`console.warn\` on failed items, and only errors critical failures
    - \`console.error\` text will be used to fix the script code and retry execution, so make it clear and concise, no unnecessary info!
 
-## Deliverables:
+{{ if (it.how2Exe) { }}## Execution Guidance:
+{{=it.how2Exe}}
+
+{{ } }}## Deliverables:
 1. Describe optimization strategies based on estimated heavy resources loads. All in pullet items.
 2. Estimated total execution time range in code block:
 \`\`\`text
@@ -560,7 +578,7 @@ Service \`{{=it.entry.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
   "{{=ep.name}}": {"summary":"{{=ep.summary}}", {{=ep.description ? '"description":"'+ep.description+'", ':''}}"parameters":{{=JSON.stringify(ep.params.parameters)}}, {{ if (ep.params.requestBody) { }}"requestBody":{{=JSON.stringify(ep.params.requestBody)}}, {{ } }}"responses":{{=JSON.stringify(ep.responses)}} },{{~}}
 {{ } else { }}
   whatFor: '{{=it.entry.whatFor}}',
-  how2Use: '{{=it.entry.how2Use}}',
+  how2Use: '{{=it.entry.how2Ops}}',
   endpoints: { {{ if (it.news && it.news.length) { }}
     existing: {...},
     added: { {{~ it.news : ep }}
@@ -587,17 +605,17 @@ output a single-lined JSON object:
 
 ## Input:
 Service \`{{=it.callgent.name}}\` { {{ if (it.totally) { }}{{~ it.news : ep }}
-  "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
+  "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Ops}}"},{{~}}
 {{ } else { }}
   whatFor: '{{=it.callgent.whatFor}}',
   how2Use: '{{=it.callgent.how2Use}}',
   entries: { {{ if (it.news && it.news.length) { }}
     existing: {...},
     added: { {{~ it.news : ep }}
-      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Ops}}"},{{~}}
     },{{ } }}{{ if (it.olds && it.olds.length) { }}
     removed: { {{~ it.olds : ep }}
-      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Use}}"},{{~}}
+      "Entry#{{=ep.pk}}": {"summary":"{{=ep.summary}}", "how2Use":"{{=ep.how2Ops}}"},{{~}}
     },{{ } }}
   }{{ } }}
 }

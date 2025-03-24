@@ -288,6 +288,7 @@ export class ScriptAgentService {
       description?: string;
     }[]
   > {
+    const how2Exe = reqEvent.context.how2Exe;
     const { usedEndpoints, unaddressedAPI } = await this.llmService.chat(
       'chooseEndpoints',
       messages,
@@ -295,6 +296,7 @@ export class ScriptAgentService {
         callgent,
         endpoints,
         files,
+        how2Exe,
       },
       {
         bizKey: reqEvent.id,
@@ -351,6 +353,7 @@ export class ScriptAgentService {
       needExternalAPI?: boolean;
     }[]
   > {
+    const how2Exe = reqEvent.context.how2Exe;
     const { usedEndpoints, unaddressedAPI } = await this.llmService.chat(
       'reChooseEndpoints',
       messages,
@@ -364,6 +367,7 @@ export class ScriptAgentService {
             'boolean: please specify if really an external openAPI is needed, **false** if local code can handle it',
         })),
         files,
+        how2Exe,
       },
       {
         bizKey: reqEvent.id,
@@ -444,6 +448,7 @@ export class ScriptAgentService {
     }));
 
     // need to opt one endpoint
+    const how2Exe = reqEvent.context.how2Exe;
     let usedEndpoints: {
       purposeKey: string;
       epName: string;
@@ -459,6 +464,7 @@ export class ScriptAgentService {
           endpoints,
           purposes: { confirmedEndpoints, optEndpoints: grouped[2] },
           files,
+          how2Exe,
         },
         {
           bizKey: reqEvent.id,
@@ -578,6 +584,7 @@ export class ScriptAgentService {
         );
       });
     }
+    const how2Exe = reqEvent.context.how2Exe;
     const argsHints = await this.llmService.chat(
       'confirmEndpointsArgs',
       messages,
@@ -586,6 +593,7 @@ export class ScriptAgentService {
         endpoints,
         purposes,
         files,
+        how2Exe,
       },
       {
         bizKey: reqEvent.id,
@@ -637,6 +645,7 @@ export class ScriptAgentService {
           purposes,
           reConfirmArgs,
           files,
+          how2Exe,
         },
         {
           bizKey: reqEvent.id,
@@ -746,6 +755,7 @@ export class ScriptAgentService {
     reqEvent: ClientRequestEvent,
   ) {
     // todo: generateTaskScript-{taskType}
+    const how2Exe = reqEvent.context.how2Exe;
 
     const [estimatedTime] = await this.llmService.chat(
       'generateTaskScript',
@@ -756,6 +766,7 @@ export class ScriptAgentService {
         argsHints,
         purposes,
         files,
+        how2Exe,
       },
       {
         bizKey: reqEvent.id,
@@ -789,6 +800,7 @@ Output clean, bug-free and robust code, and package.json`,
         argsHints,
         purposes,
         files,
+        how2Exe,
       },
       {
         bizKey: reqEvent.id,

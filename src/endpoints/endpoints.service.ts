@@ -83,7 +83,7 @@ export class EndpointsService {
       id: true,
       type: true,
       whatFor: true,
-      how2Use: true,
+      how2Ops: true,
       adaptorKey: true,
     });
     if (!entry) return;
@@ -115,7 +115,7 @@ export class EndpointsService {
     entry: {
       id: string;
       whatFor?: string;
-      how2Use?: string;
+      how2Ops?: string;
     };
     news?: Omit<Endpoint, 'securities' | 'createdAt'>[];
     olds?: Omit<Endpoint, 'securities' | 'createdAt'>[];

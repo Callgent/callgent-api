@@ -72,6 +72,7 @@ export class WebpageController {
     const { entry, callgent } = await this._load(callgentId, entryId);
     const title = 'Request: ' + Utils.truncate(requirement.requirement, 120);
     const calledBy = req.user?.sub;
+    const how2Exe = entry.how2Ops || undefined;
 
     const e = new ClientRequestEvent(
       entry.id,
@@ -83,6 +84,7 @@ export class WebpageController {
         callgentId,
         callgentName: callgent.name,
         progressive,
+        how2Exe,
       },
       calledBy,
       // callback, // 是否需要异步返回结果

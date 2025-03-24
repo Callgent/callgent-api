@@ -26,6 +26,8 @@ export class ClientRequestEvent extends EventObject {
       epName?: string /** url template for progressive requesting, `callgent:epName[@callgent]` to invoke callgent */;
       /** empty to create new task */
       progressive?: string;
+      /** guide from cen/cep on how to execute the task */
+      how2Exe?: string;
     },
     /** empty means anonymous */
     calledBy?: string,

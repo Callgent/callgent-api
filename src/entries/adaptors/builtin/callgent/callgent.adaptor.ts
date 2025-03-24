@@ -19,15 +19,17 @@ import {
   ClientRequestEvent,
   InvokeStatus,
 } from '../../../events/client-request.event';
-import {
-  PendingOrResponse,
-  ServerEntryAdaptor,
-} from '../../entry-adaptor.base';
+import { BothEntryAdaptor, PendingOrResponse } from '../../entry-adaptor.base';
 import { EntryAdaptor } from '../../entry-adaptor.decorator';
 
-/** a callgent as the server entry */
-@EntryAdaptor('Callgent', { server: '/icons/Callgent.svg' })
-export class CallgentAdaptor extends ServerEntryAdaptor {
+/**
+ * - the callgent-sen in parent requests virtual-cep from sub callgent-cen
+ *   - you may define virtual-cep in parent callgent-sen
+ * - sub callgent-cen responses virtual-cep to parent
+ *   - you may offer virtual-cep in current callgent-cen
+ */
+@EntryAdaptor('Callgent', { both: '/icons/Callgent.svg' })
+export class CallgentAdaptor extends BothEntryAdaptor {
   constructor(
     @Inject('AgentsService') readonly agentsService: AgentsService,
     private readonly emailsService: EmailsService,
@@ -35,7 +37,7 @@ export class CallgentAdaptor extends ServerEntryAdaptor {
     super(agentsService);
   }
 
-  isAsync = () => true;
+  isAsync = () => false;
 
   _genClientHost(data: Prisma.EntryUncheckedCreateInput) {
     data.host = this.emailsService.getRelayAddress(

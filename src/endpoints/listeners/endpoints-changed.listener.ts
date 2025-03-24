@@ -29,7 +29,7 @@ export class EndpointsChangedSumEntryListener {
     await Utils.sleep(1000); // wait for entries change committed
     this.logger.debug('%j: Handling event,', event);
 
-    // re-summarize entry whatFor/how2Use
+    // re-summarize entry whatFor/how2Ops
     let { opBy, entry: oldEntry } = event.data;
     if (!oldEntry.callgentId)
       oldEntry = event.data.entry = await this.entriesService.findOne(
@@ -52,7 +52,7 @@ export class EndpointsChangedSumEntryListener {
 
     if (
       result.whatFor === oldEntry.whatFor &&
-      result.how2Use === oldEntry.how2Use
+      result.how2Use === oldEntry.how2Ops
     )
       return;
     const newEntry = await this.entriesService
@@ -60,7 +60,7 @@ export class EndpointsChangedSumEntryListener {
         oldEntry.id,
         {
           whatFor: result.whatFor,
-          how2Use: result.how2Use,
+          how2Ops: result.how2Use,
         },
         { pk: true, securities: false },
       )

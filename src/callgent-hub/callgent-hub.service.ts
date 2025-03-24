@@ -111,7 +111,7 @@ export class CallgentHubService {
             name: true,
             type: true,
             whatFor: true,
-            how2Use: true,
+            how2Ops: true,
             adaptorKey: true,
             priority: true,
             host: true,
