@@ -1,5 +1,5 @@
 # using criu to checkpoint and restore a running sub-process
-FROM node:18.20.3 AS base
+FROM node:18.20.7 AS base
 
 RUN apt-get update && apt-get install -y --no-install-recommends criu \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
