@@ -48,7 +48,7 @@
     "@nestjs/event-emitter": "^2.0.4",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.3",
-    "@nestjs/platform-fastify": "^10.3.4",
+    "@nestjs/platform-fastify": "^10.4.20",
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/terminus": "^10.2.3",
     "@nestjs/throttler": "^6.2.1",
