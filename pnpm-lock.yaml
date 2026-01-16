@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   '@apidevtools/json-schema-ref-parser':
     specifier: ^11.7.2
@@ -27,7 +31,7 @@ dependencies:
     version: 2.4.2(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(nestjs-cls@4.4.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
   '@nestjs-cls/transactional-adapter-prisma':
     specifier: ^1.2.4
-    version: 1.2.4(@nestjs-cls/transactional@2.4.2)(@prisma/client@5.20.0)(nestjs-cls@4.4.1)(prisma@5.20.0)
+    version: 1.2.4(@nestjs-cls/transactional@2.4.2)(@prisma/client@5.22.0)(nestjs-cls@4.4.1)(prisma@5.20.0)
   '@nestjs/axios':
     specifier: ^3.1.2
     version: 3.1.2(@nestjs/common@10.4.4)(axios@1.7.7)(rxjs@7.8.1)
@@ -60,7 +64,7 @@ dependencies:
     version: 7.4.2(@fastify/static@7.0.4)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)
   '@nestjs/terminus':
     specifier: ^10.2.3
-    version: 10.2.3(@nestjs/axios@3.1.2)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(@prisma/client@5.20.0)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+    version: 10.2.3(@nestjs/axios@3.1.2)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(@prisma/client@5.22.0)(reflect-metadata@0.2.2)(rxjs@7.8.1)
   '@nestjs/throttler':
     specifier: ^6.2.1
     version: 6.2.1(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(reflect-metadata@0.2.2)
@@ -71,8 +75,8 @@ dependencies:
     specifier: ^3.0.3
     version: 3.0.3
   '@prisma/client':
-    specifier: 5.20.0
-    version: 5.20.0(prisma@5.20.0)
+    specifier: 5.22.0
+    version: 5.22.0(prisma@5.20.0)
   axios:
     specifier: ^1.7.7
     version: 1.7.7(debug@2.6.9)
@@ -138,7 +142,7 @@ dependencies:
     version: 4.1.0(@nestjs/common@10.4.4)(pino-http@10.3.0)
   nestjs-prisma:
     specifier: ^0.23.0
-    version: 0.23.0(@nestjs/common@10.4.4)(@prisma/client@5.20.0)(prisma@5.20.0)
+    version: 0.23.0(@nestjs/common@10.4.4)(@prisma/client@5.22.0)(prisma@5.20.0)
   passport-jwt:
     specifier: ^4.0.1
     version: 4.0.1
@@ -159,7 +163,7 @@ dependencies:
     version: 11.2.2
   prisma-soft-delete-middleware:
     specifier: ^1.3.1
-    version: 1.3.1(@prisma/client@5.20.0)
+    version: 1.3.1(@prisma/client@5.22.0)
   reflect-metadata:
     specifier: ^0.2.2
     version: 0.2.2
@@ -176,7 +180,7 @@ dependencies:
 devDependencies:
   '@chax-at/transactional-prisma-testing':
     specifier: ^1.2.0
-    version: 1.2.0(@prisma/client@5.20.0)
+    version: 1.2.0(@prisma/client@5.22.0)
   '@commitlint/cli':
     specifier: ^19.5.0
     version: 19.5.0(@types/node@22.7.5)(typescript@5.6.3)
@@ -188,7 +192,7 @@ devDependencies:
     version: 10.4.5
   '@nestjs/schematics':
     specifier: ^10.1.4
-    version: 10.1.4(chokidar@3.6.0)(typescript@5.3.3)
+    version: 10.1.4(typescript@5.6.3)
   '@nestjs/testing':
     specifier: ^10.4.4
     version: 10.4.4(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)
@@ -677,13 +681,13 @@ packages:
   /@bcoe/v8-coverage@0.2.3:
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
 
-  /@chax-at/transactional-prisma-testing@1.2.0(@prisma/client@5.20.0):
+  /@chax-at/transactional-prisma-testing@1.2.0(@prisma/client@5.22.0):
     resolution: {integrity: sha512-4GIEeHUlqcpggfz4t+t3tQb44uc67YWIzXnkB0m0Cy3jPOex/5fRhezebtqIxJzS2k4XIGxeJDij/Ajp0Mwy/Q==}
     engines: {node: '>= 14'}
     peerDependencies:
       '@prisma/client': ^4.7.0 || 5
     dependencies:
-      '@prisma/client': 5.20.0(prisma@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
     dev: true
 
   /@colors/colors@1.5.0:
@@ -725,6 +729,7 @@ packages:
   /@commitlint/config-validator@19.5.0:
     resolution: {integrity: sha512-CHtj92H5rdhKt17RmgALhfQt95VayrUo2tSqY9g2w+laAXyk7K/Ef6uPm9tn5qSIwSmrLjKaXK9eiNuxmQrDBw==}
     engines: {node: '>=v18'}
+    requiresBuild: true
     dependencies:
       '@commitlint/types': 19.5.0
       ajv: 8.17.1
@@ -745,6 +750,7 @@ packages:
   /@commitlint/execute-rule@19.5.0:
     resolution: {integrity: sha512-aqyGgytXhl2ejlk+/rfgtwpPexYyri4t8/n4ku6rRJoRhGZpLFMqrZ+YaubeGysCP6oz4mMA34YSTaSOKEeNrg==}
     engines: {node: '>=v18'}
+    requiresBuild: true
     dev: true
 
   /@commitlint/format@19.5.0:
@@ -820,6 +826,7 @@ packages:
   /@commitlint/resolve-extends@19.5.0:
     resolution: {integrity: sha512-CU/GscZhCUsJwcKTJS9Ndh3AKGZTNFIOoQB2n8CmFnizE0VnEuJoum+COW+C1lNABEeqk6ssfc1Kkalm4bDklA==}
     engines: {node: '>=v18'}
+    requiresBuild: true
     dependencies:
       '@commitlint/config-validator': 19.5.0
       '@commitlint/types': 19.5.0
@@ -1411,7 +1418,7 @@ packages:
     resolution: {integrity: sha512-HZpPoABogPvjeJOdzCOSJsXeL/SMCBgBZMVC3X3d7YYp2gf31MfxhUoYUNwf1ERPJOnQc0wkFn9trqI6ZEdZuA==}
     dev: false
 
-  /@nestjs-cls/transactional-adapter-prisma@1.2.4(@nestjs-cls/transactional@2.4.2)(@prisma/client@5.20.0)(nestjs-cls@4.4.1)(prisma@5.20.0):
+  /@nestjs-cls/transactional-adapter-prisma@1.2.4(@nestjs-cls/transactional@2.4.2)(@prisma/client@5.22.0)(nestjs-cls@4.4.1)(prisma@5.20.0):
     resolution: {integrity: sha512-W/Ej+T3QG81//d4YuXsuHnV9WFvWTQBQk1BSiowyq7d812lyr3zk8ZMwmAhB7JAY80cJMeBY6i3TBlP0QVIczQ==}
     engines: {node: '>=18'}
     peerDependencies:
@@ -1421,7 +1428,7 @@ packages:
       prisma: '> 4 < 6'
     dependencies:
       '@nestjs-cls/transactional': 2.4.2(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(nestjs-cls@4.4.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@prisma/client': 5.20.0(prisma@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
       nestjs-cls: 4.4.1(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       prisma: 5.20.0
     dev: false
@@ -1687,6 +1694,21 @@ packages:
       - chokidar
     dev: true
 
+  /@nestjs/schematics@10.1.4(typescript@5.6.3):
+    resolution: {integrity: sha512-QpY8ez9cTvXXPr3/KBrtSgXQHMSV6BkOUYy2c2TTe6cBqriEdGnCYqGl8cnfrQl3632q3lveQPaZ/c127dHsEw==}
+    peerDependencies:
+      typescript: '>=4.8.2'
+    dependencies:
+      '@angular-devkit/core': 17.3.8(chokidar@3.6.0)
+      '@angular-devkit/schematics': 17.3.8(chokidar@3.6.0)
+      comment-json: 4.2.3
+      jsonc-parser: 3.3.1
+      pluralize: 8.0.0
+      typescript: 5.6.3
+    transitivePeerDependencies:
+      - chokidar
+    dev: true
+
   /@nestjs/swagger@7.4.2(@fastify/static@7.0.4)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2):
     resolution: {integrity: sha512-Mu6TEn1M/owIvAx2B4DUQObQXqo2028R2s9rSZ/hJEgBK95+doTwS0DjmVA2wTeZTyVtXOoN7CsoM5pONBzvKQ==}
     peerDependencies:
@@ -1718,7 +1740,7 @@ packages:
       swagger-ui-dist: 5.17.14
     dev: false
 
-  /@nestjs/terminus@10.2.3(@nestjs/axios@3.1.2)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(@prisma/client@5.20.0)(reflect-metadata@0.2.2)(rxjs@7.8.1):
+  /@nestjs/terminus@10.2.3(@nestjs/axios@3.1.2)(@nestjs/common@10.4.4)(@nestjs/core@10.4.4)(@prisma/client@5.22.0)(reflect-metadata@0.2.2)(rxjs@7.8.1):
     resolution: {integrity: sha512-iX7gXtAooePcyQqFt57aDke5MzgdkBeYgF5YsFNNFwOiAFdIQEhfv3PR0G+HlH9F6D7nBCDZt9U87Pks/qHijg==}
     peerDependencies:
       '@grpc/grpc-js': '*'
@@ -1769,7 +1791,7 @@ packages:
       '@nestjs/axios': 3.1.2(@nestjs/common@10.4.4)(axios@1.7.7)(rxjs@7.8.1)
       '@nestjs/common': 10.4.4(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@nestjs/core': 10.4.4(@nestjs/common@10.4.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@prisma/client': 5.20.0(prisma@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
       boxen: 5.1.2
       check-disk-space: 3.4.0
       reflect-metadata: 0.2.2
@@ -1934,8 +1956,8 @@ packages:
       - supports-color
     dev: true
 
-  /@prisma/client@5.20.0(prisma@5.20.0):
-    resolution: {integrity: sha512-CLv55ZuMuUawMsxoqxGtLT3bEZoa2W8L3Qnp6rDIFWy+ZBrUcOFKdoeGPSnbBqxc3SkdxJrF+D1veN/WNynZYA==}
+  /@prisma/client@5.22.0(prisma@5.20.0):
+    resolution: {integrity: sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==}
     engines: {node: '>=16.13'}
     requiresBuild: true
     peerDependencies:
@@ -3606,6 +3628,7 @@ packages:
   /cosmiconfig-typescript-loader@5.1.0(@types/node@22.7.5)(cosmiconfig@9.0.0)(typescript@5.6.3):
     resolution: {integrity: sha512-7PtBB+6FdsOvZyJtlF3hEPpACq7RQX6BVGsgC7/lfVXnKMvNCu/XY3ykreqG5w/rBNdu2z8LCIKoF3kpHHdHlA==}
     engines: {node: '>=v16'}
+    requiresBuild: true
     peerDependencies:
       '@types/node': '*'
       cosmiconfig: '>=8.2'
@@ -3636,6 +3659,7 @@ packages:
   /cosmiconfig@9.0.0(typescript@5.6.3):
     resolution: {integrity: sha512-itvL5h8RETACmOTFc4UfIyB2RfEHi71Ax6E/PivVxq9NseKbOWpeyHEOIbmAw1rs8Ak0VursQNww7lf7YtUwzg==}
     engines: {node: '>=14'}
+    requiresBuild: true
     peerDependencies:
       typescript: '>=4.9.5'
     peerDependenciesMeta:
@@ -3979,6 +4003,7 @@ packages:
   /env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
     engines: {node: '>=6'}
+    requiresBuild: true
     dev: true
 
   /error-ex@1.3.2:
@@ -4851,6 +4876,7 @@ packages:
   /global-directory@4.0.1:
     resolution: {integrity: sha512-wHTUcDUoZ1H5/0iVqEudYW4/kAlN5cZ3j/bXn0Dpbizl9iaUVeWSHqiOjsgk6OW2bkLclbBjzewBz6weQ1zA2Q==}
     engines: {node: '>=18'}
+    requiresBuild: true
     dependencies:
       ini: 4.1.1
     dev: true
@@ -5080,6 +5106,7 @@ packages:
 
   /import-meta-resolve@4.1.0:
     resolution: {integrity: sha512-I6fiaX09Xivtk+THaMfAwnA3MVA5Big1WHF1Dfx9hFuvNIWpXnorlkzhcQf6ehrqQiiZECRt1poOAkPmer3ruw==}
+    requiresBuild: true
     dev: true
 
   /imurmurhash@0.1.4:
@@ -5108,6 +5135,7 @@ packages:
   /ini@4.1.1:
     resolution: {integrity: sha512-QQnnxNyfvmHFIsj7gkPcYymR8Jdw/o7mp5ZFihxn6h8Ci6fh3Dx4E1gPjpQEpIuPo9XVNY/ZUwh4BPMjGyL01g==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+    requiresBuild: true
     dev: true
 
   /inquirer@8.2.5:
@@ -5185,6 +5213,7 @@ packages:
 
   /is-arrayish@0.2.1:
     resolution: {integrity: sha512-zz06S8t0ozoDXMG+ube26zeCTNXcKIPJZJi8hBrF4idCLms4CG9QtK7qBl1boi5ODzFpjswb5JPmHCbMpjaYzg==}
+    requiresBuild: true
 
   /is-binary-path@2.1.0:
     resolution: {integrity: sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw==}
@@ -5855,6 +5884,7 @@ packages:
   /jiti@1.21.6:
     resolution: {integrity: sha512-2yTgeWTWzMWkHu6Jp9NKgePDaYHbntiwvYuuJLbbN9vl7DC9DvXKOB2BC3ZZ92D3cvV/aflH0osDfwpHepQ53w==}
     hasBin: true
+    requiresBuild: true
     dev: true
 
   /joycon@3.1.1:
@@ -6079,6 +6109,7 @@ packages:
 
   /lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
+    requiresBuild: true
 
   /load-json-file@1.1.0:
     resolution: {integrity: sha512-cy7ZdNRXdablkXYNI049pthVeXFurRyb9+hA/dZzerZ0pGTx42z+y+ssxBaVV2l70t1muq5IdKhn4UtcoGUY9A==}
@@ -6213,6 +6244,7 @@ packages:
 
   /lodash.mergewith@4.6.2:
     resolution: {integrity: sha512-GK3g5RPZWTRSeLSpgP8Xhra+pnjBC56q9FZYe1d5RN3TJ35dbkGy3YqBSMbyCrlbi+CM9Z3Jk5yTL7RCsqboyQ==}
+    requiresBuild: true
     dev: true
 
   /lodash.once@4.1.1:
@@ -6254,6 +6286,7 @@ packages:
 
   /lodash.uniq@4.5.0:
     resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
+    requiresBuild: true
     dev: true
 
   /lodash.upperfirst@4.3.1:
@@ -6672,7 +6705,7 @@ packages:
       pino-http: 10.3.0
     dev: false
 
-  /nestjs-prisma@0.23.0(@nestjs/common@10.4.4)(@prisma/client@5.20.0)(prisma@5.20.0):
+  /nestjs-prisma@0.23.0(@nestjs/common@10.4.4)(@prisma/client@5.22.0)(prisma@5.20.0):
     resolution: {integrity: sha512-0pIMDasayP+vMFSztcs85zu4WSPTKM85F8vIrqn7GsUBboEcKhI8eCeVghhNyKDGzEBaNAYNJlo2MAWdNuN7Tw==}
     peerDependencies:
       '@nestjs/common': ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
@@ -6682,7 +6715,7 @@ packages:
       '@angular-devkit/core': 13.3.11
       '@angular-devkit/schematics': 13.3.11
       '@nestjs/common': 10.4.4(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
-      '@prisma/client': 5.20.0(prisma@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
       '@schematics/angular': 13.3.11
       prisma: 5.20.0
     transitivePeerDependencies:
@@ -6985,6 +7018,7 @@ packages:
   /parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
+    requiresBuild: true
     dependencies:
       callsites: 3.1.0
     dev: true
@@ -7345,23 +7379,23 @@ packages:
       ansi-styles: 5.2.0
       react-is: 18.3.1
 
-  /prisma-nested-middleware@4.0.0(@prisma/client@5.20.0):
+  /prisma-nested-middleware@4.0.0(@prisma/client@5.22.0):
     resolution: {integrity: sha512-WSx0nl7KNXEzGaNC87fuDBOdAjj3V6um/JoQUo24PaMzMy8tvOYfb2Mw25OZhnrMXNTBhqgk4rJTUW3CVcDsHQ==}
     peerDependencies:
       '@prisma/client': '*'
     dependencies:
       '@open-draft/deferred-promise': 2.2.0
-      '@prisma/client': 5.20.0(prisma@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
       lodash: 4.17.21
     dev: false
 
-  /prisma-soft-delete-middleware@1.3.1(@prisma/client@5.20.0):
+  /prisma-soft-delete-middleware@1.3.1(@prisma/client@5.22.0):
     resolution: {integrity: sha512-oQ2Ba8wb23ho6PqMXkOSTQTXNKouLmZuILYDHrnKk1Ui3cGIXuj9zNWyJkoaTcWHznsiAaoP1Oy8ytDhwQNQqA==}
     peerDependencies:
       '@prisma/client': '*'
     dependencies:
-      '@prisma/client': 5.20.0(prisma@5.20.0)
-      prisma-nested-middleware: 4.0.0(@prisma/client@5.20.0)
+      '@prisma/client': 5.22.0(prisma@5.20.0)
+      prisma-nested-middleware: 4.0.0(@prisma/client@5.22.0)
     dev: false
 
   /prisma@5.20.0:
@@ -7666,6 +7700,7 @@ packages:
   /resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
+    requiresBuild: true
     dev: true
 
   /resolve-from@5.0.0:

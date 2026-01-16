@@ -54,7 +54,7 @@
     "@nestjs/throttler": "^6.2.1",
     "@nodeteam/nestjs-prisma-pagination": "^1.0.6",
     "@pond918/postman-to-openapi": "^3.0.3",
-    "@prisma/client": "5.20.0",
+    "@prisma/client": "5.22.0",
     "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "braces": "^3.0.3",
